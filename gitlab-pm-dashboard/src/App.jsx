@@ -6,6 +6,11 @@ import Header from './components/Header'
 import Tabs from './components/Tabs'
 import ConfigModal from './components/ConfigModal'
 import ExecutiveDashboard from './components/ExecutiveDashboard'
+import GanttView from './components/GanttView'
+import RoadmapView from './components/RoadmapView'
+import SprintBoardView from './components/SprintBoardView'
+import DependencyGraphView from './components/DependencyGraphView'
+import RiskRegisterView from './components/RiskRegisterView'
 import PlaceholderView from './components/PlaceholderView'
 
 function App() {
@@ -80,11 +85,11 @@ function App() {
             {activeView === 'executive' && (
               <ExecutiveDashboard stats={stats} healthScore={healthScore} />
             )}
-            {activeView === 'gantt' && <PlaceholderView viewName="Gantt Chart" />}
-            {activeView === 'roadmap' && <PlaceholderView viewName="Roadmap" />}
-            {activeView === 'sprint' && <PlaceholderView viewName="Sprint Board" />}
-            {activeView === 'dependencies' && <PlaceholderView viewName="Dependencies" />}
-            {activeView === 'risks' && <PlaceholderView viewName="Risk Register" />}
+            {activeView === 'gantt' && <GanttView issues={issues} />}
+            {activeView === 'roadmap' && <RoadmapView issues={issues} milestones={milestones} />}
+            {activeView === 'sprint' && <SprintBoardView issues={issues} />}
+            {activeView === 'dependencies' && <DependencyGraphView issues={issues} />}
+            {activeView === 'risks' && <RiskRegisterView />}
             {activeView === 'resources' && <PlaceholderView viewName="Team Resources" />}
           </>
         )}

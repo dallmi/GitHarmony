@@ -95,17 +95,50 @@
 
 **Build Status:** ✓ 213KB (66KB gzipped) - fully functional with Executive Dashboard
 
+## Completed Phase 2 ✓
+
+### All View Components (DONE)
+
+4. **Gantt Chart View** ✓
+   - `GanttView.jsx` - Timeline visualization with milestones
+   - Bar chart positioning based on dates
+   - Color-coded by status (blocker, done, overdue, in progress)
+   - Progress percentage display
+
+5. **Roadmap View** ✓
+   - `RoadmapView.jsx` - Strategic milestone view
+   - Milestone progress tracking
+   - High priority, at-risk, overdue metrics per milestone
+   - Blocker highlighting
+   - Backlog section for unassigned issues
+
+6. **Sprint Board** ✓
+   - `SprintBoardView.jsx` - Kanban-style board
+   - Three columns: To Do, In Progress, Done
+   - Sprint progress tracking
+   - Drag-friendly card layout
+
+7. **Dependency Graph** ✓
+   - `DependencyGraphView.jsx` - D3.js force-directed graph
+   - Interactive node dragging
+   - Parses "blocked by #123" from descriptions
+   - Visual legend (in progress, completed, blocker)
+   - Statistics panel
+
+8. **Risk Register** ✓
+   - `RiskRegisterView.jsx` - Risk matrix and management
+   - 3×3 Probability × Impact matrix
+   - Add/Edit/Close risks
+   - Risk score calculation
+   - Active risks list with owner tracking
+
+**Build Status:** ✓ 292KB (90KB gzipped) - ALL VIEWS FUNCTIONAL
+
 ## In Progress 🔄
 
-### Remaining View Components
-Need to extract from V4 single-file HTML:
-
-- `GanttView.jsx` - Timeline visualization
-- `RoadmapView.jsx` - Milestone-based roadmap
-- `SprintBoard.jsx` - Kanban board
-- `DependencyGraph.jsx` - D3.js force-directed graph
-- `RiskRegister.jsx` - Risk matrix and mitigation tracker
-- `ResourceView.jsx` - Team capacity and allocation
+### Remaining Features
+- `ResourceView.jsx` - Team capacity and allocation (Team Resources view)
+- PowerPoint export functionality
 
 ## Not Started ⏳
 
