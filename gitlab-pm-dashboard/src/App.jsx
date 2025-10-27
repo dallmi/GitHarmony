@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
-import { isConfigured } from './services/storageService'
+import { isConfigured, loadConfig } from './services/storageService'
+import { exportToPowerPoint } from './services/pptExportService'
 import useGitLabData from './hooks/useGitLabData'
 import useHealthScore from './hooks/useHealthScore'
+import useRisks from './hooks/useRisks'
 import Header from './components/Header'
 import Tabs from './components/Tabs'
 import ConfigModal from './components/ConfigModal'
@@ -33,16 +35,41 @@ function App() {
   const { stats, healthScore } = useHealthScore(issues, milestones)
   console.log('App: Health data:', { stats, healthScore })
 
+  console.log('App: Calling useRisks hook...')
+  const { risks } = useRisks()
+  console.log('App: Risks data:', { risksCount: risks?.length })
+
   const handleConfigSave = () => {
     console.log('App: handleConfigSave called')
     setShowConfigModal(false)
     refresh()
   }
 
-  const handleExportPPT = () => {
+  const handleExportPPT = async () => {
     console.log('App: handleExportPPT called')
-    // TODO: Implement PowerPoint export
-    alert('PowerPoint export coming soon!')
+
+    if (!stats || !healthScore) {
+      alert('Please wait for data to load before exporting')
+      return
+    }
+
+    try {
+      const config = loadConfig()
+      const filename = await exportToPowerPoint({
+        projectId: config.projectId || 'Unknown Project',
+        stats,
+        healthScore,
+        issues,
+        milestones,
+        risks
+      })
+
+      console.log('App: PowerPoint export successful:', filename)
+      alert(`PowerPoint exported successfully: ${filename}`)
+    } catch (error) {
+      console.error('App: PowerPoint export failed:', error)
+      alert(`Export failed: ${error.message}`)
+    }
   }
 
   console.log('App: About to render, current state:', { activeView, showConfigModal, configured, issuesCount: issues?.length, loading })
