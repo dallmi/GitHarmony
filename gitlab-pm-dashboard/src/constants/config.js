@@ -42,6 +42,7 @@ export const VIEW_TABS = [
   { id: 'gantt', label: 'Gantt Chart' },
   { id: 'roadmap', label: 'Roadmap' },
   { id: 'sprint', label: 'Sprint Board' },
+  { id: 'velocity', label: 'Velocity & Burndown' },
   { id: 'dependencies', label: 'Dependencies' },
   { id: 'risks', label: 'Risk Register' },
   { id: 'resources', label: 'Team Resources' }

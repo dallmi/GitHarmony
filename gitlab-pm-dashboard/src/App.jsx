@@ -11,6 +11,7 @@ import ExecutiveDashboard from './components/ExecutiveDashboard'
 import GanttView from './components/GanttView'
 import RoadmapView from './components/RoadmapView'
 import SprintBoardView from './components/SprintBoardView'
+import VelocityView from './components/VelocityView'
 import DependencyGraphView from './components/DependencyGraphView'
 import RiskRegisterView from './components/RiskRegisterView'
 import TeamResourcesView from './components/TeamResourcesView'
@@ -132,6 +133,7 @@ function App() {
             {activeView === 'gantt' && <GanttView issues={issues} />}
             {activeView === 'roadmap' && <RoadmapView issues={issues} milestones={milestones} />}
             {activeView === 'sprint' && <SprintBoardView issues={issues} />}
+            {activeView === 'velocity' && <VelocityView issues={issues} />}
             {activeView === 'dependencies' && <DependencyGraphView issues={issues} />}
             {activeView === 'risks' && <RiskRegisterView />}
             {activeView === 'resources' && <TeamResourcesView issues={issues} />}
