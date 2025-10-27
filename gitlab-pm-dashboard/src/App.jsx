@@ -7,6 +7,7 @@ import useRisks from './hooks/useRisks'
 import Header from './components/Header'
 import Tabs from './components/Tabs'
 import ConfigModal from './components/ConfigModal'
+import StatusGeneratorModal from './components/StatusGeneratorModal'
 import ExecutiveDashboard from './components/ExecutiveDashboard'
 import EpicDashboardView from './components/EpicDashboardView'
 import GanttView from './components/GanttView'
@@ -27,6 +28,7 @@ function App() {
   console.log('App: Configuration check:', configured)
 
   const [showConfigModal, setShowConfigModal] = useState(!configured)
+  const [showStatusModal, setShowStatusModal] = useState(false)
   console.log('App: showConfigModal:', !configured)
 
   console.log('App: Calling useGitLabData hook...')
@@ -84,6 +86,7 @@ function App() {
         onRefresh={refresh}
         onConfigure={() => setShowConfigModal(true)}
         onExportPPT={handleExportPPT}
+        onGenerateStatus={() => setShowStatusModal(true)}
         loading={loading}
       />
 
@@ -147,6 +150,17 @@ function App() {
         show={showConfigModal}
         onClose={() => setShowConfigModal(false)}
         onSave={handleConfigSave}
+      />
+
+      <StatusGeneratorModal
+        show={showStatusModal}
+        onClose={() => setShowStatusModal(false)}
+        projectId={loadConfig()?.projectId || 'Unknown Project'}
+        stats={stats}
+        healthScore={healthScore}
+        issues={issues}
+        milestones={milestones}
+        risks={risks}
       />
     </div>
   )

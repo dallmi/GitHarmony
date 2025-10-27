@@ -1,6 +1,6 @@
 import React from 'react'
 
-export default function Header({ stats, healthScore, onRefresh, onConfigure, onExportPPT, loading }) {
+export default function Header({ stats, healthScore, onRefresh, onConfigure, onExportPPT, onGenerateStatus, loading }) {
   return (
     <div className="header">
       <div style={{
@@ -83,6 +83,14 @@ export default function Header({ stats, healthScore, onRefresh, onConfigure, onE
             disabled={loading || !stats}
           >
             Export PPT
+          </button>
+
+          <button
+            className="btn btn-secondary"
+            onClick={onGenerateStatus}
+            disabled={loading || !stats}
+          >
+            Generate Status
           </button>
 
           <button
