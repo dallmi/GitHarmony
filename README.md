@@ -1,40 +1,84 @@
-# GitLab Project Management Dashboard
+# GitLab Project Management Dashboard - Enterprise Edition
 
-Eine professionelle, browser-basierte Project Management Lösung für GitLab mit Fokus auf Projektvisualisierung und Team-Koordination.
+A professional, browser-based Project Management solution for GitLab with Executive Dashboard, Risk Management, and Dependency Tracking.
 
-## Übersicht
+## 🆕 Latest: V3 - Enterprise Edition
+**New in V3:** Dependency Graph, Risk Register with Mitigation Tracking, Enhanced PowerPoint Export
 
-Dieses Tool bietet eine umfassende Projektmanagement-Ansicht für GitLab-Projekte mit verschiedenen Visualisierungen:
+## Overview
 
-- **Gantt Chart**: Zeitbasierte Visualisierung aller Tasks mit Fortschrittsanzeige
-- **Roadmap**: Milestone-orientierte Übersicht mit Fortschritt und Blocker-Tracking
-- **Sprint Board**: Kanban-Style Board organisiert nach Sprints (To Do / In Progress / Done)
-- **Team View**: Ressourcenübersicht mit Workload-Verteilung pro Team-Mitglied
+Professional project management tool for GitLab with multiple views and enterprise features:
 
-## Features
+### Version Comparison
 
-### Visualisierungen
-- **Gantt Chart**: Zeitliche Darstellung von Issues mit Start- und Enddatum
-- **Roadmap View**: Milestone-basierte Projektsicht mit Metriken
-- **Sprint Board**: Agile Board-Ansicht gruppiert nach Sprint-Labels
-- **Resource View**: Team-Übersicht mit Workload und Aufgabenverteilung
+| Feature | V1 (German) | V2 (Executive) | V3 (Enterprise) |
+|---------|-------------|----------------|-----------------|
+| Language | German | English | English |
+| Executive Dashboard | ❌ | ✅ | ✅ Enhanced |
+| Health Scoring | ❌ | ✅ | ✅ |
+| PowerPoint Export | ❌ | ✅ | ✅ Enhanced |
+| Dependency Graph | ❌ | ❌ | ✅ |
+| Risk Register | ❌ | ❌ | ✅ |
+| Mitigation Tracking | ❌ | ❌ | ✅ |
 
-### Tracking & Monitoring
-- Real-time Status Updates von GitLab Issues
-- Blocker-Identifikation und Hervorhebung
-- Prioritäts-Management (High/Medium/Low)
-- Overdue & At-Risk Issue Tracking
-- Fortschrittsberechnung basierend auf Labels und Status
+### Available Views
+- **👔 Executive Dashboard**: C-level ready summary with RAG status and health score
+- **🔗 Dependency Graph**: Interactive network diagram showing issue dependencies and critical paths
+- **⚠️ Risk Register**: Probability × Impact matrix with mitigation action tracking
+- **📊 Gantt Chart**: Timeline visualization (V1/V2)
+- **🗺️ Roadmap**: Milestone-based progress tracking (V1/V2)
+- **🏃 Sprint Board**: Kanban-style agile board (V1/V2)
+- **👥 Team Resources**: Workload distribution per team member (V1/V2)
 
-### Filterung
-- Filter nach Milestone
-- Filter nach zugewiesener Person
-- Automatische Berechnung von Statistiken
+## 🚀 V3 Enterprise Features
 
-### UBS Design
-- Corporate Design in UBS Rot
-- Professionelles Interface für Management-Reporting
-- Responsive Layout
+### 1. Executive Dashboard
+- **Automated Health Score**: 4-dimensional scoring (Completion, Schedule, Blockers, Risk)
+- **RAG Status**: Red/Amber/Green visual indicators
+- **Key Metrics Cards**: Completion rate, blockers, active risks, dependencies
+- **Critical Alerts**: Top blockers and recent achievements
+- **Trend Analysis**: Performance indicators
+
+### 2. Dependency Graph (NEW in V3)
+- **Interactive Network Diagram**: D3.js-powered visualization
+- **Dependency Detection**: Automatically parses "blocked by #123" from issue descriptions
+- **Critical Path Highlighting**: Visual identification of bottlenecks
+- **Drag & Drop**: Interactive node positioning
+- **Color Coding**:
+  - 🔵 Blue: In Progress
+  - 🟢 Green: Completed
+  - 🔴 Red: Blocker
+- **Statistics Dashboard**: Total issues, dependencies, blocking relationships
+
+### 3. Risk Register (NEW in V3)
+- **Probability × Impact Matrix**: 3x3 grid (Low/Medium/High)
+- **Risk Categorization**: Visual heat map
+- **Risk Management**:
+  - Add/Edit/Delete risks
+  - Assign risk owners
+  - Track status (Active/Closed)
+- **Mitigation Actions**:
+  - Add mitigation plans per risk
+  - Assign owners to actions
+  - Track completion status
+  - Checkbox-based workflow
+- **Data Persistence**: Risks stored in localStorage
+
+### 4. Enhanced PowerPoint Export
+- **3+ Professional Slides**:
+  - Executive Summary (Health Score + Metrics Table)
+  - Risks & Dependencies Summary
+  - Enhanced with active risks count
+- **UBS Branded**: Corporate color scheme
+- **Auto-generated filename**: Project-Status-{project}-{date}.pptx
+- **One-Click Export**: No configuration needed
+
+### 5. Real-Time GitLab Integration
+- Live data from GitLab API
+- Issue tracking with labels
+- Milestone progress
+- Assignee workload
+- Blocker detection
 
 ## Installation & Setup
 
