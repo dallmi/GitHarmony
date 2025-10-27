@@ -20,6 +20,7 @@ import RiskRegisterView from './components/RiskRegisterView'
 import ResourceCapacityView from './components/ResourceCapacityView'
 import StakeholderHubView from './components/StakeholderHubView'
 import InsightsView from './components/InsightsView'
+import IssueComplianceView from './components/IssueComplianceView'
 
 function App() {
   console.log('App: Component initializing...')
@@ -158,6 +159,7 @@ function App() {
                 risks={risks}
               />
             )}
+            {activeView === 'compliance' && <IssueComplianceView issues={issues} />}
             {activeView === 'epics' && <EpicDashboardView epics={epics} issues={issues} />}
             {activeView === 'gantt' && <GanttView issues={issues} />}
             {activeView === 'roadmap' && <RoadmapView issues={issues} milestones={milestones} />}
