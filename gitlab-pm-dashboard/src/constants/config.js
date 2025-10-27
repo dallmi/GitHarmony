@@ -47,7 +47,8 @@ export const VIEW_TABS = [
   { id: 'velocity', label: 'Velocity & Burndown' },
   { id: 'dependencies', label: 'Dependencies' },
   { id: 'risks', label: 'Risk Register' },
-  { id: 'resources', label: 'Team Resources' }
+  { id: 'resources', label: 'Team Resources' },
+  { id: 'stakeholders', label: 'Stakeholders' }
 ]
 
 export const LABEL_CONVENTIONS = {

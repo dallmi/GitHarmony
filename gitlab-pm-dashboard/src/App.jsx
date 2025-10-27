@@ -18,6 +18,7 @@ import VelocityView from './components/VelocityView'
 import DependencyGraphView from './components/DependencyGraphView'
 import RiskRegisterView from './components/RiskRegisterView'
 import ResourceCapacityView from './components/ResourceCapacityView'
+import StakeholderHubView from './components/StakeholderHubView'
 
 function App() {
   console.log('App: Component initializing...')
@@ -154,6 +155,7 @@ function App() {
             {activeView === 'dependencies' && <DependencyGraphView issues={issues} />}
             {activeView === 'risks' && <RiskRegisterView />}
             {activeView === 'resources' && <ResourceCapacityView issues={issues} />}
+            {activeView === 'stakeholders' && <StakeholderHubView stats={stats} healthScore={healthScore} />}
           </>
         )}
       </div>
