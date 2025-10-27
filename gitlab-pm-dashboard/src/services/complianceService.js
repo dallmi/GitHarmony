@@ -4,6 +4,44 @@
  */
 
 /**
+ * Configurable thresholds for stale issue detection
+ */
+export const STALE_THRESHOLDS = {
+  warning: 4 * 7, // 4 weeks in days
+  critical: 8 * 7  // 8 weeks in days
+}
+
+/**
+ * Calculate how many days an issue has been open
+ */
+function getDaysOpen(issue) {
+  const created = new Date(issue.created_at)
+  const now = new Date()
+  const diffTime = Math.abs(now - created)
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  return diffDays
+}
+
+/**
+ * Check if issue is stale based on thresholds
+ */
+export function checkStaleStatus(issue) {
+  if (issue.state !== 'opened') {
+    return { isStale: false, daysOpen: 0, severity: null }
+  }
+
+  const daysOpen = getDaysOpen(issue)
+
+  if (daysOpen >= STALE_THRESHOLDS.critical) {
+    return { isStale: true, daysOpen, severity: 'critical' }
+  } else if (daysOpen >= STALE_THRESHOLDS.warning) {
+    return { isStale: true, daysOpen, severity: 'warning' }
+  }
+
+  return { isStale: false, daysOpen, severity: null }
+}
+
+/**
  * UBS Issue Quality Criteria
  */
 const QUALITY_CRITERIA = {
@@ -71,6 +109,21 @@ const QUALITY_CRITERIA = {
       )
     },
     severity: 'medium'
+  },
+  stale: {
+    name: 'Stale Issue',
+    description: `Issue has been open too long (Warning: ${STALE_THRESHOLDS.warning} days, Critical: ${STALE_THRESHOLDS.critical} days)`,
+    validate: (issue) => {
+      const staleStatus = checkStaleStatus(issue)
+      return !staleStatus.isStale
+    },
+    severity: 'low',
+    getDynamicSeverity: (issue) => {
+      const staleStatus = checkStaleStatus(issue)
+      if (staleStatus.severity === 'critical') return 'high'
+      if (staleStatus.severity === 'warning') return 'medium'
+      return 'low'
+    }
   }
 }
 
@@ -80,16 +133,23 @@ const QUALITY_CRITERIA = {
 export function checkIssueCompliance(issue) {
   const violations = []
   const passed = []
+  const staleStatus = checkStaleStatus(issue)
 
   Object.entries(QUALITY_CRITERIA).forEach(([key, criteria]) => {
     const isValid = criteria.validate(issue)
 
     if (!isValid) {
+      // Use dynamic severity for stale issues
+      const severity = criteria.getDynamicSeverity
+        ? criteria.getDynamicSeverity(issue)
+        : criteria.severity
+
       violations.push({
         criterion: key,
         name: criteria.name,
         description: criteria.description,
-        severity: criteria.severity
+        severity,
+        ...(key === 'stale' && { daysOpen: staleStatus.daysOpen })
       })
     } else {
       passed.push(key)
@@ -104,7 +164,8 @@ export function checkIssueCompliance(issue) {
     violations,
     passed,
     complianceScore: Math.round((passed.length / Object.keys(QUALITY_CRITERIA).length) * 100),
-    isCompliant: violations.length === 0
+    isCompliant: violations.length === 0,
+    staleStatus
   }
 }
 
@@ -135,8 +196,30 @@ export function findNonCompliantIssues(issues) {
   // Filter only non-compliant issues
   const nonCompliant = results.filter(r => !r.isCompliant)
 
-  // Sort by compliance score (worst first)
-  return nonCompliant.sort((a, b) => a.complianceScore - b.complianceScore)
+  // Sort by compliance score (worst first), then by days open (oldest first)
+  return nonCompliant.sort((a, b) => {
+    if (a.complianceScore !== b.complianceScore) {
+      return a.complianceScore - b.complianceScore
+    }
+    return (b.staleStatus?.daysOpen || 0) - (a.staleStatus?.daysOpen || 0)
+  })
+}
+
+/**
+ * Find all stale issues (regardless of compliance)
+ */
+export function findStaleIssues(issues) {
+  return issues
+    .filter(issue => issue.state === 'opened')
+    .map(issue => {
+      const staleStatus = checkStaleStatus(issue)
+      return {
+        ...issue,
+        staleStatus
+      }
+    })
+    .filter(issue => issue.staleStatus.isStale)
+    .sort((a, b) => b.staleStatus.daysOpen - a.staleStatus.daysOpen)
 }
 
 /**
@@ -175,6 +258,11 @@ export function getComplianceStats(issues) {
     !r.violations.some(v => v.severity === 'high' || v.severity === 'medium')
   ).length
 
+  // Stale issue statistics
+  const staleIssues = findStaleIssues(issues)
+  const staleWarning = staleIssues.filter(i => i.staleStatus.severity === 'warning').length
+  const staleCritical = staleIssues.filter(i => i.staleStatus.severity === 'critical').length
+
   return {
     total,
     compliant,
@@ -183,7 +271,12 @@ export function getComplianceStats(issues) {
     violationsByCriterion,
     highSeverity,
     mediumSeverity,
-    lowSeverity
+    lowSeverity,
+    staleIssues: {
+      total: staleIssues.length,
+      warning: staleWarning,
+      critical: staleCritical
+    }
   }
 }
 
@@ -197,6 +290,8 @@ export function exportToCSV(nonCompliantIssues) {
     'State',
     'Compliance Score',
     'Violations',
+    'Days Open',
+    'Stale Status',
     'Missing Assignee',
     'Missing Weight',
     'Missing Epic',
@@ -220,12 +315,18 @@ export function exportToCSV(nonCompliantIssues) {
       violationMap[v.criterion] = true
     })
 
+    const staleStatus = issue.staleStatus?.isStale
+      ? (issue.staleStatus.severity === 'critical' ? 'CRITICAL' : 'WARNING')
+      : 'OK'
+
     return [
       issue.iid,
       `"${issue.title.replace(/"/g, '""')}"`, // Escape quotes
       issue.state,
       issue.complianceScore + '%',
       issue.violations.length,
+      issue.staleStatus?.daysOpen || 0,
+      staleStatus,
       violationMap.assignee ? 'YES' : 'NO',
       violationMap.weight ? 'YES' : 'NO',
       violationMap.epic ? 'YES' : 'NO',

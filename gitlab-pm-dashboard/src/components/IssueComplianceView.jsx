@@ -4,7 +4,8 @@ import {
   getComplianceStats,
   getCriteriaDetails,
   exportToCSV,
-  downloadCSV
+  downloadCSV,
+  findStaleIssues
 } from '../services/complianceService'
 
 /**
@@ -13,30 +14,43 @@ import {
  */
 export default function IssueComplianceView({ issues }) {
   const [filterSeverity, setFilterSeverity] = useState('all') // all, high, medium, low
+  const [showStaleOnly, setShowStaleOnly] = useState(false)
 
-  const { nonCompliantIssues, stats } = useMemo(() => {
+  const { nonCompliantIssues, stats, staleIssues } = useMemo(() => {
     if (!issues || issues.length === 0) {
-      return { nonCompliantIssues: [], stats: null }
+      return { nonCompliantIssues: [], stats: null, staleIssues: [] }
     }
 
     const nonCompliant = findNonCompliantIssues(issues)
     const complianceStats = getComplianceStats(issues)
+    const stale = findStaleIssues(issues)
 
     return {
       nonCompliantIssues: nonCompliant,
-      stats: complianceStats
+      stats: complianceStats,
+      staleIssues: stale
     }
   }, [issues])
 
   const criteria = getCriteriaDetails()
 
   const filteredIssues = useMemo(() => {
-    if (filterSeverity === 'all') return nonCompliantIssues
+    let filtered = nonCompliantIssues
 
-    return nonCompliantIssues.filter(issue => {
-      return issue.violations.some(v => v.severity === filterSeverity)
-    })
-  }, [nonCompliantIssues, filterSeverity])
+    // Filter by severity
+    if (filterSeverity !== 'all') {
+      filtered = filtered.filter(issue => {
+        return issue.violations.some(v => v.severity === filterSeverity)
+      })
+    }
+
+    // Filter by stale status
+    if (showStaleOnly) {
+      filtered = filtered.filter(issue => issue.staleStatus?.isStale)
+    }
+
+    return filtered
+  }, [nonCompliantIssues, filterSeverity, showStaleOnly])
 
   const handleExportCSV = () => {
     const csvContent = exportToCSV(nonCompliantIssues)
@@ -111,6 +125,16 @@ export default function IssueComplianceView({ issues }) {
               {stats.mediumSeverity}
             </div>
           </div>
+
+          <div className="card" style={{ borderLeft: '4px solid #7C3AED' }}>
+            <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>Stale Issues</div>
+            <div style={{ fontSize: '32px', fontWeight: '600', color: '#7C3AED' }}>
+              {stats.staleIssues.total}
+            </div>
+            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
+              {stats.staleIssues.critical} critical, {stats.staleIssues.warning} warning
+            </div>
+          </div>
         </div>
       )}
 
@@ -145,29 +169,64 @@ export default function IssueComplianceView({ issues }) {
         </div>
       </div>
 
-      {/* Filter */}
+      {/* Filters */}
       {nonCompliantIssues.length > 0 && (
-        <div style={{ marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <span style={{ fontSize: '14px', fontWeight: '600' }}>Filter by Severity:</span>
-          {['all', 'high', 'medium', 'low'].map(severity => (
+        <div style={{ marginBottom: '20px', display: 'flex', gap: '24px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <span style={{ fontSize: '14px', fontWeight: '600' }}>Filter by Severity:</span>
+            {['all', 'high', 'medium', 'low'].map(severity => (
+              <button
+                key={severity}
+                onClick={() => setFilterSeverity(severity)}
+                style={{
+                  padding: '6px 16px',
+                  background: filterSeverity === severity ? '#E60000' : '#F3F4F6',
+                  color: filterSeverity === severity ? 'white' : '#6B7280',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  textTransform: 'capitalize'
+                }}
+              >
+                {severity}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <button
-              key={severity}
-              onClick={() => setFilterSeverity(severity)}
+              onClick={() => setShowStaleOnly(!showStaleOnly)}
               style={{
                 padding: '6px 16px',
-                background: filterSeverity === severity ? '#E60000' : '#F3F4F6',
-                color: filterSeverity === severity ? 'white' : '#6B7280',
+                background: showStaleOnly ? '#7C3AED' : '#F3F4F6',
+                color: showStaleOnly ? 'white' : '#6B7280',
                 border: 'none',
                 borderRadius: '6px',
                 fontSize: '13px',
                 fontWeight: '600',
                 cursor: 'pointer',
-                textTransform: 'capitalize'
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
-              {severity}
+              ⏰ Stale Only
+              {stats && stats.staleIssues.total > 0 && (
+                <span style={{
+                  background: showStaleOnly ? 'rgba(255,255,255,0.3)' : '#DC2626',
+                  color: showStaleOnly ? 'white' : 'white',
+                  padding: '2px 6px',
+                  borderRadius: '10px',
+                  fontSize: '11px',
+                  fontWeight: '700'
+                }}>
+                  {stats.staleIssues.total}
+                </span>
+              )}
             </button>
-          ))}
+          </div>
         </div>
       )}
 
@@ -203,7 +262,7 @@ export default function IssueComplianceView({ issues }) {
                 {/* Issue Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '14px', fontWeight: '600', color: '#6B7280' }}>
                         #{issue.iid}
                       </span>
@@ -221,6 +280,21 @@ export default function IssueComplianceView({ issues }) {
                       }}>
                         {issue.state}
                       </span>
+                      {issue.staleStatus?.isStale && (
+                        <span style={{
+                          padding: '4px 8px',
+                          background: issue.staleStatus.severity === 'critical' ? '#FEE2E2' : '#FEF3C7',
+                          color: issue.staleStatus.severity === 'critical' ? '#991B1B' : '#92400E',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          ⏰ {issue.staleStatus.daysOpen} days open
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -254,6 +328,7 @@ export default function IssueComplianceView({ issues }) {
                         fontWeight: '600'
                       }}>
                         {v.name}
+                        {v.criterion === 'stale' && v.daysOpen && ` (${v.daysOpen}d)`}
                       </span>
                     ))}
                     {mediumViolations.map((v, idx) => (
@@ -266,6 +341,7 @@ export default function IssueComplianceView({ issues }) {
                         fontWeight: '600'
                       }}>
                         {v.name}
+                        {v.criterion === 'stale' && v.daysOpen && ` (${v.daysOpen}d)`}
                       </span>
                     ))}
                     {lowViolations.map((v, idx) => (
@@ -278,6 +354,7 @@ export default function IssueComplianceView({ issues }) {
                         fontWeight: '600'
                       }}>
                         {v.name}
+                        {v.criterion === 'stale' && v.daysOpen && ` (${v.daysOpen}d)`}
                       </span>
                     ))}
                   </div>
