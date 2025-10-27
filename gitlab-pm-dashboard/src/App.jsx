@@ -13,7 +13,7 @@ import RoadmapView from './components/RoadmapView'
 import SprintBoardView from './components/SprintBoardView'
 import DependencyGraphView from './components/DependencyGraphView'
 import RiskRegisterView from './components/RiskRegisterView'
-import PlaceholderView from './components/PlaceholderView'
+import TeamResourcesView from './components/TeamResourcesView'
 
 function App() {
   console.log('App: Component initializing...')
@@ -134,7 +134,7 @@ function App() {
             {activeView === 'sprint' && <SprintBoardView issues={issues} />}
             {activeView === 'dependencies' && <DependencyGraphView issues={issues} />}
             {activeView === 'risks' && <RiskRegisterView />}
-            {activeView === 'resources' && <PlaceholderView viewName="Team Resources" />}
+            {activeView === 'resources' && <TeamResourcesView issues={issues} />}
           </>
         )}
       </div>
