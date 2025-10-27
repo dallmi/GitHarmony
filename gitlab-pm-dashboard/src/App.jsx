@@ -8,6 +8,7 @@ import Header from './components/Header'
 import Tabs from './components/Tabs'
 import ConfigModal from './components/ConfigModal'
 import ExecutiveDashboard from './components/ExecutiveDashboard'
+import EpicDashboardView from './components/EpicDashboardView'
 import GanttView from './components/GanttView'
 import RoadmapView from './components/RoadmapView'
 import SprintBoardView from './components/SprintBoardView'
@@ -130,6 +131,7 @@ function App() {
             {activeView === 'executive' && (
               <ExecutiveDashboard stats={stats} healthScore={healthScore} />
             )}
+            {activeView === 'epics' && <EpicDashboardView epics={epics} issues={issues} />}
             {activeView === 'gantt' && <GanttView issues={issues} />}
             {activeView === 'roadmap' && <RoadmapView issues={issues} milestones={milestones} />}
             {activeView === 'sprint' && <SprintBoardView issues={issues} />}

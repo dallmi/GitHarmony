@@ -39,6 +39,7 @@ export const RISK_MATRIX = {
 
 export const VIEW_TABS = [
   { id: 'executive', label: 'Executive Dashboard' },
+  { id: 'epics', label: 'Epic Portfolio' },
   { id: 'gantt', label: 'Gantt Chart' },
   { id: 'roadmap', label: 'Roadmap' },
   { id: 'sprint', label: 'Sprint Board' },
