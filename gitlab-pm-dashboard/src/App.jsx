@@ -9,6 +9,7 @@ import Tabs from './components/Tabs'
 import ConfigModal from './components/ConfigModal'
 import StatusGeneratorModal from './components/StatusGeneratorModal'
 import ExecutiveDashboard from './components/ExecutiveDashboard'
+import PortfolioView from './components/PortfolioView'
 import EpicDashboardView from './components/EpicDashboardView'
 import GanttView from './components/GanttView'
 import RoadmapView from './components/RoadmapView'
@@ -47,6 +48,14 @@ function App() {
     console.log('App: handleConfigSave called')
     setShowConfigModal(false)
     refresh()
+  }
+
+  const handleProjectSwitch = (projectId) => {
+    console.log('App: handleProjectSwitch called with:', projectId)
+    // Refresh data after switching project
+    refresh()
+    // Switch to executive view
+    setActiveView('executive')
   }
 
   const handleExportPPT = async () => {
@@ -128,6 +137,9 @@ function App() {
             </div>
           </div>
         )}
+
+        {/* Portfolio view is always available */}
+        {activeView === 'portfolio' && <PortfolioView onProjectSwitch={handleProjectSwitch} />}
 
         {isConfigured() && issues.length > 0 && (
           <>

@@ -8,7 +8,9 @@ const KEYS = {
   GITLAB_TOKEN: 'gitlab_token',
   PROJECT_ID: 'gitlab_project',
   GROUP_PATH: 'gitlab_group_path',
-  RISKS: 'project_risks'
+  RISKS: 'project_risks',
+  PROJECTS: 'portfolio_projects', // Multi-project configuration
+  ACTIVE_PROJECT: 'active_project_id' // Currently active project
 }
 
 /**
@@ -71,4 +73,91 @@ export function saveRisks(risks) {
  */
 export function clearAll() {
   localStorage.clear()
+}
+
+/**
+ * PORTFOLIO MANAGEMENT
+ */
+
+/**
+ * Get all configured projects
+ */
+export function getAllProjects() {
+  const stored = localStorage.getItem(KEYS.PROJECTS)
+  return stored ? JSON.parse(stored) : []
+}
+
+/**
+ * Save project to portfolio
+ */
+export function saveProject(project) {
+  const projects = getAllProjects()
+  const existingIndex = projects.findIndex(p => p.id === project.id)
+
+  if (existingIndex >= 0) {
+    // Update existing project
+    projects[existingIndex] = { ...projects[existingIndex], ...project }
+  } else {
+    // Add new project
+    projects.push({
+      id: project.id || Date.now().toString(),
+      name: project.name,
+      gitlabUrl: project.gitlabUrl,
+      token: project.token,
+      projectId: project.projectId,
+      groupPath: project.groupPath || '',
+      addedAt: new Date().toISOString()
+    })
+  }
+
+  localStorage.setItem(KEYS.PROJECTS, JSON.stringify(projects))
+  return projects
+}
+
+/**
+ * Remove project from portfolio
+ */
+export function removeProject(projectId) {
+  const projects = getAllProjects()
+  const filtered = projects.filter(p => p.id !== projectId)
+  localStorage.setItem(KEYS.PROJECTS, JSON.stringify(filtered))
+  return filtered
+}
+
+/**
+ * Get active project ID
+ */
+export function getActiveProjectId() {
+  return localStorage.getItem(KEYS.ACTIVE_PROJECT)
+}
+
+/**
+ * Set active project
+ */
+export function setActiveProject(projectId) {
+  localStorage.setItem(KEYS.ACTIVE_PROJECT, projectId)
+
+  // Also update the current config for backwards compatibility
+  const projects = getAllProjects()
+  const project = projects.find(p => p.id === projectId)
+
+  if (project) {
+    saveConfig({
+      gitlabUrl: project.gitlabUrl,
+      token: project.token,
+      projectId: project.projectId,
+      groupPath: project.groupPath
+    })
+  }
+}
+
+/**
+ * Get active project configuration
+ */
+export function getActiveProject() {
+  const activeId = getActiveProjectId()
+  if (!activeId) return null
+
+  const projects = getAllProjects()
+  return projects.find(p => p.id === activeId) || null
 }
