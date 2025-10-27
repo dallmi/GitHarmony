@@ -1,9 +1,10 @@
 /**
  * PowerPoint Export Service
  * Generates professional PPTX presentations from dashboard data
+ *
+ * NOTE: PptxGenJS is loaded from CDN on-demand to reduce bundle size
+ * Library (~380KB) only loads when user clicks "Export PPT" button
  */
-
-import PptxGenJS from 'pptxgenjs'
 
 // UBS Brand Colors
 const COLORS = {
@@ -21,6 +22,56 @@ const COLORS = {
 }
 
 /**
+ * Load PptxGenJS library from CDN
+ * Only loads when export is triggered to reduce initial bundle size
+ * Uses CDN fallback chain for reliability
+ */
+async function loadPptxGenJS() {
+  console.log('PPT Export: Loading PptxGenJS library from CDN...')
+
+  // Check if already loaded
+  if (window.PptxGenJS) {
+    console.log('PPT Export: Library already loaded')
+    return window.PptxGenJS
+  }
+
+  // Try loading from CDN
+  const cdnUrls = [
+    'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js',
+    'https://unpkg.com/pptxgenjs@3.12.0/dist/pptxgen.bundle.js'
+  ]
+
+  for (const url of cdnUrls) {
+    try {
+      console.log(`PPT Export: Trying ${url}...`)
+      await loadScript(url)
+
+      if (window.PptxGenJS) {
+        console.log('PPT Export: Library loaded successfully from CDN')
+        return window.PptxGenJS
+      }
+    } catch (error) {
+      console.warn(`PPT Export: Failed to load from ${url}:`, error)
+    }
+  }
+
+  throw new Error('Failed to load PptxGenJS library from CDN. Please check your internet connection.')
+}
+
+/**
+ * Dynamically load a script tag
+ */
+function loadScript(url) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script')
+    script.src = url
+    script.onload = resolve
+    script.onerror = reject
+    document.head.appendChild(script)
+  })
+}
+
+/**
  * Export complete project status to PowerPoint
  */
 export async function exportToPowerPoint({
@@ -32,6 +83,9 @@ export async function exportToPowerPoint({
   risks
 }) {
   console.log('PPT Export: Starting export...')
+
+  // Dynamically load PptxGenJS
+  const PptxGenJS = await loadPptxGenJS()
 
   const pptx = new PptxGenJS()
   pptx.author = 'GitLab Project Management Dashboard'
