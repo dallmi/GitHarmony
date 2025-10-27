@@ -88,6 +88,109 @@ export async function fetchEpicIssues(gitlabUrl, groupPath, epicId, token) {
 }
 
 /**
+ * Check if Resource State Events API is available (Premium/Ultimate feature)
+ */
+export async function checkPremiumFeatures(gitlabUrl, projectId, token) {
+  const encodedProjectId = encodeURIComponent(projectId)
+
+  try {
+    // Try to fetch resource state events for the project
+    const response = await fetch(
+      `${gitlabUrl}/api/v4/projects/${encodedProjectId}/issues?per_page=1`,
+      { headers: { 'PRIVATE-TOKEN': token } }
+    )
+
+    if (!response.ok) {
+      return { hasLabelHistory: false, hasResourceEvents: false }
+    }
+
+    const issues = await response.json()
+    if (issues.length === 0) {
+      return { hasLabelHistory: false, hasResourceEvents: false }
+    }
+
+    // Try to fetch resource state events for first issue
+    const testIssueIid = issues[0].iid
+    const eventsResponse = await fetch(
+      `${gitlabUrl}/api/v4/projects/${encodedProjectId}/issues/${testIssueIid}/resource_state_events`,
+      { headers: { 'PRIVATE-TOKEN': token } }
+    )
+
+    if (eventsResponse.status === 404 || eventsResponse.status === 403) {
+      console.log('Resource State Events API not available (requires Premium/Ultimate)')
+      return { hasLabelHistory: false, hasResourceEvents: false }
+    }
+
+    // Try to fetch resource label events
+    const labelEventsResponse = await fetch(
+      `${gitlabUrl}/api/v4/projects/${encodedProjectId}/issues/${testIssueIid}/resource_label_events`,
+      { headers: { 'PRIVATE-TOKEN': token } }
+    )
+
+    const hasLabelHistory = labelEventsResponse.ok
+    const hasResourceEvents = eventsResponse.ok
+
+    console.log('GitLab Premium Features:', {
+      hasLabelHistory,
+      hasResourceEvents
+    })
+
+    return { hasLabelHistory, hasResourceEvents }
+  } catch (error) {
+    console.error('Premium feature check failed:', error)
+    return { hasLabelHistory: false, hasResourceEvents: false }
+  }
+}
+
+/**
+ * Fetch resource label events for an issue (Premium/Ultimate only)
+ * Returns label add/remove history with timestamps
+ */
+export async function fetchIssueLabelHistory(gitlabUrl, projectId, issueIid, token) {
+  const encodedProjectId = encodeURIComponent(projectId)
+
+  try {
+    const response = await fetch(
+      `${gitlabUrl}/api/v4/projects/${encodedProjectId}/issues/${issueIid}/resource_label_events`,
+      { headers: { 'PRIVATE-TOKEN': token } }
+    )
+
+    if (!response.ok) {
+      return null // Not available
+    }
+
+    return response.json()
+  } catch (error) {
+    console.error(`Failed to fetch label history for issue ${issueIid}:`, error)
+    return null
+  }
+}
+
+/**
+ * Fetch resource state events for an issue (Premium/Ultimate only)
+ * Returns state change history (opened/closed) with timestamps
+ */
+export async function fetchIssueStateHistory(gitlabUrl, projectId, issueIid, token) {
+  const encodedProjectId = encodeURIComponent(projectId)
+
+  try {
+    const response = await fetch(
+      `${gitlabUrl}/api/v4/projects/${encodedProjectId}/issues/${issueIid}/resource_state_events`,
+      { headers: { 'PRIVATE-TOKEN': token } }
+    )
+
+    if (!response.ok) {
+      return null // Not available
+    }
+
+    return response.json()
+  } catch (error) {
+    console.error(`Failed to fetch state history for issue ${issueIid}:`, error)
+    return null
+  }
+}
+
+/**
  * Fetch all data needed for the dashboard
  */
 export async function fetchAllData(config) {

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import {
   getCycleTimeStats,
   getPhaseDistribution,
@@ -12,6 +12,8 @@ import {
   getPhaseLabel,
   getPhaseColor
 } from '../services/cycleTimeService'
+import { checkPremiumFeatures } from '../services/gitlabApi'
+import { loadConfig } from '../services/storageService'
 
 /**
  * Cycle Time & Issue Lifecycle Analytics View
@@ -20,6 +22,29 @@ import {
 export default function CycleTimeView({ issues }) {
   const [selectedPhase, setSelectedPhase] = useState('all')
   const [showLabelConfig, setShowLabelConfig] = useState(false)
+  const [premiumFeatures, setPremiumFeatures] = useState(null)
+  const [checkingPremium, setCheckingPremium] = useState(true)
+
+  // Check for GitLab Premium features on mount
+  useEffect(() => {
+    async function checkPremium() {
+      const config = loadConfig()
+      if (!config) {
+        setCheckingPremium(false)
+        return
+      }
+
+      const features = await checkPremiumFeatures(
+        config.gitlabUrl,
+        config.projectId,
+        config.token
+      )
+      setPremiumFeatures(features)
+      setCheckingPremium(false)
+    }
+
+    checkPremium()
+  }, [])
 
   const analytics = useMemo(() => {
     if (!issues || issues.length === 0) {
@@ -90,6 +115,42 @@ export default function CycleTimeView({ issues }) {
           </button>
         </div>
       </div>
+
+      {/* Premium Feature Detection Status */}
+      {!checkingPremium && premiumFeatures && (
+        <div className="card" style={{
+          marginBottom: '30px',
+          background: premiumFeatures.hasLabelHistory ? '#D1FAE5' : '#FEF3C7',
+          borderColor: premiumFeatures.hasLabelHistory ? '#10B981' : '#F59E0B'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ fontSize: '24px' }}>
+              {premiumFeatures.hasLabelHistory ? '✅' : 'ℹ️'}
+            </div>
+            <div style={{ flex: 1 }}>
+              <h3 style={{
+                fontSize: '14px',
+                fontWeight: '600',
+                color: premiumFeatures.hasLabelHistory ? '#065F46' : '#92400E',
+                marginBottom: '4px'
+              }}>
+                {premiumFeatures.hasLabelHistory
+                  ? 'GitLab Premium/Ultimate Detected'
+                  : 'GitLab Free/Community Edition Detected'}
+              </h3>
+              <p style={{
+                fontSize: '12px',
+                color: premiumFeatures.hasLabelHistory ? '#065F46' : '#92400E',
+                margin: 0
+              }}>
+                {premiumFeatures.hasLabelHistory
+                  ? '✓ Label history API available - Precise cycle time tracking enabled'
+                  : '⚠ Using estimated cycle times. Upgrade to Premium/Ultimate for exact label-change history and more accurate metrics.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Key Metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
