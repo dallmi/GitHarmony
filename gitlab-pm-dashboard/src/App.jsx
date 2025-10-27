@@ -14,21 +14,38 @@ import RiskRegisterView from './components/RiskRegisterView'
 import PlaceholderView from './components/PlaceholderView'
 
 function App() {
-  const [activeView, setActiveView] = useState('executive')
-  const [showConfigModal, setShowConfigModal] = useState(!isConfigured())
+  console.log('App: Component initializing...')
 
+  const [activeView, setActiveView] = useState('executive')
+  console.log('App: activeView state initialized:', activeView)
+
+  const configured = isConfigured()
+  console.log('App: Configuration check:', configured)
+
+  const [showConfigModal, setShowConfigModal] = useState(!configured)
+  console.log('App: showConfigModal:', !configured)
+
+  console.log('App: Calling useGitLabData hook...')
   const { issues, milestones, epics, loading, error, refresh } = useGitLabData()
+  console.log('App: GitLab data:', { issuesCount: issues?.length, milestonesCount: milestones?.length, epicsCount: epics?.length, loading, error })
+
+  console.log('App: Calling useHealthScore hook...')
   const { stats, healthScore } = useHealthScore(issues, milestones)
+  console.log('App: Health data:', { stats, healthScore })
 
   const handleConfigSave = () => {
+    console.log('App: handleConfigSave called')
     setShowConfigModal(false)
     refresh()
   }
 
   const handleExportPPT = () => {
+    console.log('App: handleExportPPT called')
     // TODO: Implement PowerPoint export
     alert('PowerPoint export coming soon!')
   }
+
+  console.log('App: About to render, current state:', { activeView, showConfigModal, configured, issuesCount: issues?.length, loading })
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
