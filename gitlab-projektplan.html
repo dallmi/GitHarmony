@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitLab Project Management - UBS</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --ubs-red: #E60000;
+            --ubs-red-dark: #B80000;
+        }
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+        }
+        .ubs-bg-red { background-color: var(--ubs-red); }
+        .ubs-bg-red-dark { background-color: var(--ubs-red-dark); }
+        .ubs-text-red { color: var(--ubs-red); }
+        .ubs-border-red { border-color: var(--ubs-red); }
+        .ubs-hover-red:hover { background-color: var(--ubs-red-dark); }
+        
+        /* Gantt Chart Styles */
+        .gantt-container {
+            overflow-x: auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .gantt-timeline {
+            display: flex;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .gantt-month {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            font-weight: bold;
+            background: #f9fafb;
+        }
+        .gantt-row {
+            display: flex;
+            border-bottom: 1px solid #e5e7eb;
+            min-height: 50px;
+            align-items: center;
+        }
+        .gantt-row:hover {
+            background: #f9fafb;
+        }
+        .gantt-label {
+            width: 250px;
+            padding: 8px 16px;
+            font-size: 14px;
+            border-right: 2px solid #e5e7eb;
+            flex-shrink: 0;
+        }
+        .gantt-timeline-bars {
+            flex: 1;
+            position: relative;
+            padding: 8px 0;
+        }
+        .gantt-bar {
+            position: absolute;
+            height: 30px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .gantt-bar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .gantt-bar-blocker {
+            background: var(--ubs-red);
+            color: white;
+            border-left: 4px solid var(--ubs-red-dark);
+        }
+        .gantt-bar-progress {
+            background: #3b82f6;
+            color: white;
+            border-left: 4px solid #1e40af;
+        }
+        .gantt-bar-done {
+            background: #10b981;
+            color: white;
+            border-left: 4px solid #047857;
+        }
+        .gantt-bar-overdue {
+            background: #ef4444;
+            color: white;
+            border-left: 4px solid #b91c1c;
+        }
+        
+        /* Progress Bar */
+        .progress-bar {
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--ubs-red);
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        function GitLabProjectManagement() {
+            const [token, setToken] = useState(localStorage.getItem('gitlab_token') || '');
+            const [gitlabUrl, setGitlabUrl] = useState(localStorage.getItem('gitlab_url') || 'https://devcloud.ubs.net');
+            const [projectId, setProjectId] = useState(localStorage.getItem('gitlab_project') || '');
+            const [issues, setIssues] = useState([]);
+            const [milestones, setMilestones] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+            const [view, setView] = useState('gantt');
+            const [selectedMilestone, setSelectedMilestone] = useState('all');
+            const [selectedAssignee, setSelectedAssignee] = useState('all');
+            const [isConfigured, setIsConfigured] = useState(false);
+
+            useEffect(() => {
+                if (token && projectId && gitlabUrl) {
+                    setIsConfigured(true);
+                    fetchData();
+                }
+            }, []);
+
+            const saveConfig = () => {
+                localStorage.setItem('gitlab_token', token);
+                localStorage.setItem('gitlab_url', gitlabUrl);
+                localStorage.setItem('gitlab_project', projectId);
+                setIsConfigured(true);
+                fetchData();
+            };
+
+            const fetchData = async () => {
+                setLoading(true);
+                setError('');
+                try {
+                    const encodedProjectId = encodeURIComponent(projectId);
+                    
+                    const issuesResponse = await fetch(
+                        `${gitlabUrl}/api/v4/projects/${encodedProjectId}/issues?per_page=100&scope=all`,
+                        { headers: { 'PRIVATE-TOKEN': token } }
+                    );
+                    if (!issuesResponse.ok) throw new Error(`Issues API Fehler: ${issuesResponse.status}`);
+                    const issuesData = await issuesResponse.json();
+                    
+                    const milestonesResponse = await fetch(
+                        `${gitlabUrl}/api/v4/projects/${encodedProjectId}/milestones`,
+                        { headers: { 'PRIVATE-TOKEN': token } }
+                    );
+                    if (!milestonesResponse.ok) throw new Error(`Milestones API Fehler: ${milestonesResponse.status}`);
+                    const milestonesData = await milestonesResponse.json();
+                    
+                    setIssues(issuesData);
+                    setMilestones(milestonesData);
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const getSprintFromLabels = (labels) => {
+                const sprintLabel = labels.find(l => l.toLowerCase().includes('sprint') || l.toLowerCase().includes('iteration'));
+                return sprintLabel || 'Backlog';
+            };
+
+            const isBlocker = (labels) => {
+                return labels.some(l => l.toLowerCase().includes('blocker') || l.toLowerCase().includes('blocked'));
+            };
+
+            const getPriority = (labels) => {
+                const labelNames = labels.map(l => l.toLowerCase());
+                if (labelNames.some(l => l.includes('critical') || l.includes('urgent') || l.includes('high'))) return 'high';
+                if (labelNames.some(l => l.includes('low'))) return 'low';
+                return 'medium';
+            };
+
+            const getProgress = (issue) => {
+                if (issue.state === 'closed') return 100;
+                const labelNames = issue.labels.map(l => l.toLowerCase());
+                if (labelNames.some(l => l.includes('review') || l.includes('testing'))) return 75;
+                if (labelNames.some(l => l.includes('progress') || l.includes('wip'))) return 50;
+                if (labelNames.some(l => l.includes('started'))) return 25;
+                return 0;
+            };
+
+            const uniqueAssignees = useMemo(() => {
+                const assigneeMap = new Map();
+                issues.forEach(issue => {
+                    issue.assignees?.forEach(a => {
+                        assigneeMap.set(a.id, a);
+                    });
+                });
+                return Array.from(assigneeMap.values());
+            }, [issues]);
+
+            const filteredIssues = useMemo(() => {
+                return issues.filter(issue => {
+                    if (selectedMilestone !== 'all' && issue.milestone?.id !== parseInt(selectedMilestone)) return false;
+                    if (selectedAssignee !== 'all' && !issue.assignees?.some(a => a.id === parseInt(selectedAssignee))) return false;
+                    return true;
+                });
+            }, [issues, selectedMilestone, selectedAssignee]);
+
+            const stats = useMemo(() => {
+                const total = filteredIssues.length;
+                const open = filteredIssues.filter(i => i.state === 'opened').length;
+                const closed = filteredIssues.filter(i => i.state === 'closed').length;
+                const blockers = filteredIssues.filter(i => isBlocker(i.labels)).length;
+                const overdue = filteredIssues.filter(i => i.due_date && new Date(i.due_date) < new Date() && i.state === 'opened').length;
+                const atRisk = filteredIssues.filter(i => {
+                    if (!i.due_date || i.state === 'closed') return false;
+                    const daysUntilDue = Math.floor((new Date(i.due_date) - new Date()) / (1000 * 60 * 60 * 24));
+                    return daysUntilDue <= 7 && daysUntilDue >= 0;
+                }).length;
+                const completionRate = total > 0 ? Math.round((closed / total) * 100) : 0;
+                
+                return { total, open, closed, blockers, overdue, atRisk, completionRate };
+            }, [filteredIssues]);
+
+            const GanttView = () => {
+                const issuesWithDates = filteredIssues.filter(i => i.due_date || i.milestone?.due_date);
+                
+                if (issuesWithDates.length === 0) {
+                    return (
+                        <div className="bg-white rounded-lg shadow p-12 text-center">
+                            <div className="text-6xl mb-4">📅</div>
+                            <h3 className="text-xl font-bold text-gray-700 mb-2">Keine Zeitplanung vorhanden</h3>
+                            <p className="text-gray-500">Füge Due Dates oder Milestones zu deinen Issues hinzu.</p>
+                        </div>
+                    );
+                }
+
+                const minDate = new Date(Math.min(...issuesWithDates.map(i => 
+                    new Date(i.created_at || i.milestone?.start_date || i.due_date).getTime()
+                )));
+                const maxDate = new Date(Math.max(...issuesWithDates.map(i => 
+                    new Date(i.due_date || i.milestone?.due_date).getTime()
+                )));
+                
+                minDate.setDate(1);
+                maxDate.setMonth(maxDate.getMonth() + 1);
+                
+                const months = [];
+                let current = new Date(minDate);
+                while (current <= maxDate) {
+                    months.push(new Date(current));
+                    current.setMonth(current.getMonth() + 1);
+                }
+
+                const getBarPosition = (issue) => {
+                    const startDate = new Date(issue.created_at);
+                    const endDate = new Date(issue.due_date || issue.milestone?.due_date);
+                    const totalDays = (maxDate - minDate) / (1000 * 60 * 60 * 24);
+                    const startDays = (startDate - minDate) / (1000 * 60 * 60 * 24);
+                    const duration = (endDate - startDate) / (1000 * 60 * 60 * 24);
+                    
+                    return {
+                        left: `${(startDays / totalDays) * 100}%`,
+                        width: `${Math.max((duration / totalDays) * 100, 2)}%`
+                    };
+                };
+
+                const getBarClass = (issue) => {
+                    if (isBlocker(issue.labels)) return 'gantt-bar-blocker';
+                    if (issue.state === 'closed') return 'gantt-bar-done';
+                    if (issue.due_date && new Date(issue.due_date) < new Date()) return 'gantt-bar-overdue';
+                    return 'gantt-bar-progress';
+                };
+
+                return (
+                    <div className="gantt-container">
+                        <div className="gantt-timeline">
+                            <div className="gantt-label"><strong>Task</strong></div>
+                            {months.map((month, idx) => (
+                                <div key={idx} className="gantt-month" style={{ flex: 1 }}>
+                                    {month.toLocaleDateString('de-DE', { month: 'short', year: 'numeric' })}
+                                </div>
+                            ))}
+                        </div>
+                        
+                        {issuesWithDates.map(issue => {
+                            const position = getBarPosition(issue);
+                            const progress = getProgress(issue);
+                            
+                            return (
+                                <div key={issue.id} className="gantt-row">
+                                    <div className="gantt-label">
+                                        <div className="font-semibold text-sm">#{issue.iid} {issue.title.substring(0, 30)}...</div>
+                                        <div className="text-xs text-gray-500 mt-1">
+                                            {issue.assignees?.[0]?.name || 'Unassigned'}
+                                            {isBlocker(issue.labels) && <span className="ml-2 text-red-600 font-bold">🚫 BLOCKER</span>}
+                                        </div>
+                                    </div>
+                                    <div className="gantt-timeline-bars">
+                                        <div 
+                                            className={`gantt-bar ${getBarClass(issue)}`}
+                                            style={position}
+                                            onClick={() => window.open(issue.web_url, '_blank')}
+                                            title={`${issue.title} - ${progress}% complete`}
+                                        >
+                                            <span className="truncate">{issue.title.substring(0, 20)}</span>
+                                            <span className="ml-auto text-xs">{progress}%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            };
+
+            const RoadmapView = () => {
+                return (
+                    <div className="space-y-6">
+                        {milestones.map(milestone => {
+                            const milestoneIssues = filteredIssues.filter(i => i.milestone?.id === milestone.id);
+                            const completed = milestoneIssues.filter(i => i.state === 'closed').length;
+                            const total = milestoneIssues.length;
+                            const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0;
+                            const blockerCount = milestoneIssues.filter(i => isBlocker(i.labels)).length;
+                            
+                            return (
+                                <div key={milestone.id} className="bg-white rounded-lg shadow p-6">
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="flex-1">
+                                            <h3 className="text-xl font-bold text-gray-900 mb-2">{milestone.title}</h3>
+                                            <p className="text-gray-600 text-sm mb-3">{milestone.description}</p>
+                                            <div className="flex items-center gap-4 text-sm">
+                                                <span className={`px-3 py-1 rounded-full font-semibold ${
+                                                    milestone.state === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                                }`}>
+                                                    {milestone.state === 'active' ? 'Active' : 'Closed'}
+                                                </span>
+                                                {milestone.due_date && (
+                                                    <span className="text-gray-600">📅 {new Date(milestone.due_date).toLocaleDateString('de-DE')}</span>
+                                                )}
+                                                {blockerCount > 0 && (
+                                                    <span className="ubs-text-red font-bold">🚫 {blockerCount} Blocker</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-3xl font-bold ubs-text-red">{progressPercent}%</div>
+                                            <div className="text-sm text-gray-500">{completed} / {total}</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="progress-bar mb-4">
+                                        <div className="progress-fill" style={{ width: `${progressPercent}%` }}></div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-3 gap-4 mt-4">
+                                        <div className="bg-gray-50 p-3 rounded">
+                                            <div className="text-sm text-gray-600 mb-1">High Priority</div>
+                                            <div className="text-2xl font-bold text-gray-900">
+                                                {milestoneIssues.filter(i => getPriority(i.labels) === 'high').length}
+                                            </div>
+                                        </div>
+                                        <div className="bg-gray-50 p-3 rounded">
+                                            <div className="text-sm text-gray-600 mb-1">At Risk</div>
+                                            <div className="text-2xl font-bold text-yellow-600">
+                                                {milestoneIssues.filter(i => i.due_date && 
+                                                    Math.floor((new Date(i.due_date) - new Date()) / (1000*60*60*24)) <= 7 &&
+                                                    i.state === 'opened'
+                                                ).length}
+                                            </div>
+                                        </div>
+                                        <div className="bg-gray-50 p-3 rounded">
+                                            <div className="text-sm text-gray-600 mb-1">Overdue</div>
+                                            <div className="text-2xl font-bold ubs-text-red">
+                                                {milestoneIssues.filter(i => i.due_date && 
+                                                    new Date(i.due_date) < new Date() && 
+                                                    i.state === 'opened'
+                                                ).length}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {blockerCount > 0 && (
+                                        <div className="mt-4 bg-red-50 border-l-4 ubs-border-red p-4 rounded">
+                                            <h4 className="font-bold ubs-text-red mb-2">🚫 Blockers</h4>
+                                            <div className="space-y-2">
+                                                {milestoneIssues.filter(i => isBlocker(i.labels)).map(issue => (
+                                                    <div key={issue.id} className="flex items-center justify-between">
+                                                        <span className="text-sm cursor-pointer hover:underline" 
+                                                              onClick={() => window.open(issue.web_url, '_blank')}>
+                                                            #{issue.iid} {issue.title}
+                                                        </span>
+                                                        <span className="text-xs text-gray-600">
+                                                            {issue.assignees?.[0]?.name || 'Unassigned'}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                        
+                        {filteredIssues.filter(i => !i.milestone).length > 0 && (
+                            <div className="bg-white rounded-lg shadow p-6">
+                                <h3 className="text-xl font-bold text-gray-900 mb-4">📋 Backlog</h3>
+                                <div className="text-gray-600">
+                                    {filteredIssues.filter(i => !i.milestone).length} Issues ohne Milestone
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            };
+
+            const ResourceView = () => {
+                return (
+                    <div className="space-y-6">
+                        {uniqueAssignees.map(assignee => {
+                            const assigneeIssues = filteredIssues.filter(i => 
+                                i.assignees?.some(a => a.id === assignee.id)
+                            );
+                            const workload = assigneeIssues.filter(i => i.state === 'opened').length;
+                            const completed = assigneeIssues.filter(i => i.state === 'closed').length;
+                            const blockers = assigneeIssues.filter(i => isBlocker(i.labels) && i.state === 'opened').length;
+                            
+                            return (
+                                <div key={assignee.id} className="bg-white rounded-lg shadow p-6">
+                                    <div className="flex items-center mb-4">
+                                        <img src={assignee.avatar_url} className="w-16 h-16 rounded-full mr-4" alt={assignee.name} />
+                                        <div className="flex-1">
+                                            <h3 className="text-xl font-bold text-gray-900">{assignee.name}</h3>
+                                            <p className="text-gray-600">@{assignee.username}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-3xl font-bold ubs-text-red">{workload}</div>
+                                            <div className="text-sm text-gray-500">Offene Tasks</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-4 gap-4 mb-4">
+                                        <div className="bg-gray-50 p-3 rounded text-center">
+                                            <div className="text-2xl font-bold text-gray-900">{assigneeIssues.length}</div>
+                                            <div className="text-xs text-gray-600">Gesamt</div>
+                                        </div>
+                                        <div className="bg-green-50 p-3 rounded text-center">
+                                            <div className="text-2xl font-bold text-green-700">{completed}</div>
+                                            <div className="text-xs text-gray-600">Erledigt</div>
+                                        </div>
+                                        <div className="bg-blue-50 p-3 rounded text-center">
+                                            <div className="text-2xl font-bold text-blue-700">{workload}</div>
+                                            <div className="text-xs text-gray-600">In Arbeit</div>
+                                        </div>
+                                        <div className="bg-red-50 p-3 rounded text-center">
+                                            <div className="text-2xl font-bold ubs-text-red">{blockers}</div>
+                                            <div className="text-xs text-gray-600">Blocker</div>
+                                        </div>
+                                    </div>
+                                    
+                                    {assigneeIssues.filter(i => i.state === 'opened').length > 0 && (
+                                        <div className="space-y-2">
+                                            <h4 className="font-semibold text-gray-700 mb-2">Aktuelle Aufgaben</h4>
+                                            {assigneeIssues.filter(i => i.state === 'opened').slice(0, 5).map(issue => (
+                                                <div key={issue.id} 
+                                                     className="flex items-center justify-between p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer"
+                                                     onClick={() => window.open(issue.web_url, '_blank')}>
+                                                    <div className="flex-1">
+                                                        <div className="font-medium text-sm">#{issue.iid} {issue.title}</div>
+                                                        <div className="text-xs text-gray-500 mt-1">
+                                                            {issue.milestone?.title || 'Kein Milestone'}
+                                                            {isBlocker(issue.labels) && <span className="ml-2 ubs-text-red font-bold">🚫 BLOCKER</span>}
+                                                        </div>
+                                                    </div>
+                                                    {issue.due_date && (
+                                                        <div className={`text-xs px-2 py-1 rounded ${
+                                                            new Date(issue.due_date) < new Date() ? 'bg-red-100 text-red-800' : 'bg-gray-200 text-gray-700'
+                                                        }`}>
+                                                            {new Date(issue.due_date).toLocaleDateString('de-DE')}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                        
+                        {filteredIssues.filter(i => !i.assignees || i.assignees.length === 0).length > 0 && (
+                            <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-6">
+                                <h3 className="text-xl font-bold text-gray-900 mb-2">⚠️ Nicht zugewiesen</h3>
+                                <p className="text-gray-700">
+                                    {filteredIssues.filter(i => !i.assignees || i.assignees.length === 0).length} Issues benötigen Assignment
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                );
+            };
+
+            const SprintBoardView = () => {
+                const sprints = [...new Set(filteredIssues.map(i => getSprintFromLabels(i.labels)))];
+                
+                return (
+                    <div className="space-y-6">
+                        {sprints.map(sprint => {
+                            const sprintIssues = filteredIssues.filter(i => getSprintFromLabels(i.labels) === sprint);
+                            const completed = sprintIssues.filter(i => i.state === 'closed').length;
+                            const total = sprintIssues.length;
+                            const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0;
+                            
+                            const grouped = {
+                                todo: sprintIssues.filter(i => i.state === 'opened' && getProgress(i) === 0),
+                                progress: sprintIssues.filter(i => i.state === 'opened' && getProgress(i) > 0 && getProgress(i) < 100),
+                                done: sprintIssues.filter(i => i.state === 'closed')
+                            };
+                            
+                            return (
+                                <div key={sprint} className="bg-white rounded-lg shadow p-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-xl font-bold text-gray-900">{sprint}</h3>
+                                        <div className="text-right">
+                                            <div className="text-2xl font-bold ubs-text-red">{progressPercent}%</div>
+                                            <div className="text-sm text-gray-500">{completed} / {total}</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="progress-bar mb-6">
+                                        <div className="progress-fill" style={{ width: `${progressPercent}%` }}></div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <div className="bg-gray-50 p-4 rounded-lg">
+                                            <h4 className="font-semibold text-gray-700 mb-3">📋 To Do ({grouped.todo.length})</h4>
+                                            <div className="space-y-2">
+                                                {grouped.todo.map(issue => (
+                                                    <div key={issue.id} 
+                                                         className="bg-white p-3 rounded shadow-sm hover:shadow cursor-pointer"
+                                                         onClick={() => window.open(issue.web_url, '_blank')}>
+                                                        <div className="text-sm font-medium">#{issue.iid} {issue.title}</div>
+                                                        <div className="text-xs text-gray-500 mt-1">
+                                                            {issue.assignees?.[0]?.name || 'Unassigned'}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="bg-blue-50 p-4 rounded-lg">
+                                            <h4 className="font-semibold text-gray-700 mb-3">🔄 In Progress ({grouped.progress.length})</h4>
+                                            <div className="space-y-2">
+                                                {grouped.progress.map(issue => (
+                                                    <div key={issue.id} 
+                                                         className="bg-white p-3 rounded shadow-sm hover:shadow cursor-pointer"
+                                                         onClick={() => window.open(issue.web_url, '_blank')}>
+                                                        <div className="text-sm font-medium">#{issue.iid} {issue.title}</div>
+                                                        <div className="text-xs text-gray-500 mt-1">
+                                                            {issue.assignees?.[0]?.name || 'Unassigned'}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="bg-green-50 p-4 rounded-lg">
+                                            <h4 className="font-semibold text-gray-700 mb-3">✅ Done ({grouped.done.length})</h4>
+                                            <div className="space-y-2">
+                                                {grouped.done.map(issue => (
+                                                    <div key={issue.id} 
+                                                         className="bg-white p-3 rounded shadow-sm hover:shadow cursor-pointer"
+                                                         onClick={() => window.open(issue.web_url, '_blank')}>
+                                                        <div className="text-sm font-medium line-through text-gray-500">
+                                                            #{issue.iid} {issue.title}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            };
+
+            if (!isConfigured) {
+                return (
+                    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-xl shadow-2xl p-8 max-w-lg w-full border-t-4 ubs-border-red">
+                            <div className="text-center mb-6">
+                                <h1 className="text-4xl font-bold text-gray-900 mb-2">GitLab Project Management</h1>
+                                <p className="text-gray-600">Professional tracking for teams & executives</p>
+                            </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">GitLab URL</label>
+                                    <input
+                                        type="text"
+                                        value={gitlabUrl}
+                                        onChange={(e) => setGitlabUrl(e.target.value)}
+                                        placeholder="https://devcloud.ubs.net"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Personal Access Token</label>
+                                    <input
+                                        type="password"
+                                        value={token}
+                                        onChange={(e) => setToken(e.target.value)}
+                                        placeholder="glpat-..."
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Projekt-ID</label>
+                                    <input
+                                        type="text"
+                                        value={projectId}
+                                        onChange={(e) => setProjectId(e.target.value)}
+                                        placeholder="namespace/project"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600"
+                                    />
+                                </div>
+                                <button
+                                    onClick={saveConfig}
+                                    disabled={!token || !projectId || !gitlabUrl}
+                                    className="w-full ubs-bg-red text-white py-3 rounded-lg font-bold ubs-hover-red transition-all disabled:bg-gray-300 shadow-lg"
+                                >
+                                    🚀 Verbinden
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-gray-50">
+                    <div className="ubs-bg-red shadow-lg">
+                        <div className="max-w-7xl mx-auto px-4 py-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <h1 className="text-3xl font-bold text-white mb-1">Project Management</h1>
+                                    <p className="text-white text-opacity-90 text-sm">{projectId}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={fetchData}
+                                        disabled={loading}
+                                        className="px-6 py-2 bg-white ubs-text-red rounded-lg hover:bg-gray-100 transition-colors font-semibold shadow-md"
+                                    >
+                                        {loading ? '⏳' : '🔄'} Refresh
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            localStorage.clear();
+                                            setIsConfigured(false);
+                                        }}
+                                        className="px-6 py-2 bg-white bg-opacity-20 text-white rounded-lg hover:bg-opacity-30 transition-colors font-semibold"
+                                    >
+                                        ⚙️
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-6 gap-3 mb-4">
+                                <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-3 text-center">
+                                    <div className="text-2xl font-bold text-white">{stats.total}</div>
+                                    <div className="text-xs text-white text-opacity-90">Total</div>
+                                </div>
+                                <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-3 text-center">
+                                    <div className="text-2xl font-bold text-white">{stats.completionRate}%</div>
+                                    <div className="text-xs text-white text-opacity-90">Complete</div>
+                                </div>
+                                <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-3 text-center">
+                                    <div className="text-2xl font-bold text-white">{stats.open}</div>
+                                    <div className="text-xs text-white text-opacity-90">Open</div>
+                                </div>
+                                <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-3 text-center">
+                                    <div className="text-2xl font-bold text-white">{stats.blockers}</div>
+                                    <div className="text-xs text-white text-opacity-90">Blockers</div>
+                                </div>
+                                <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-3 text-center">
+                                    <div className="text-2xl font-bold text-white">{stats.atRisk}</div>
+                                    <div className="text-xs text-white text-opacity-90">At Risk</div>
+                                </div>
+                                <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-3 text-center">
+                                    <div className="text-2xl font-bold text-white">{stats.overdue}</div>
+                                    <div className="text-xs text-white text-opacity-90">Overdue</div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 items-center flex-wrap">
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setView('gantt')}
+                                        className={`px-4 py-2 rounded-lg transition-all font-semibold ${
+                                            view === 'gantt' ? 'bg-white ubs-text-red shadow-lg' : 'bg-white bg-opacity-20 text-white hover:bg-opacity-30'
+                                        }`}>
+                                        📊 Gantt
+                                    </button>
+                                    <button
+                                        onClick={() => setView('roadmap')}
+                                        className={`px-4 py-2 rounded-lg transition-all font-semibold ${
+                                            view === 'roadmap' ? 'bg-white ubs-text-red shadow-lg' : 'bg-white bg-opacity-20 text-white hover:bg-opacity-30'
+                                        }`}>
+                                        🗺️ Roadmap
+                                    </button>
+                                    <button
+                                        onClick={() => setView('sprint')}
+                                        className={`px-4 py-2 rounded-lg transition-all font-semibold ${
+                                            view === 'sprint' ? 'bg-white ubs-text-red shadow-lg' : 'bg-white bg-opacity-20 text-white hover:bg-opacity-30'
+                                        }`}>
+                                        🏃 Sprints
+                                    </button>
+                                    <button
+                                        onClick={() => setView('resources')}
+                                        className={`px-4 py-2 rounded-lg transition-all font-semibold ${
+                                            view === 'resources' ? 'bg-white ubs-text-red shadow-lg' : 'bg-white bg-opacity-20 text-white hover:bg-opacity-30'
+                                        }`}>
+                                        👥 Team
+                                    </button>
+                                </div>
+                                
+                                <select
+                                    value={selectedMilestone}
+                                    onChange={(e) => setSelectedMilestone(e.target.value)}
+                                    className="px-4 py-2 border-2 border-white border-opacity-30 bg-white bg-opacity-20 text-white rounded-lg font-semibold">
+                                    <option value="all" className="text-gray-900">Alle Milestones</option>
+                                    {milestones.map(m => (
+                                        <option key={m.id} value={m.id} className="text-gray-900">{m.title}</option>
+                                    ))}
+                                </select>
+
+                                <select
+                                    value={selectedAssignee}
+                                    onChange={(e) => setSelectedAssignee(e.target.value)}
+                                    className="px-4 py-2 border-2 border-white border-opacity-30 bg-white bg-opacity-20 text-white rounded-lg font-semibold">
+                                    <option value="all" className="text-gray-900">Alle Personen</option>
+                                    {uniqueAssignees.map(a => (
+                                        <option key={a.id} value={a.id} className="text-gray-900">{a.name}</option>
+                                    ))}
+                                </select>
+
+                                <div className="ml-auto text-white font-semibold">
+                                    {filteredIssues.length} Issues
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="max-w-7xl mx-auto px-4 py-6">
+                        {error && (
+                            <div className="bg-red-50 border-l-4 ubs-border-red text-red-800 px-6 py-4 rounded-lg mb-4 shadow-sm">
+                                <div className="flex items-center">
+                                    <span className="text-2xl mr-3">⚠️</span>
+                                    <div>
+                                        <div className="font-bold">Fehler</div>
+                                        <div>{error}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {loading ? (
+                            <div className="flex items-center justify-center py-20">
+                                <div className="text-center">
+                                    <div className="text-6xl mb-4">⏳</div>
+                                    <div className="text-xl text-gray-600 font-semibold">Lädt Daten...</div>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                {view === 'gantt' && <GanttView />}
+                                {view === 'roadmap' && <RoadmapView />}
+                                {view === 'sprint' && <SprintBoardView />}
+                                {view === 'resources' && <ResourceView />}
+                            </>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<GitLabProjectManagement />, document.getElementById('root'));
+    </script>
+</body>
+</html>
