@@ -17,7 +17,7 @@ import SprintBoardView from './components/SprintBoardView'
 import VelocityView from './components/VelocityView'
 import DependencyGraphView from './components/DependencyGraphView'
 import RiskRegisterView from './components/RiskRegisterView'
-import TeamResourcesView from './components/TeamResourcesView'
+import ResourceCapacityView from './components/ResourceCapacityView'
 
 function App() {
   console.log('App: Component initializing...')
@@ -153,7 +153,7 @@ function App() {
             {activeView === 'velocity' && <VelocityView issues={issues} />}
             {activeView === 'dependencies' && <DependencyGraphView issues={issues} />}
             {activeView === 'risks' && <RiskRegisterView />}
-            {activeView === 'resources' && <TeamResourcesView issues={issues} />}
+            {activeView === 'resources' && <ResourceCapacityView issues={issues} />}
           </>
         )}
       </div>
