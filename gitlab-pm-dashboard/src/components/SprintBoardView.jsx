@@ -29,7 +29,7 @@ export default function SprintBoardView({ issues }) {
   }
 
   return (
-    <div className="container">
+    <div className="container-fluid">
       <h2 className="mb-3">Sprint Board</h2>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>

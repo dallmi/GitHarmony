@@ -4,8 +4,7 @@ export default function Header({ stats, healthScore, onRefresh, onConfigure, onE
   return (
     <div className="header">
       <div style={{
-        maxWidth: '1400px',
-        margin: '0 auto',
+        width: '100%',
         padding: '16px 20px',
         display: 'flex',
         justifyContent: 'space-between',

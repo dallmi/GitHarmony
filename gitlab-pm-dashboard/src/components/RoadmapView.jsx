@@ -16,7 +16,7 @@ export default function RoadmapView({ issues, milestones }) {
   }
 
   return (
-    <div className="container">
+    <div className="container-fluid">
       <h2 className="mb-3">Roadmap</h2>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

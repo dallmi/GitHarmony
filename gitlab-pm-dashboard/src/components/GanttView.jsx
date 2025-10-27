@@ -71,7 +71,7 @@ export default function GanttView({ issues }) {
   }
 
   return (
-    <div className="container">
+    <div className="container-timeline">
       <div className="card" style={{ overflowX: 'auto' }}>
         <h2 className="mb-3">Gantt Chart</h2>
 

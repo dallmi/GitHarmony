@@ -136,7 +136,7 @@ export default function DependencyGraphView({ issues }) {
   }
 
   return (
-    <div className="container">
+    <div className="container-fluid">
       <div className="card mb-3">
         <h2 className="mb-3">Dependency Graph</h2>
 
