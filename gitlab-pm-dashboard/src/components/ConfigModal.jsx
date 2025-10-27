@@ -33,6 +33,7 @@ export default function ConfigModal({ show, onClose, onSave }) {
               src="https://www.ubs.com/etc/designs/fit/img/UBS_logo_compact.png"
               alt="UBS Logo"
               style={{ height: '32px', width: 'auto' }}
+              onError={(e) => { e.target.style.display = 'none' }}
             />
             <h2>GitLab Configuration</h2>
           </div>

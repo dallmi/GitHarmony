@@ -16,6 +16,7 @@ export default function Header({ stats, healthScore, onRefresh, onConfigure, onE
             src="https://www.ubs.com/etc/designs/fit/img/UBS_logo_compact.png"
             alt="UBS Logo"
             style={{ height: '40px', width: 'auto' }}
+            onError={(e) => { e.target.style.display = 'none' }}
           />
           <div>
             <h1 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '4px' }}>
