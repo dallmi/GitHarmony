@@ -28,7 +28,14 @@ export default function ConfigModal({ show, onClose, onSave }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>GitLab Configuration</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img
+              src="https://www.ubs.com/etc/designs/fit/img/UBS_logo_compact.png"
+              alt="UBS Logo"
+              style={{ height: '32px', width: 'auto' }}
+            />
+            <h2>GitLab Configuration</h2>
+          </div>
           <button
             className="btn"
             onClick={onClose}

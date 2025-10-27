@@ -11,21 +11,28 @@ export default function Header({ stats, healthScore, onRefresh, onConfigure, onE
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
-        <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '4px' }}>
-            GitLab Project Management
-          </h1>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-            {stats && (
-              <>
-                {stats.total} Issues · {stats.open} Open · {stats.closed} Closed
-                {stats.blockers > 0 && (
-                  <span style={{ marginLeft: '12px', color: 'var(--danger)' }}>
-                    {stats.blockers} Blockers
-                  </span>
-                )}
-              </>
-            )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <img
+            src="https://www.ubs.com/etc/designs/fit/img/UBS_logo_compact.png"
+            alt="UBS Logo"
+            style={{ height: '40px', width: 'auto' }}
+          />
+          <div>
+            <h1 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '4px' }}>
+              GitLab Project Management
+            </h1>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+              {stats && (
+                <>
+                  {stats.total} Issues · {stats.open} Open · {stats.closed} Closed
+                  {stats.blockers > 0 && (
+                    <span style={{ marginLeft: '12px', color: 'var(--danger)' }}>
+                      {stats.blockers} Blockers
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
 
