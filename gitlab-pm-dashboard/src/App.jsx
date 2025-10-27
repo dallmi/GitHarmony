@@ -19,6 +19,7 @@ import DependencyGraphView from './components/DependencyGraphView'
 import RiskRegisterView from './components/RiskRegisterView'
 import ResourceCapacityView from './components/ResourceCapacityView'
 import StakeholderHubView from './components/StakeholderHubView'
+import InsightsView from './components/InsightsView'
 
 function App() {
   console.log('App: Component initializing...')
@@ -146,6 +147,16 @@ function App() {
           <>
             {activeView === 'executive' && (
               <ExecutiveDashboard stats={stats} healthScore={healthScore} />
+            )}
+            {activeView === 'insights' && (
+              <InsightsView
+                issues={issues}
+                milestones={milestones}
+                epics={epics}
+                stats={stats}
+                healthScore={healthScore}
+                risks={risks}
+              />
             )}
             {activeView === 'epics' && <EpicDashboardView epics={epics} issues={issues} />}
             {activeView === 'gantt' && <GanttView issues={issues} />}
