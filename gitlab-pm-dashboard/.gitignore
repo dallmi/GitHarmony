@@ -8,9 +8,12 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
 dist-ssr
 *.local
+
+# Keep dist/index.html for end users
+!dist/
+!dist/index.html
 
 # Editor directories and files
 .vscode/*
