@@ -202,18 +202,17 @@ export async function fetchAllData(config) {
     groupPath ? fetchEpics(gitlabUrl, groupPath, token) : Promise.resolve([])
   ])
 
-  // Enrich epics with their issues
-  const epicsWithIssues = await Promise.all(
-    epics.map(async (epic) => {
-      try {
-        const epicIssues = await fetchEpicIssues(gitlabUrl, groupPath, epic.id, token)
-        return { ...epic, issues: epicIssues }
-      } catch (error) {
-        console.error(`Failed to fetch issues for epic ${epic.id}:`, error)
-        return { ...epic, issues: [] }
-      }
-    })
-  )
+  // Enrich epics with their issues from issue data (workaround for 403 on Epic Issues API)
+  const epicsWithIssues = epics.map((epic) => {
+    // Find all issues that belong to this epic
+    const epicIssues = issues.filter(issue =>
+      issue.epic && issue.epic.id === epic.id
+    )
+
+    return { ...epic, issues: epicIssues }
+  })
+
+  console.log(`Loaded ${epics.length} epics with ${epicsWithIssues.reduce((sum, e) => sum + e.issues.length, 0)} total issues`)
 
   return {
     issues,
