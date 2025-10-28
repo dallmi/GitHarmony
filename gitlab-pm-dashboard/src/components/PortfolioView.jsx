@@ -10,7 +10,7 @@ export default function PortfolioView({ onProjectSwitch }) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
-    gitlabUrl: 'https://devcloud.ubs.net',
+    gitlabUrl: 'https://gitlab.com',
     token: '',
     projectId: '',
     groupPath: ''
@@ -26,7 +26,7 @@ export default function PortfolioView({ onProjectSwitch }) {
     setProjects(updatedProjects)
     setFormData({
       name: '',
-      gitlabUrl: 'https://devcloud.ubs.net',
+      gitlabUrl: 'https://gitlab.com',
       token: '',
       projectId: '',
       groupPath: ''

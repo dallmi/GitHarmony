@@ -5,7 +5,7 @@
 export const APP_CONFIG = {
   name: 'GitLab Project Management Dashboard',
   version: '5.0.0',
-  defaultGitLabUrl: 'https://devcloud.ubs.net',
+  defaultGitLabUrl: 'https://gitlab.com',
 }
 
 export const HEALTH_SCORE_WEIGHTS = {

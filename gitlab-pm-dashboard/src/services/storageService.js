@@ -28,7 +28,7 @@ export function saveConfig(config) {
  */
 export function loadConfig() {
   return {
-    gitlabUrl: localStorage.getItem(KEYS.GITLAB_URL) || 'https://devcloud.ubs.net',
+    gitlabUrl: localStorage.getItem(KEYS.GITLAB_URL) || 'https://gitlab.com',
     token: localStorage.getItem(KEYS.GITLAB_TOKEN) || '',
     projectId: localStorage.getItem(KEYS.PROJECT_ID) || '',
     groupPath: localStorage.getItem(KEYS.GROUP_PATH) || ''

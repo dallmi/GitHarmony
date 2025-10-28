@@ -55,7 +55,7 @@ gitlab-pm-dashboard/dist/index.html  (292KB - everything included)
 When you open the dashboard, you'll see a configuration screen:
 
 1. **GitLab URL**: Your GitLab instance URL
-   - Example: `https://gitlab.com` or `https://devcloud.ubs.net`
+   - Example: `https://gitlab.com` or your self-hosted instance
 
 2. **Project ID**: Your project identifier
    - Format: `namespace/project` or numeric ID

@@ -4,7 +4,7 @@ import { loadConfig, saveConfig } from '../services/storageService'
 export default function ConfigModal({ show, onClose, onSave }) {
   const existingConfig = loadConfig()
 
-  const [gitlabUrl, setGitlabUrl] = useState(existingConfig.gitlabUrl || 'https://devcloud.ubs.net')
+  const [gitlabUrl, setGitlabUrl] = useState(existingConfig.gitlabUrl || 'https://gitlab.com')
   const [projectId, setProjectId] = useState(existingConfig.projectId || '')
   const [groupPath, setGroupPath] = useState(existingConfig.groupPath || '')
   const [token, setToken] = useState(existingConfig.token || '')
