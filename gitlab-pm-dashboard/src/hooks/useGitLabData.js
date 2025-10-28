@@ -33,12 +33,7 @@ export default function useGitLabData() {
     setError(null)
 
     try {
-      const result = await fetchAllData(
-        config.gitlabUrl,
-        config.projectId,
-        config.groupPath,
-        config.token
-      )
+      const result = await fetchAllData(config)
 
       setData(result)
     } catch (err) {
