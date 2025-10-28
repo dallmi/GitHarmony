@@ -6,9 +6,9 @@
  * Library (~380KB) only loads when user clicks "Export PPT" button
  */
 
-// UBS Brand Colors
+// Brand Colors
 const COLORS = {
-  ubsRed: 'E60000',
+  primary: 'E60000',
   white: 'FFFFFF',
   black: '000000',
   gray900: '1F2937',
@@ -89,7 +89,7 @@ export async function exportToPowerPoint({
 
   const pptx = new PptxGenJS()
   pptx.author = 'GitLab Project Management Dashboard'
-  pptx.company = 'UBS'
+  pptx.company = 'GitLab PM Dashboard'
   pptx.title = `Project Status - ${projectId}`
   pptx.subject = 'Project Status Report'
 
@@ -127,7 +127,7 @@ function addExecutiveSummarySlide(pptx, { projectId, stats, healthScore }) {
     h: 0.7,
     fontSize: 32,
     bold: true,
-    color: COLORS.ubsRed
+    color: COLORS.primary
   })
 
   // Project ID
@@ -260,7 +260,7 @@ function addMilestonesSlide(pptx, { milestones, issues }) {
     h: 0.7,
     fontSize: 32,
     bold: true,
-    color: COLORS.ubsRed
+    color: COLORS.primary
   })
 
   if (milestones.length === 0) {
@@ -333,7 +333,7 @@ function addRisksSlide(pptx, { issues, risks, stats }) {
     h: 0.7,
     fontSize: 32,
     bold: true,
-    color: COLORS.ubsRed
+    color: COLORS.primary
   })
 
   // Summary Box

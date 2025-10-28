@@ -1,10 +1,10 @@
 /**
  * Color constants
- * UBS corporate design + clean professional palette
+ * Professional color palette
  */
 
 export const COLORS = {
-  // UBS Primary
+  // Primary Brand Color
   primary: '#E60000',
   primaryDark: '#B80000',
   primaryLight: '#FF3333',
@@ -44,7 +44,7 @@ export const COLORS = {
 
   // Chart colors (for D3 visualizations)
   chart: [
-    '#E60000', // UBS Red
+    '#E60000', // Primary Red
     '#2563EB', // Blue
     '#059669', // Green
     '#D97706', // Amber

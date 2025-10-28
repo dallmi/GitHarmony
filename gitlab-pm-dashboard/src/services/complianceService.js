@@ -1,6 +1,6 @@
 /**
  * Issue Compliance & Quality Check Service
- * Validates issues against UBS quality criteria
+ * Validates issues against quality criteria
  */
 
 /**
@@ -42,7 +42,7 @@ export function checkStaleStatus(issue) {
 }
 
 /**
- * UBS Issue Quality Criteria
+ * Issue Quality Criteria
  */
 const QUALITY_CRITERIA = {
   assignee: {

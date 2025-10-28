@@ -55,7 +55,7 @@
   - Identify blocked issues
 
 ### Constants
-- **colors.js** - UBS corporate design palette
+- **colors.js** - Professional color palette
   - Color hierarchy (primary, background, text, borders)
   - Health/status colors (success, warning, danger)
   - Helper functions: `getHealthColor()`, `getPriorityColor()`

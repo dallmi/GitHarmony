@@ -29,12 +29,6 @@ export default function ConfigModal({ show, onClose, onSave }) {
       <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <img
-              src="https://www.ubs.com/etc/designs/fit/img/UBS_logo_compact.png"
-              alt="UBS Logo"
-              style={{ height: '32px', width: 'auto' }}
-              onError={(e) => { e.target.style.display = 'none' }}
-            />
             <h2>GitLab Configuration</h2>
           </div>
           <button

@@ -10,7 +10,7 @@ import {
 
 /**
  * Issue Compliance & Quality Check View
- * Shows issues that don't meet UBS quality criteria
+ * Shows issues that don't meet quality criteria
  */
 export default function IssueComplianceView({ issues }) {
   const [filterSeverity, setFilterSeverity] = useState('all') // all, high, medium, low
@@ -76,7 +76,7 @@ export default function IssueComplianceView({ issues }) {
             Issue Quality Compliance
           </h2>
           <p style={{ fontSize: '14px', color: '#6B7280' }}>
-            UBS quality criteria validation for all issues
+            Quality criteria validation for all issues
           </p>
         </div>
         {nonCompliantIssues.length > 0 && (
@@ -141,7 +141,7 @@ export default function IssueComplianceView({ issues }) {
       {/* Quality Criteria Reference */}
       <div className="card" style={{ marginBottom: '30px', background: '#F9FAFB' }}>
         <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
-          UBS Issue Quality Criteria
+          Issue Quality Criteria
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '12px' }}>
           {criteria.map(criterion => (
@@ -239,7 +239,7 @@ export default function IssueComplianceView({ issues }) {
           </h3>
           <p className="text-muted">
             {nonCompliantIssues.length === 0
-              ? 'All issues meet UBS quality criteria. Great work!'
+              ? 'All issues meet quality criteria. Great work!'
               : 'Try selecting a different severity filter.'}
           </p>
         </div>
@@ -449,7 +449,7 @@ export default function IssueComplianceView({ issues }) {
           </h3>
           <div style={{ fontSize: '14px', color: '#1E40AF', lineHeight: '1.6' }}>
             <p style={{ marginBottom: '12px' }}>
-              <strong>{nonCompliantIssues.length}</strong> issue(s) need attention to meet UBS quality standards.
+              <strong>{nonCompliantIssues.length}</strong> issue(s) need attention to meet quality standards.
             </p>
             <p style={{ marginBottom: '12px' }}>
               Top violations:
