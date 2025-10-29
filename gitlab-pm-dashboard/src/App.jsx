@@ -175,7 +175,7 @@ function App() {
             {activeView === 'cycletime' && <CycleTimeView issues={issues} />}
             {activeView === 'epics' && <EpicDashboardView epics={epics} issues={issues} />}
             {activeView === 'quarterly' && <QuarterlyEpicTracker epics={epics} issues={issues} />}
-            {activeView === 'gantt' && <GanttView issues={issues} />}
+            {activeView === 'gantt' && <GanttView issues={issues} epics={epics} />}
             {activeView === 'roadmap' && <RoadmapView issues={issues} milestones={milestones} />}
             {activeView === 'sprint' && <SprintBoardView issues={issues} />}
             {activeView === 'velocity' && <VelocityView issues={issues} />}
