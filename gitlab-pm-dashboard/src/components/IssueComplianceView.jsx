@@ -7,6 +7,9 @@ import {
   downloadCSV,
   findStaleIssues
 } from '../services/complianceService'
+import SearchBar from './SearchBar'
+import { searchIssues } from '../utils/searchUtils'
+import { exportIssuesToCSV, downloadCSV as downloadCSVUtil } from '../utils/csvExportUtils'
 
 /**
  * Issue Compliance & Quality Check View
@@ -15,6 +18,8 @@ import {
 export default function IssueComplianceView({ issues }) {
   const [filterSeverity, setFilterSeverity] = useState('all') // all, high, medium, low
   const [showStaleOnly, setShowStaleOnly] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [activeFilter, setActiveFilter] = useState(null) // Track active tile filter
 
   const { nonCompliantIssues, stats, staleIssues } = useMemo(() => {
     if (!issues || issues.length === 0) {
@@ -37,6 +42,11 @@ export default function IssueComplianceView({ issues }) {
   const filteredIssues = useMemo(() => {
     let filtered = nonCompliantIssues
 
+    // Apply search filter first
+    if (searchTerm) {
+      filtered = searchIssues(filtered, searchTerm)
+    }
+
     // Filter by severity
     if (filterSeverity !== 'all') {
       filtered = filtered.filter(issue => {
@@ -49,13 +59,34 @@ export default function IssueComplianceView({ issues }) {
       filtered = filtered.filter(issue => issue.staleStatus?.isStale)
     }
 
+    // Apply active tile filter
+    if (activeFilter) {
+      switch (activeFilter) {
+        case 'highSeverity':
+          filtered = filtered.filter(issue => issue.violations.some(v => v.severity === 'high'))
+          break
+        case 'mediumSeverity':
+          filtered = filtered.filter(issue => issue.violations.some(v => v.severity === 'medium'))
+          break
+        case 'stale':
+          filtered = filtered.filter(issue => issue.staleStatus?.isStale)
+          break
+      }
+    }
+
     return filtered
-  }, [nonCompliantIssues, filterSeverity, showStaleOnly])
+  }, [nonCompliantIssues, searchTerm, filterSeverity, showStaleOnly, activeFilter])
 
   const handleExportCSV = () => {
-    const csvContent = exportToCSV(nonCompliantIssues)
+    // Export filtered issues using new CSV export utility
+    const csvContent = exportIssuesToCSV(filteredIssues)
     const date = new Date().toISOString().split('T')[0]
-    downloadCSV(csvContent, `issue-compliance-report-${date}.csv`)
+    downloadCSVUtil(csvContent, `issue-compliance-report-${date}.csv`)
+  }
+
+  const handleTileClick = (filterType) => {
+    // Toggle filter on/off
+    setActiveFilter(activeFilter === filterType ? null : filterType)
   }
 
   const getSeverityColor = (severity) => {
@@ -70,7 +101,7 @@ export default function IssueComplianceView({ issues }) {
   return (
     <div className="container-fluid">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
             Issue Quality Compliance
@@ -79,12 +110,20 @@ export default function IssueComplianceView({ issues }) {
             Quality criteria validation for all issues
           </p>
         </div>
-        {nonCompliantIssues.length > 0 && (
+        {filteredIssues.length > 0 && (
           <button className="btn btn-primary" onClick={handleExportCSV}>
-            📊 Export CSV Report
+            📊 Export CSV ({filteredIssues.length} issues)
           </button>
         )}
       </div>
+
+      {/* Search Bar */}
+      <SearchBar
+        value={searchTerm}
+        onChange={setSearchTerm}
+        placeholder="Search issues by title, labels, assignees, epic, milestone, description..."
+        onClear={() => setActiveFilter(null)}
+      />
 
       {/* Stats Cards */}
       {stats && (
@@ -109,30 +148,69 @@ export default function IssueComplianceView({ issues }) {
             </div>
           </div>
 
-          <div className="card" style={{ borderLeft: '4px solid #DC2626' }}>
-            <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>High Severity</div>
+          <div
+            className="card"
+            onClick={() => handleTileClick('highSeverity')}
+            style={{
+              borderLeft: '4px solid #DC2626',
+              cursor: 'pointer',
+              transform: activeFilter === 'highSeverity' ? 'scale(0.98)' : 'scale(1)',
+              boxShadow: activeFilter === 'highSeverity' ? '0 0 0 3px #DC262633' : undefined,
+              transition: 'all 0.2s'
+            }}
+          >
+            <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
+              High Severity {activeFilter === 'highSeverity' && '✓'}
+            </div>
             <div style={{ fontSize: '32px', fontWeight: '600', color: '#DC2626' }}>
               {stats.highSeverity}
             </div>
             <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
-              Critical issues
+              {activeFilter === 'highSeverity' ? 'Click to clear filter' : 'Click to filter'}
             </div>
           </div>
 
-          <div className="card" style={{ borderLeft: '4px solid #D97706' }}>
-            <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>Medium Severity</div>
+          <div
+            className="card"
+            onClick={() => handleTileClick('mediumSeverity')}
+            style={{
+              borderLeft: '4px solid #D97706',
+              cursor: 'pointer',
+              transform: activeFilter === 'mediumSeverity' ? 'scale(0.98)' : 'scale(1)',
+              boxShadow: activeFilter === 'mediumSeverity' ? '0 0 0 3px #D9770633' : undefined,
+              transition: 'all 0.2s'
+            }}
+          >
+            <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
+              Medium Severity {activeFilter === 'mediumSeverity' && '✓'}
+            </div>
             <div style={{ fontSize: '32px', fontWeight: '600', color: '#D97706' }}>
               {stats.mediumSeverity}
             </div>
+            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
+              {activeFilter === 'mediumSeverity' ? 'Click to clear filter' : 'Click to filter'}
+            </div>
           </div>
 
-          <div className="card" style={{ borderLeft: '4px solid #7C3AED' }}>
-            <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>Stale Issues</div>
+          <div
+            className="card"
+            onClick={() => handleTileClick('stale')}
+            style={{
+              borderLeft: '4px solid #7C3AED',
+              cursor: 'pointer',
+              transform: activeFilter === 'stale' ? 'scale(0.98)' : 'scale(1)',
+              boxShadow: activeFilter === 'stale' ? '0 0 0 3px #7C3AED33' : undefined,
+              transition: 'all 0.2s'
+            }}
+          >
+            <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
+              Stale Issues {activeFilter === 'stale' && '✓'}
+            </div>
             <div style={{ fontSize: '32px', fontWeight: '600', color: '#7C3AED' }}>
               {stats.staleIssues.total}
             </div>
             <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
-              {stats.staleIssues.critical} critical, {stats.staleIssues.warning} warning
+              {activeFilter === 'stale' ? 'Click to clear filter' : `${stats.staleIssues.critical} critical, ${stats.staleIssues.warning} warning`}
             </div>
           </div>
         </div>
