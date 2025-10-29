@@ -12,6 +12,7 @@ import {
   getPhaseLabel,
   getPhaseColor
 } from '../services/cycleTimeService'
+import { useIterationFilter } from '../contexts/IterationFilterContext'
 import { checkPremiumFeatures } from '../services/gitlabApi'
 import { loadConfig } from '../services/storageService'
 
@@ -19,7 +20,9 @@ import { loadConfig } from '../services/storageService'
  * Cycle Time & Issue Lifecycle Analytics View
  * Shows how long issues spend in different phases
  */
-export default function CycleTimeView({ issues }) {
+export default function CycleTimeView({ issues: allIssues }) {
+  // Use filtered issues from iteration context
+  const { filteredIssues: issues } = useIterationFilter()
   const [selectedPhase, setSelectedPhase] = useState('all')
   const [showLabelConfig, setShowLabelConfig] = useState(false)
   const [premiumFeatures, setPremiumFeatures] = useState(null)

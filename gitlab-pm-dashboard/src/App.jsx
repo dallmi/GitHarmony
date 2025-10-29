@@ -4,8 +4,10 @@ import { exportToPowerPoint } from './services/pptExportService'
 import useGitLabData from './hooks/useGitLabData'
 import useHealthScore from './hooks/useHealthScore'
 import useRisks from './hooks/useRisks'
+import { IterationFilterProvider } from './contexts/IterationFilterContext'
 import Header from './components/Header'
 import Tabs from './components/Tabs'
+import IterationFilterDropdown from './components/IterationFilterDropdown'
 import ConfigModal from './components/ConfigModal'
 import StatusGeneratorModal from './components/StatusGeneratorModal'
 import ExecutiveDashboard from './components/ExecutiveDashboard'
@@ -93,20 +95,28 @@ function App() {
   console.log('App: About to render, current state:', { activeView, showConfigModal, configured, issuesCount: issues?.length, loading })
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Header
-        stats={stats}
-        healthScore={healthScore}
-        onRefresh={refresh}
-        onConfigure={() => setShowConfigModal(true)}
-        onExportPPT={handleExportPPT}
-        onGenerateStatus={() => setShowStatusModal(true)}
-        loading={loading}
-      />
+    <IterationFilterProvider issues={issues}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Header
+          stats={stats}
+          healthScore={healthScore}
+          onRefresh={refresh}
+          onConfigure={() => setShowConfigModal(true)}
+          onExportPPT={handleExportPPT}
+          onGenerateStatus={() => setShowStatusModal(true)}
+          loading={loading}
+        />
 
-      <Tabs activeView={activeView} onViewChange={setActiveView} />
+        <Tabs activeView={activeView} onViewChange={setActiveView} />
 
-      <div style={{ flex: 1, paddingTop: '20px' }}>
+        {/* Iteration Filter - Shows on views that benefit from iteration filtering */}
+        {isConfigured() && issues.length > 0 && (
+          ['compliance', 'cycletime', 'resources', 'sprint', 'velocity'].includes(activeView)
+        ) && (
+          <IterationFilterDropdown />
+        )}
+
+        <div style={{ flex: 1, paddingTop: '20px' }}>
         {error && (
           <div className="container">
             <div className="card" style={{ background: '#FEE2E2', borderColor: '#DC2626', color: '#DC2626' }}>
@@ -193,7 +203,8 @@ function App() {
         milestones={milestones}
         risks={risks}
       />
-    </div>
+      </div>
+    </IterationFilterProvider>
   )
 }
 

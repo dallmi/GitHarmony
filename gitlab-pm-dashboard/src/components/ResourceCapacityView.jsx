@@ -1,10 +1,13 @@
 import React, { useMemo, useState } from 'react'
+import { useIterationFilter } from '../contexts/IterationFilterContext'
 
 /**
  * Resource Capacity Planning View
  * Advanced resource management with capacity allocation and forecasting
  */
-export default function ResourceCapacityView({ issues }) {
+export default function ResourceCapacityView({ issues: allIssues }) {
+  // Use filtered issues from iteration context
+  const { filteredIssues: issues } = useIterationFilter()
   // Default capacity: 40 hours/week per person (5 days * 8 hours)
   const [capacitySettings, setCapacitySettings] = useState({
     hoursPerWeek: 40,

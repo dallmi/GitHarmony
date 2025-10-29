@@ -9,10 +9,14 @@
  */
 export const DEFAULT_PHASE_PATTERNS = {
   backlog: ['backlog', 'new', 'open', 'todo', 'to do'],
-  analysis: ['analysis', 'analyzing', 'refinement', 'planning', 'design'],
+  analysis: ['analysis', 'analyzing', 'refinement', 'planning', 'design', 'in analysis'],
   inProgress: ['in progress', 'doing', 'wip', 'development', 'started', 'active'],
   review: ['review', 'code review', 'peer review', 'reviewing'],
-  testing: ['testing', 'qa', 'test', 'validation', 'verification'],
+  testing: ['in testing', 'testing', 'qa', 'test', 'validation', 'verification'],
+  awaitingTesting: ['awaiting testing', 'awaiting qa', 'ready for testing', 'to test'],
+  awaitingRelease: ['awaiting release', 'ready for release', 'to release', 'pending release'],
+  released: ['released', 'deployed', 'in production'],
+  cancelled: ['cancelled', 'canceled', 'rejected', 'wont fix', 'won\'t fix'],
   done: ['done', 'completed', 'closed', 'resolved', 'finished'],
   blocked: ['blocked', 'blocker', 'waiting', 'on hold', 'paused']
 }
@@ -28,9 +32,21 @@ export function detectIssuePhase(issue, phasePatterns = DEFAULT_PHASE_PATTERNS) 
 
   const labels = issue.labels.map(l => l.toLowerCase())
 
-  // Check each phase in priority order
+  // Check each phase in priority order (most specific first)
+  if (labels.some(l => phasePatterns.cancelled.some(p => l.includes(p)))) {
+    return 'cancelled'
+  }
+  if (labels.some(l => phasePatterns.released.some(p => l.includes(p)))) {
+    return 'released'
+  }
   if (labels.some(l => phasePatterns.blocked.some(p => l.includes(p)))) {
     return 'blocked'
+  }
+  if (labels.some(l => phasePatterns.awaitingRelease.some(p => l.includes(p)))) {
+    return 'awaitingRelease'
+  }
+  if (labels.some(l => phasePatterns.awaitingTesting.some(p => l.includes(p)))) {
+    return 'awaitingTesting'
   }
   if (labels.some(l => phasePatterns.testing.some(p => l.includes(p)))) {
     return 'testing'
@@ -139,13 +155,22 @@ export function getPhaseDistribution(issues, phasePatterns = DEFAULT_PHASE_PATTE
     inProgress: [],
     review: [],
     testing: [],
+    awaitingTesting: [],
+    awaitingRelease: [],
+    released: [],
+    cancelled: [],
     done: [],
     blocked: []
   }
 
   issues.forEach(issue => {
     const phase = detectIssuePhase(issue, phasePatterns)
-    distribution[phase].push(issue)
+    if (distribution[phase]) {
+      distribution[phase].push(issue)
+    } else {
+      // Fallback for unknown phases
+      distribution.backlog.push(issue)
+    }
   })
 
   return distribution
@@ -396,7 +421,11 @@ export function getPhaseLabel(phase) {
     analysis: 'Analysis',
     inProgress: 'In Progress',
     review: 'Review',
-    testing: 'Testing',
+    testing: 'In Testing',
+    awaitingTesting: 'Awaiting Testing',
+    awaitingRelease: 'Awaiting Release',
+    released: 'Released',
+    cancelled: 'Cancelled',
     done: 'Done',
     blocked: 'Blocked'
   }
@@ -413,6 +442,10 @@ export function getPhaseColor(phase) {
     inProgress: '#F59E0B',
     review: '#8B5CF6',
     testing: '#EC4899',
+    awaitingTesting: '#F59E0B',
+    awaitingRelease: '#10B981',
+    released: '#059669',
+    cancelled: '#9CA3AF',
     done: '#10B981',
     blocked: '#EF4444'
   }

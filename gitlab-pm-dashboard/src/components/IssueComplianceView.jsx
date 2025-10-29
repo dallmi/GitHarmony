@@ -7,6 +7,7 @@ import {
   downloadCSV,
   findStaleIssues
 } from '../services/complianceService'
+import { useIterationFilter } from '../contexts/IterationFilterContext'
 import SearchBar from './SearchBar'
 import { searchIssues } from '../utils/searchUtils'
 import { exportIssuesToCSV, downloadCSV as downloadCSVUtil } from '../utils/csvExportUtils'
@@ -15,7 +16,9 @@ import { exportIssuesToCSV, downloadCSV as downloadCSVUtil } from '../utils/csvE
  * Issue Compliance & Quality Check View
  * Shows issues that don't meet quality criteria
  */
-export default function IssueComplianceView({ issues }) {
+export default function IssueComplianceView({ issues: allIssues }) {
+  // Use filtered issues from iteration context
+  const { filteredIssues: issues } = useIterationFilter()
   const [filterSeverity, setFilterSeverity] = useState('all') // all, high, medium, low
   const [showStaleOnly, setShowStaleOnly] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
