@@ -191,16 +191,45 @@ export async function fetchIssueStateHistory(gitlabUrl, projectId, issueIid, tok
 }
 
 /**
+ * Filter data to only include items from 2025 onwards
+ */
+function filterByYear2025(data, dateFields) {
+  const year2025Start = new Date('2025-01-01').getTime()
+
+  return data.filter(item => {
+    // Check if any of the date fields is >= 2025
+    return dateFields.some(field => {
+      const dateValue = item[field]
+      if (!dateValue) return false
+
+      const itemDate = new Date(dateValue).getTime()
+      return itemDate >= year2025Start
+    })
+  })
+}
+
+/**
  * Fetch all data needed for the dashboard
  */
 export async function fetchAllData(config) {
   const { gitlabUrl, projectId, groupPath, token } = config
 
-  const [issues, milestones, epics] = await Promise.all([
+  const [allIssues, allMilestones, allEpics] = await Promise.all([
     fetchIssues(gitlabUrl, projectId, token),
     fetchMilestones(gitlabUrl, projectId, token),
     groupPath ? fetchEpics(gitlabUrl, groupPath, token) : Promise.resolve([])
   ])
+
+  // Filter issues: show if created_at, updated_at, or due_date >= 2025
+  const issues = filterByYear2025(allIssues, ['created_at', 'updated_at', 'due_date'])
+
+  // Filter milestones: show if start_date, due_date, or created_at >= 2025
+  const milestones = filterByYear2025(allMilestones, ['start_date', 'due_date', 'created_at'])
+
+  // Filter epics: show if start_date, end_date, or created_at >= 2025
+  const epics = filterByYear2025(allEpics, ['start_date', 'end_date', 'created_at'])
+
+  console.log(`Filtered data: ${allIssues.length} → ${issues.length} issues, ${allMilestones.length} → ${milestones.length} milestones, ${allEpics.length} → ${epics.length} epics (>= 2025)`)
 
   // Enrich epics with their issues from issue data (workaround for 403 on Epic Issues API)
   const epicsWithIssues = epics.map((epic) => {
