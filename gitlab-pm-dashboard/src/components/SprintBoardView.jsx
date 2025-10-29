@@ -3,10 +3,34 @@ import { getSprintFromLabels } from '../utils/labelUtils'
 
 export default function SprintBoardView({ issues }) {
   const sprints = useMemo(() => {
+    // Build map of iteration name to start date for sorting
+    const iterationDates = new Map()
+    issues.forEach(issue => {
+      if (issue.iteration) {
+        const title = typeof issue.iteration === 'object' ? issue.iteration.title : issue.iteration
+        const startDate = issue.iteration?.start_date || null
+        if (title && !iterationDates.has(title)) {
+          iterationDates.set(title, startDate)
+        }
+      }
+    })
+
     const sprintSet = new Set(
       issues.map(i => getSprintFromLabels(i.labels, i.iteration))
     )
-    return Array.from(sprintSet).filter(Boolean).sort()
+
+    // Sort by start date if available, otherwise alphabetically
+    return Array.from(sprintSet).filter(Boolean).sort((a, b) => {
+      const dateA = iterationDates.get(a)
+      const dateB = iterationDates.get(b)
+
+      if (dateA && dateB) {
+        return new Date(dateB) - new Date(dateA) // Newest first
+      }
+
+      // Fallback to alphabetical sort
+      return a.localeCompare(b)
+    })
   }, [issues])
 
   const getProgress = (issue) => {
@@ -43,6 +67,12 @@ export default function SprintBoardView({ issues }) {
           const total = sprintIssues.length
           const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0
 
+          // Get iteration dates for display
+          const firstIssueWithIteration = sprintIssues.find(i => i.iteration)
+          const iterationData = firstIssueWithIteration?.iteration
+          const startDate = iterationData?.start_date
+          const dueDate = iterationData?.due_date
+
           const grouped = {
             todo: sprintIssues.filter(i => i.state === 'opened' && getProgress(i) === 0),
             progress: sprintIssues.filter(i => i.state === 'opened' && getProgress(i) > 0 && getProgress(i) < 100),
@@ -52,7 +82,16 @@ export default function SprintBoardView({ issues }) {
           return (
             <div key={sprint} className="card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3>{sprint}</h3>
+                <div>
+                  <h3 style={{ marginBottom: '4px' }}>{sprint}</h3>
+                  {(startDate || dueDate) && (
+                    <div style={{ fontSize: '13px', color: '#6B7280' }}>
+                      {startDate && new Date(startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {startDate && dueDate && ' - '}
+                      {dueDate && new Date(dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                  )}
+                </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--primary)' }}>
                     {progressPercent}%
