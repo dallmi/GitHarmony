@@ -44,6 +44,7 @@ export const VIEW_TABS = [
   { id: 'cycletime', label: 'Cycle Time' },
   { id: 'portfolio', label: 'Portfolio' },
   { id: 'epics', label: 'Epic Portfolio' },
+  { id: 'quarterly', label: 'Quarterly Tracker' },
   { id: 'gantt', label: 'Gantt Chart' },
   { id: 'roadmap', label: 'Roadmap' },
   { id: 'sprint', label: 'Sprint Board' },

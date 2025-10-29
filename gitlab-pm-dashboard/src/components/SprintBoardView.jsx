@@ -3,7 +3,9 @@ import { getSprintFromLabels } from '../utils/labelUtils'
 
 export default function SprintBoardView({ issues }) {
   const sprints = useMemo(() => {
-    const sprintSet = new Set(issues.map(i => getSprintFromLabels(i.labels)))
+    const sprintSet = new Set(
+      issues.map(i => getSprintFromLabels(i.labels, i.iteration))
+    )
     return Array.from(sprintSet).filter(Boolean).sort()
   }, [issues])
 
@@ -21,8 +23,10 @@ export default function SprintBoardView({ issues }) {
       <div className="container">
         <div className="card text-center" style={{ padding: '60px 20px' }}>
           <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>📋</div>
-          <h3 className="mb-2">No Sprints</h3>
-          <p className="text-muted">Add "Sprint X" labels to your issues to see the sprint board.</p>
+          <h3 className="mb-2">No Sprints/Iterations Found</h3>
+          <p className="text-muted">
+            Add iterations to your issues in GitLab, or add "Sprint X" / "Iteration X" labels to see the sprint board.
+          </p>
         </div>
       </div>
     )
@@ -34,7 +38,7 @@ export default function SprintBoardView({ issues }) {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         {sprints.map(sprint => {
-          const sprintIssues = issues.filter(i => getSprintFromLabels(i.labels) === sprint)
+          const sprintIssues = issues.filter(i => getSprintFromLabels(i.labels, i.iteration) === sprint)
           const completed = sprintIssues.filter(i => i.state === 'closed').length
           const total = sprintIssues.length
           const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0

@@ -11,6 +11,7 @@ import StatusGeneratorModal from './components/StatusGeneratorModal'
 import ExecutiveDashboard from './components/ExecutiveDashboard'
 import PortfolioView from './components/PortfolioView'
 import EpicDashboardView from './components/EpicDashboardView'
+import QuarterlyEpicTracker from './components/QuarterlyEpicTracker'
 import GanttView from './components/GanttView'
 import RoadmapView from './components/RoadmapView'
 import SprintBoardView from './components/SprintBoardView'
@@ -163,6 +164,7 @@ function App() {
             {activeView === 'compliance' && <IssueComplianceView issues={issues} />}
             {activeView === 'cycletime' && <CycleTimeView issues={issues} />}
             {activeView === 'epics' && <EpicDashboardView epics={epics} issues={issues} />}
+            {activeView === 'quarterly' && <QuarterlyEpicTracker epics={epics} issues={issues} />}
             {activeView === 'gantt' && <GanttView issues={issues} />}
             {activeView === 'roadmap' && <RoadmapView issues={issues} milestones={milestones} />}
             {activeView === 'sprint' && <SprintBoardView issues={issues} />}

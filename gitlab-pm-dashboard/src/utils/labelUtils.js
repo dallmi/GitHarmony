@@ -4,16 +4,32 @@
  */
 
 /**
- * Extract sprint number from labels (e.g., "Sprint 3" -> 3)
+ * Extract sprint/iteration from labels or iteration field
+ * Supports: "Sprint 3", "Iteration 3", or GitLab iteration object
  */
-export function getSprintFromLabels(labels) {
+export function getSprintFromLabels(labels, iteration = null) {
+  // First, check GitLab iteration field (most reliable)
+  if (iteration) {
+    if (typeof iteration === 'object' && iteration.title) {
+      return iteration.title // e.g., "Iteration 3.5"
+    }
+    if (typeof iteration === 'string') {
+      return iteration
+    }
+  }
+
+  // Fallback: Check labels for "Sprint X" or "Iteration X"
   if (!labels || labels.length === 0) return null
 
-  const sprintLabel = labels.find(l => l.toLowerCase().startsWith('sprint'))
-  if (!sprintLabel) return null
+  const iterationLabel = labels.find(l => {
+    const lower = l.toLowerCase()
+    return lower.startsWith('sprint') || lower.startsWith('iteration')
+  })
 
-  const match = sprintLabel.match(/\d+/)
-  return match ? parseInt(match[0], 10) : null
+  if (!iterationLabel) return null
+
+  // Return full label (e.g., "Iteration 3.5" or "Sprint 12")
+  return iterationLabel
 }
 
 /**
