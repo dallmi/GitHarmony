@@ -18,7 +18,7 @@ export function calculateVelocity(issues) {
   const sprintMap = new Map()
 
   issues.forEach((issue) => {
-    const sprint = getSprintFromLabels(issue.labels)
+    const sprint = getSprintFromLabels(issue.labels, issue.iteration)
     if (!sprint) return
 
     if (!sprintMap.has(sprint)) {
@@ -44,9 +44,37 @@ export function calculateVelocity(issues) {
     }
   })
 
-  // Convert to array and sort by sprint number
+  // Build a map of sprint name to start date for sorting
+  const sprintDates = new Map()
+  issues.forEach((issue) => {
+    const sprint = getSprintFromLabels(issue.labels, issue.iteration)
+    if (sprint && issue.iteration?.start_date && !sprintDates.has(sprint)) {
+      sprintDates.set(sprint, issue.iteration.start_date)
+    }
+  })
+
+  // Convert to array and sort by start date (or by sprint number for legacy format)
   const velocityData = Array.from(sprintMap.values())
-    .sort((a, b) => a.sprint - b.sprint)
+    .sort((a, b) => {
+      const dateA = sprintDates.get(a.sprint)
+      const dateB = sprintDates.get(b.sprint)
+
+      // If both have dates, sort by date
+      if (dateA && dateB) {
+        return new Date(dateA) - new Date(dateB)
+      }
+
+      // Try to parse as numbers (for legacy "Sprint X" format)
+      const numA = typeof a.sprint === 'number' ? a.sprint : parseInt(a.sprint, 10)
+      const numB = typeof b.sprint === 'number' ? b.sprint : parseInt(b.sprint, 10)
+
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB
+      }
+
+      // Fallback to string comparison
+      return String(a.sprint).localeCompare(String(b.sprint))
+    })
     .map((sprint) => ({
       ...sprint,
       velocity: sprint.completedIssues, // Velocity = completed issues
@@ -97,28 +125,48 @@ export function calculateBurndown(issues, currentSprint) {
   }
 
   const sprintIssues = issues.filter(
-    (issue) => getSprintFromLabels(issue.labels) === currentSprint
+    (issue) => getSprintFromLabels(issue.labels, issue.iteration) === currentSprint
   )
 
   if (sprintIssues.length === 0) {
     return { actual: [], ideal: [], total: 0 }
   }
 
-  // Get sprint start date (earliest created_at)
-  const createdDates = sprintIssues
-    .map((i) => new Date(i.created_at))
-    .filter((d) => !isNaN(d))
+  // Try to get sprint dates from iteration object
+  let sprintStart = null
+  let sprintEnd = null
 
-  if (createdDates.length === 0) {
-    return { actual: [], ideal: [], total: 0 }
+  // Find any issue in this sprint that has iteration dates
+  const issueWithIteration = sprintIssues.find(i => i.iteration?.start_date)
+  if (issueWithIteration && issueWithIteration.iteration) {
+    if (issueWithIteration.iteration.start_date) {
+      sprintStart = new Date(issueWithIteration.iteration.start_date)
+    }
+    if (issueWithIteration.iteration.due_date) {
+      sprintEnd = new Date(issueWithIteration.iteration.due_date)
+    }
   }
 
-  const sprintStart = new Date(Math.min(...createdDates))
-  const today = new Date()
+  // Fallback: use earliest created_at if no iteration dates
+  if (!sprintStart) {
+    const createdDates = sprintIssues
+      .map((i) => new Date(i.created_at))
+      .filter((d) => !isNaN(d))
 
-  // Calculate total duration (assume 2-week sprint if no end date)
-  const sprintDuration = 14 * 24 * 60 * 60 * 1000 // 14 days in milliseconds
-  const sprintEnd = new Date(sprintStart.getTime() + sprintDuration)
+    if (createdDates.length === 0) {
+      return { actual: [], ideal: [], total: 0 }
+    }
+
+    sprintStart = new Date(Math.min(...createdDates))
+  }
+
+  // If no end date, assume 2-week sprint
+  if (!sprintEnd) {
+    const sprintDuration = 14 * 24 * 60 * 60 * 1000 // 14 days in milliseconds
+    sprintEnd = new Date(sprintStart.getTime() + sprintDuration)
+  }
+
+  const today = new Date()
 
   const totalIssues = sprintIssues.length
 
@@ -226,17 +274,60 @@ export function predictCompletion(issues, averageVelocity) {
 }
 
 /**
- * Get current active sprint (highest sprint number with open issues)
+ * Get current active sprint (most recent iteration with open issues)
  */
 export function getCurrentSprint(issues) {
   if (!issues || issues.length === 0) return null
 
-  const sprintsWithOpenIssues = issues
+  // Build a map of iteration name to start date
+  const iterationDates = new Map()
+
+  issues
     .filter((i) => i.state === 'opened')
-    .map((i) => getSprintFromLabels(i.labels))
-    .filter((s) => s !== null)
+    .forEach((issue) => {
+      const sprint = getSprintFromLabels(issue.labels, issue.iteration)
+      if (!sprint) return
 
-  if (sprintsWithOpenIssues.length === 0) return null
+      // Try to get the start date from the iteration object
+      const startDate = issue.iteration?.start_date
+      if (startDate && !iterationDates.has(sprint)) {
+        iterationDates.set(sprint, startDate)
+      }
+    })
 
-  return Math.max(...sprintsWithOpenIssues)
+  if (iterationDates.size === 0) {
+    // Fallback: if no iterations with dates, just return any sprint with open issues
+    const sprintsWithOpenIssues = issues
+      .filter((i) => i.state === 'opened')
+      .map((i) => getSprintFromLabels(i.labels, i.iteration))
+      .filter((s) => s !== null)
+
+    if (sprintsWithOpenIssues.length === 0) return null
+
+    // Try to parse as number for legacy "Sprint X" format
+    const asNumbers = sprintsWithOpenIssues
+      .map(s => typeof s === 'number' ? s : parseInt(s, 10))
+      .filter(n => !isNaN(n))
+
+    if (asNumbers.length > 0) {
+      return Math.max(...asNumbers)
+    }
+
+    // Otherwise return the first one
+    return sprintsWithOpenIssues[0]
+  }
+
+  // Find the iteration with the most recent start date
+  let mostRecentSprint = null
+  let mostRecentDate = null
+
+  iterationDates.forEach((date, sprint) => {
+    const dateObj = new Date(date)
+    if (!mostRecentDate || dateObj > mostRecentDate) {
+      mostRecentDate = dateObj
+      mostRecentSprint = sprint
+    }
+  })
+
+  return mostRecentSprint
 }
