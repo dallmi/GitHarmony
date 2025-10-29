@@ -122,6 +122,110 @@ export default function ResourceCapacityView({ issues: allIssues }) {
 
   const { members, unassigned, teamMetrics } = capacityMetrics
 
+  // Get root cause analysis for capacity issues
+  const getCapacityRootCause = (member) => {
+    const causes = []
+    const actions = []
+
+    if (member.capacity.utilization >= 100) {
+      // Analyze why overloaded
+      const excessHours = member.capacity.allocatedHours - member.capacity.weeklyCapacity
+
+      // Check issue distribution across epics
+      const epicMap = new Map()
+      member.issues.filter(i => i.state === 'opened').forEach(issue => {
+        const epicId = issue.epic?.id || 'no-epic'
+        const epicTitle = issue.epic?.title || 'No Epic'
+        if (!epicMap.has(epicId)) {
+          epicMap.set(epicId, { title: epicTitle, count: 0 })
+        }
+        epicMap.get(epicId).count++
+      })
+
+      const epicsArray = Array.from(epicMap.values()).sort((a, b) => b.count - a.count)
+
+      if (epicsArray.length > 2) {
+        causes.push({
+          severity: 'critical',
+          category: 'multi-epic',
+          description: `Assigned to ${epicsArray.length} different epics simultaneously`,
+          impact: `Spread across: ${epicsArray.slice(0, 3).map(e => `${e.title} (${e.count})`).join(', ')}`
+        })
+        actions.push({
+          priority: 'high',
+          title: 'Focus on fewer epics',
+          description: `Reduce to 1-2 epics. Consider moving ${epicsArray[epicsArray.length - 1].title} issues to another team member`,
+          estimatedImpact: `Reduce context switching, improve focus`
+        })
+      }
+
+      if (member.openIssues > 8) {
+        causes.push({
+          severity: 'critical',
+          category: 'wip',
+          description: `Too many open issues (${member.openIssues}) - WIP limit exceeded`,
+          impact: `${excessHours.toFixed(0)} hours over capacity`
+        })
+        actions.push({
+          priority: 'high',
+          title: 'Implement WIP limits',
+          description: `Move ${Math.ceil(member.openIssues * 0.3)} issues to available team members`,
+          estimatedImpact: `Free up ${(excessHours * 0.3).toFixed(0)} hours`
+        })
+      }
+
+      // Check for blockers
+      const blockedIssues = member.issues.filter(i =>
+        i.state === 'opened' &&
+        (i.labels?.some(l => l.toLowerCase().includes('blocked')) ||
+         i.labels?.some(l => l.toLowerCase().includes('waiting')))
+      )
+
+      if (blockedIssues.length > 0) {
+        causes.push({
+          severity: 'warning',
+          category: 'blockers',
+          description: `${blockedIssues.length} blocked or waiting issues`,
+          impact: `${blockedIssues.length * capacitySettings.hoursPerIssue} hours tied up in blocked work`
+        })
+        actions.push({
+          priority: 'medium',
+          title: 'Resolve blockers',
+          description: `Escalate blocked issues: ${blockedIssues.slice(0, 2).map(i => i.title).join(', ')}`,
+          estimatedImpact: `Free up ${(blockedIssues.length * capacitySettings.hoursPerIssue).toFixed(0)} hours`
+        })
+      }
+    } else if (member.capacity.utilization >= 80) {
+      causes.push({
+        severity: 'warning',
+        category: 'at-capacity',
+        description: `Operating at ${member.capacity.utilization}% capacity`,
+        impact: `Only ${member.capacity.availableHours} hours available`
+      })
+      actions.push({
+        priority: 'medium',
+        title: 'Monitor workload closely',
+        description: 'Avoid assigning new work until current issues are completed',
+        estimatedImpact: 'Prevent overload'
+      })
+    } else if (member.capacity.utilization < 50) {
+      causes.push({
+        severity: 'info',
+        category: 'underutilized',
+        description: `Operating at only ${member.capacity.utilization}% capacity`,
+        impact: `${member.capacity.availableHours} hours available`
+      })
+      actions.push({
+        priority: 'low',
+        title: 'Assign more work',
+        description: `Can take on ${Math.floor(member.capacity.availableHours / capacitySettings.hoursPerIssue)} more issues`,
+        estimatedImpact: 'Better team balance'
+      })
+    }
+
+    return { causes, actions }
+  }
+
   // Get rebalancing recommendations
   const getRebalancingRecommendations = () => {
     if (!members || members.length < 2) return []
@@ -424,13 +528,55 @@ export default function ResourceCapacityView({ issues: allIssues }) {
                     </div>
                   </div>
 
-                  {/* Overload Warning */}
-                  {cap.utilization >= 100 && (
-                    <div style={{ marginTop: '12px', padding: '12px', background: '#FEE2E2', borderRadius: '6px', fontSize: '13px', color: '#991B1B' }}>
-                      ⚠️ <strong>Overloaded:</strong> This team member has {cap.utilization}% utilization.
-                      Consider redistributing {member.openIssues - Math.floor(cap.weeklyCapacity / capacitySettings.hoursPerIssue)} issue(s) to available team members.
-                    </div>
-                  )}
+                  {/* Root Cause Analysis */}
+                  {(() => {
+                    const { causes, actions } = getCapacityRootCause(member)
+
+                    if (causes.length === 0) return null
+
+                    return (
+                      <div style={{ marginTop: '12px', padding: '12px', background: '#F3F4F6', borderRadius: '6px', fontSize: '13px' }}>
+                        {/* Causes */}
+                        <div style={{ marginBottom: '12px' }}>
+                          <div style={{ fontSize: '12px', fontWeight: '600', color: '#1F2937', marginBottom: '8px' }}>
+                            🔍 Root Cause Analysis:
+                          </div>
+                          {causes.map((cause, idx) => (
+                            <div key={idx} style={{ marginBottom: '8px', paddingLeft: '8px', borderLeft: `3px solid ${cause.severity === 'critical' ? '#DC2626' : cause.severity === 'warning' ? '#D97706' : '#6B7280'}` }}>
+                              <div style={{ fontWeight: '600', color: '#374151', marginBottom: '2px' }}>
+                                {cause.severity === 'critical' && '🔴'} {cause.severity === 'warning' && '🟡'} {cause.severity === 'info' && 'ℹ️'} {cause.description}
+                              </div>
+                              <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                                {cause.impact}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Actions */}
+                        {actions.length > 0 && (
+                          <div>
+                            <div style={{ fontSize: '12px', fontWeight: '600', color: '#1F2937', marginBottom: '8px' }}>
+                              💡 Recommended Actions:
+                            </div>
+                            {actions.map((action, idx) => (
+                              <div key={idx} style={{ marginBottom: '8px', paddingLeft: '8px', borderLeft: '3px solid #2563EB' }}>
+                                <div style={{ fontWeight: '600', color: '#374151', marginBottom: '2px' }}>
+                                  {action.title}
+                                </div>
+                                <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '2px' }}>
+                                  {action.description}
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
+                                  Impact: {action.estimatedImpact}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
               )
             })}

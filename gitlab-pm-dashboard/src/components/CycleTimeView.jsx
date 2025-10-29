@@ -259,36 +259,66 @@ export default function CycleTimeView({ issues: allIssues }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {analytics.bottlenecks.map(bottleneck => (
               <div key={bottleneck.phase} style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
                 padding: '12px',
                 background: 'white',
                 borderRadius: '6px',
                 borderLeft: `4px solid ${bottleneck.severity === 'high' ? '#DC2626' : bottleneck.severity === 'medium' ? '#F59E0B' : '#3B82F6'}`
               }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937', marginBottom: '4px' }}>
-                    {getPhaseLabel(bottleneck.phase)}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937', marginBottom: '4px' }}>
+                      {getPhaseLabel(bottleneck.phase)}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                      {bottleneck.reason}
+                    </div>
                   </div>
-                  <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                    {bottleneck.reason}
+                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '20px', fontWeight: '600', color: '#1F2937' }}>
+                        {bottleneck.count}
+                      </div>
+                      <div style={{ fontSize: '10px', color: '#6B7280' }}>issues</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '20px', fontWeight: '600', color: '#F59E0B' }}>
+                        {bottleneck.avgTimeInPhase}
+                      </div>
+                      <div style={{ fontSize: '10px', color: '#6B7280' }}>avg days</div>
+                    </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '20px', fontWeight: '600', color: '#1F2937' }}>
-                      {bottleneck.count}
-                    </div>
-                    <div style={{ fontSize: '10px', color: '#6B7280' }}>issues</div>
+
+                {/* Root Causes & Actions */}
+                {(bottleneck.rootCauses?.length > 0 || bottleneck.recommendedActions?.length > 0) && (
+                  <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: '12px', marginTop: '12px' }}>
+                    {bottleneck.rootCauses?.length > 0 && (
+                      <div style={{ marginBottom: '8px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: '600', color: '#92400E', marginBottom: '4px', textTransform: 'uppercase' }}>
+                          🔍 Likely Root Cause:
+                        </div>
+                        {bottleneck.rootCauses.map((cause, idx) => (
+                          <div key={idx} style={{ fontSize: '12px', color: '#6B7280', marginBottom: '2px' }}>
+                            • {cause}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {bottleneck.recommendedActions?.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: '11px', fontWeight: '600', color: '#92400E', marginBottom: '4px', textTransform: 'uppercase' }}>
+                          💡 Recommended Action:
+                        </div>
+                        {bottleneck.recommendedActions.map((action, idx) => (
+                          <div key={idx} style={{ fontSize: '12px', color: '#6B7280', marginBottom: '2px' }}>
+                            • {action}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '20px', fontWeight: '600', color: '#F59E0B' }}>
-                      {bottleneck.avgTimeInPhase}
-                    </div>
-                    <div style={{ fontSize: '10px', color: '#6B7280' }}>avg days</div>
-                  </div>
-                </div>
+                )}
               </div>
             ))}
           </div>

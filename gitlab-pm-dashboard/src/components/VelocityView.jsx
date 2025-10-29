@@ -13,6 +13,125 @@ import {
  * Shows sprint velocity, trends, burndown chart, and predictive analytics
  */
 export default function VelocityView({ issues }) {
+  // Get velocity root cause analysis
+  const getVelocityRootCause = (velocityData, trend, avgVelocity) => {
+    if (!velocityData || velocityData.length < 2) return { causes: [], actions: [] }
+
+    const causes = []
+    const actions = []
+
+    const recent3 = velocityData.slice(-3)
+    const recent = velocityData[velocityData.length - 1]
+    const previous = velocityData[velocityData.length - 2]
+
+    // Analyze velocity drop
+    if (trend < -10) {
+      // Significant decline
+      const dropPercent = Math.abs(trend)
+
+      causes.push({
+        severity: 'critical',
+        category: 'velocity-decline',
+        description: `Velocity declined by ${dropPercent}% (from ${previous.velocity} to ${recent.velocity} issues/sprint)`,
+        impact: `${previous.velocity - recent.velocity} fewer issues completed per sprint`
+      })
+
+      // Analyze potential reasons
+      if (recent.completionRate < 70) {
+        causes.push({
+          severity: 'warning',
+          category: 'completion-rate',
+          description: `Low completion rate: ${recent.completionRate}% in Sprint ${recent.sprint}`,
+          impact: `${recent.openIssues} issues not completed`
+        })
+        actions.push({
+          priority: 'high',
+          title: 'Reduce sprint scope',
+          description: 'Team is taking on too much work. Reduce planned issues by 20-30%',
+          estimatedImpact: 'Improve completion rate to 80%+'
+        })
+      }
+
+      // Check for increasing WIP
+      if (recent.openIssues > previous.openIssues) {
+        causes.push({
+          severity: 'warning',
+          category: 'wip-increase',
+          description: `Work in progress increased from ${previous.openIssues} to ${recent.openIssues} issues`,
+          impact: 'More started work not being completed'
+        })
+        actions.push({
+          priority: 'high',
+          title: 'Implement WIP limits',
+          description: 'Focus on completing existing work before starting new issues',
+          estimatedImpact: 'Increase completion rate'
+        })
+      }
+
+      actions.push({
+        priority: 'high',
+        title: 'Investigate blockers',
+        description: 'Review issues for blockers, dependencies, or scope creep',
+        estimatedImpact: 'Identify and remove impediments'
+      })
+    } else if (trend > 10) {
+      // Improving velocity
+      causes.push({
+        severity: 'info',
+        category: 'velocity-improvement',
+        description: `Velocity improved by ${trend}% (from ${previous.velocity} to ${recent.velocity} issues/sprint)`,
+        impact: `${recent.velocity - previous.velocity} more issues completed per sprint`
+      })
+
+      if (recent.completionRate > 90) {
+        causes.push({
+          severity: 'info',
+          category: 'high-completion',
+          description: `Excellent completion rate: ${recent.completionRate}% in Sprint ${recent.sprint}`,
+          impact: 'Team is efficiently completing planned work'
+        })
+        actions.push({
+          priority: 'low',
+          title: 'Consider increasing scope',
+          description: 'Team may have capacity for more work. Test with 10-15% increase',
+          estimatedImpact: 'Optimize team utilization'
+        })
+      }
+
+      actions.push({
+        priority: 'low',
+        title: 'Document success factors',
+        description: 'Capture what worked well this sprint to replicate in future',
+        estimatedImpact: 'Maintain improved velocity'
+      })
+    } else {
+      // Stable velocity
+      causes.push({
+        severity: 'info',
+        category: 'velocity-stable',
+        description: `Velocity stable at ~${avgVelocity} issues/sprint`,
+        impact: 'Predictable delivery rate'
+      })
+
+      if (avgVelocity < 5 && recent.totalIssues > 10) {
+        causes.push({
+          severity: 'warning',
+          category: 'low-velocity',
+          description: `Low velocity despite ${recent.totalIssues} issues in sprint`,
+          impact: 'Team may be overloaded or issues too large'
+        })
+        actions.push({
+          priority: 'medium',
+          title: 'Break down issues',
+          description: 'Split large issues into smaller chunks (aim for 1-3 day issues)',
+          estimatedImpact: 'Increase throughput and visibility'
+        })
+      }
+    }
+
+    return { causes, actions }
+  }
+
   const analytics = useMemo(() => {
     if (!issues || issues.length === 0) {
       return null
@@ -103,6 +222,89 @@ export default function VelocityView({ issues }) {
           )}
         </div>
       </div>
+
+      {/* Velocity Root Cause Analysis */}
+      {(() => {
+        const { causes, actions } = getVelocityRootCause(velocityData, trend, avgVelocity)
+
+        if (causes.length === 0) return null
+
+        return (
+          <div className="card" style={{ marginBottom: '20px', background: '#F9FAFB' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
+              📊 Velocity Analysis
+            </h3>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              {/* Root Causes */}
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937', marginBottom: '12px' }}>
+                  🔍 Analysis:
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {causes.map((cause, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: '12px',
+                        background: 'white',
+                        borderRadius: '6px',
+                        borderLeft: `4px solid ${
+                          cause.severity === 'critical' ? '#DC2626' :
+                          cause.severity === 'warning' ? '#D97706' :
+                          '#2563EB'
+                        }`
+                      }}
+                    >
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>
+                        {cause.severity === 'critical' && '🔴'}
+                        {cause.severity === 'warning' && '🟡'}
+                        {cause.severity === 'info' && 'ℹ️'}
+                        {cause.description}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                        {cause.impact}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recommended Actions */}
+              {actions.length > 0 && (
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937', marginBottom: '12px' }}>
+                    💡 Recommended Actions:
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {actions.map((action, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          padding: '12px',
+                          background: 'white',
+                          borderRadius: '6px',
+                          borderLeft: '4px solid #2563EB'
+                        }}
+                      >
+                        <div style={{ fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>
+                          {action.title}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>
+                          {action.description}
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
+                          Expected impact: {action.estimatedImpact}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
         {/* Velocity Chart */}

@@ -25,6 +25,7 @@ import StakeholderHubView from './components/StakeholderHubView'
 import InsightsView from './components/InsightsView'
 import IssueComplianceView from './components/IssueComplianceView'
 import CycleTimeView from './components/CycleTimeView'
+import RiskAnalysisView from './components/RiskAnalysisView'
 
 function App() {
   console.log('App: Component initializing...')
@@ -176,6 +177,7 @@ function App() {
             {activeView === 'epics' && <EpicDashboardView epics={epics} issues={issues} />}
             {activeView === 'quarterly' && <QuarterlyEpicTracker epics={epics} issues={issues} />}
             {activeView === 'gantt' && <GanttView issues={issues} epics={epics} />}
+            {activeView === 'riskanalysis' && <RiskAnalysisView epics={epics} issues={issues} />}
             {activeView === 'roadmap' && <RoadmapView issues={issues} milestones={milestones} />}
             {activeView === 'sprint' && <SprintBoardView issues={issues} />}
             {activeView === 'velocity' && <VelocityView issues={issues} />}

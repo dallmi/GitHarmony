@@ -223,11 +223,77 @@ export function identifyBottlenecks(issues) {
     count: issuesList.length,
     avgTimeInPhase: issuesList.length > 0
       ? Math.round(issuesList.reduce((sum, i) => sum + getTimeInCurrentPhase(i), 0) / issuesList.length)
-      : 0
+      : 0,
+    issues: issuesList
   }))
 
   // Sort by count (descending)
   const sortedByCount = [...phaseCounts].sort((a, b) => b.count - a.count)
+
+  // Root cause helpers
+  const getRootCause = (phase, phaseData) => {
+    const causes = []
+    const actions = []
+
+    // Phase-specific root causes
+    if (phase === 'testing' || phase === 'awaitingTesting') {
+      if (phaseData.avgTimeInPhase > 7) {
+        causes.push('Security or QA team backlog')
+        actions.push('Request additional QA resources or auto-approve low-risk changes')
+      }
+      if (phaseData.count > 5) {
+        causes.push(`${phaseData.count} issues waiting for testing`)
+        actions.push('Prioritize testing queue, enable parallel testing')
+      }
+    }
+
+    if (phase === 'awaitingRelease') {
+      if (phaseData.avgTimeInPhase > 5) {
+        causes.push('Infrequent deployment schedule')
+        actions.push('Enable more frequent deployments or continuous delivery')
+      }
+      if (phaseData.count > 3) {
+        causes.push(`${phaseData.count} issues ready but waiting for release window`)
+        actions.push('Deploy batches more frequently (daily vs weekly)')
+      }
+    }
+
+    if (phase === 'review') {
+      if (phaseData.avgTimeInPhase > 3) {
+        causes.push('Code review backlog or slow review process')
+        actions.push('Assign dedicated reviewers, set SLA for reviews (24-48 hours)')
+      }
+    }
+
+    if (phase === 'blocked') {
+      causes.push('External dependencies or blockers')
+      actions.push('Escalate blockers to management, find workarounds')
+    }
+
+    if (phase === 'inProgress') {
+      if (phaseData.count > 8) {
+        causes.push('Too much work in progress (WIP)')
+        actions.push('Implement WIP limits, focus on completing vs starting')
+      }
+      if (phaseData.avgTimeInPhase > 10) {
+        causes.push('Issues are more complex than estimated')
+        actions.push('Break down large issues, improve estimation process')
+      }
+    }
+
+    // Generic fallbacks
+    if (causes.length === 0 && phaseData.count > 5) {
+      causes.push(`High volume of issues in ${getPhaseLabel(phase)}`)
+      actions.push('Increase throughput or reduce incoming work to this phase')
+    }
+
+    if (causes.length === 0 && phaseData.avgTimeInPhase > 10) {
+      causes.push('Issues spending excessive time in this phase')
+      actions.push('Investigate process inefficiencies or resource constraints')
+    }
+
+    return { causes, actions }
+  }
 
   // Identify bottlenecks
   sortedByCount.forEach((phaseData, index) => {
@@ -248,12 +314,16 @@ export function identifyBottlenecks(issues) {
     }
 
     if (severity) {
+      const { causes, actions } = getRootCause(phaseData.phase, phaseData)
+
       bottlenecks.push({
         phase: phaseData.phase,
         count: phaseData.count,
         avgTimeInPhase: phaseData.avgTimeInPhase,
         severity,
-        reason
+        reason,
+        rootCauses: causes,
+        recommendedActions: actions
       })
     }
   })
