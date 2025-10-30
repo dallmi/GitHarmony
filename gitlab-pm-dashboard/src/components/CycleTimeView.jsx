@@ -15,6 +15,8 @@ import {
 import { useIterationFilter } from '../contexts/IterationFilterContext'
 import { checkPremiumFeatures } from '../services/gitlabApi'
 import { loadConfig } from '../services/storageService'
+import SearchBar from './SearchBar'
+import { searchIssues } from '../utils/searchUtils'
 
 /**
  * Cycle Time & Issue Lifecycle Analytics View
@@ -22,11 +24,18 @@ import { loadConfig } from '../services/storageService'
  */
 export default function CycleTimeView({ issues: allIssues }) {
   // Use filtered issues from iteration context
-  const { filteredIssues: issues } = useIterationFilter()
+  const { filteredIssues: issuesFromIteration } = useIterationFilter()
   const [selectedPhase, setSelectedPhase] = useState('all')
   const [showLabelConfig, setShowLabelConfig] = useState(false)
   const [premiumFeatures, setPremiumFeatures] = useState(null)
   const [checkingPremium, setCheckingPremium] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+
+  // Apply search filter on top of iteration filter
+  const issues = useMemo(() => {
+    if (!searchTerm) return issuesFromIteration
+    return searchIssues(issuesFromIteration, searchTerm)
+  }, [issuesFromIteration, searchTerm])
 
   // Check for GitLab Premium features on mount
   useEffect(() => {
@@ -97,7 +106,7 @@ export default function CycleTimeView({ issues: allIssues }) {
   return (
     <div className="container-fluid">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
             Cycle Time Analytics
@@ -118,6 +127,13 @@ export default function CycleTimeView({ issues: allIssues }) {
           </button>
         </div>
       </div>
+
+      {/* Search Bar */}
+      <SearchBar
+        value={searchTerm}
+        onChange={setSearchTerm}
+        placeholder="Search issues by title, labels, assignees, epic, milestone, description..."
+      />
 
       {/* Premium Feature Detection Status */}
       {!checkingPremium && premiumFeatures && (
