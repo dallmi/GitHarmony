@@ -8,6 +8,7 @@ export default function ConfigModal({ show, onClose, onSave }) {
   const [projectId, setProjectId] = useState(existingConfig.projectId || '')
   const [groupPath, setGroupPath] = useState(existingConfig.groupPath || '')
   const [token, setToken] = useState(existingConfig.token || '')
+  const [filter2025, setFilter2025] = useState(existingConfig.filter2025 !== undefined ? existingConfig.filter2025 : true)
 
   if (!show) return null
 
@@ -16,7 +17,8 @@ export default function ConfigModal({ show, onClose, onSave }) {
       gitlabUrl,
       projectId,
       groupPath,
-      token
+      token,
+      filter2025
     }
 
     saveConfig(config)
@@ -91,6 +93,26 @@ export default function ConfigModal({ show, onClose, onSave }) {
             />
             <div className="text-small text-muted" style={{ marginTop: '4px' }}>
               Create a personal access token with 'api' and 'read_api' scopes
+            </div>
+          </div>
+
+          <div className="form-group">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#F9FAFB', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
+              <input
+                type="checkbox"
+                id="filter2025"
+                checked={filter2025}
+                onChange={e => setFilter2025(e.target.checked)}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+              <label htmlFor="filter2025" style={{ cursor: 'pointer', flex: 1, margin: 0 }}>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937', marginBottom: '4px' }}>
+                  Filter data by year 2025+
+                </div>
+                <div className="text-small text-muted">
+                  When enabled, only shows issues, epics, and milestones with dates {'>='} 2025-01-01
+                </div>
+              </label>
             </div>
           </div>
         </div>

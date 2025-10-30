@@ -212,7 +212,7 @@ function filterByYear2025(data, dateFields) {
  * Fetch all data needed for the dashboard
  */
 export async function fetchAllData(config) {
-  const { gitlabUrl, projectId, groupPath, token } = config
+  const { gitlabUrl, projectId, groupPath, token, filter2025 } = config
 
   const [allIssues, allMilestones, allEpics] = await Promise.all([
     fetchIssues(gitlabUrl, projectId, token),
@@ -220,16 +220,25 @@ export async function fetchAllData(config) {
     groupPath ? fetchEpics(gitlabUrl, groupPath, token) : Promise.resolve([])
   ])
 
+  // Apply 2025 filter if enabled (default: true for backwards compatibility)
+  const shouldFilter = filter2025 !== false
+
   // Filter issues: show if created_at, updated_at, or due_date >= 2025
-  const issues = filterByYear2025(allIssues, ['created_at', 'updated_at', 'due_date'])
+  const issues = shouldFilter
+    ? filterByYear2025(allIssues, ['created_at', 'updated_at', 'due_date'])
+    : allIssues
 
   // Filter milestones: show if start_date, due_date, or created_at >= 2025
-  const milestones = filterByYear2025(allMilestones, ['start_date', 'due_date', 'created_at'])
+  const milestones = shouldFilter
+    ? filterByYear2025(allMilestones, ['start_date', 'due_date', 'created_at'])
+    : allMilestones
 
   // Filter epics: show if start_date, end_date, or created_at >= 2025
-  const epics = filterByYear2025(allEpics, ['start_date', 'end_date', 'created_at'])
+  const epics = shouldFilter
+    ? filterByYear2025(allEpics, ['start_date', 'end_date', 'created_at'])
+    : allEpics
 
-  console.log(`Filtered data: ${allIssues.length} → ${issues.length} issues, ${allMilestones.length} → ${milestones.length} milestones, ${allEpics.length} → ${epics.length} epics (>= 2025)`)
+  console.log(`Filtered data: ${allIssues.length} → ${issues.length} issues, ${allMilestones.length} → ${milestones.length} milestones, ${allEpics.length} → ${epics.length} epics ${shouldFilter ? '(>= 2025)' : '(no filter)'}`)
 
   // Enrich epics with their issues from issue data (workaround for 403 on Epic Issues API)
   const epicsWithIssues = epics.map((epic) => {
