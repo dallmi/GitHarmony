@@ -221,23 +221,27 @@ export default function RiskAnalysisView({ epics, issues }) {
                       {analysis.reason}
                     </div>
 
-                    <div style={{ display: 'flex', gap: '20px', fontSize: '13px', color: '#6B7280' }}>
-                      <span>{analysis.metrics.closedIssues}/{analysis.metrics.totalIssues} issues closed ({analysis.metrics.progressPercent.toFixed(0)}%)</span>
-                      {analysis.metrics.remainingIterations !== null && (
-                        <span>{analysis.metrics.remainingIterations} iterations left</span>
-                      )}
-                      {analysis.metrics.currentVelocity > 0 && (
-                        <span>Velocity: {analysis.metrics.currentVelocity.toFixed(1)} (need {analysis.metrics.requiredVelocity.toFixed(1)})</span>
-                      )}
-                    </div>
+                    {analysis.metrics && (
+                      <div style={{ display: 'flex', gap: '20px', fontSize: '13px', color: '#6B7280' }}>
+                        <span>{analysis.metrics.closedIssues}/{analysis.metrics.totalIssues} issues closed ({analysis.metrics.progressPercent.toFixed(0)}%)</span>
+                        {analysis.metrics.remainingIterations !== null && (
+                          <span>{analysis.metrics.remainingIterations} iterations left</span>
+                        )}
+                        {analysis.metrics.currentVelocity > 0 && (
+                          <span>Velocity: {analysis.metrics.currentVelocity.toFixed(1)} (need {analysis.metrics.requiredVelocity.toFixed(1)})</span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  <div style={{ minWidth: '120px', textAlign: 'right' }}>
-                    <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>Progress</div>
-                    <div style={{ fontSize: '24px', fontWeight: '700', color: getStatusColor(analysis.status) }}>
-                      {analysis.metrics.progressPercent.toFixed(0)}%
+                  {analysis.metrics && (
+                    <div style={{ minWidth: '120px', textAlign: 'right' }}>
+                      <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>Progress</div>
+                      <div style={{ fontSize: '24px', fontWeight: '700', color: getStatusColor(analysis.status) }}>
+                        {analysis.metrics.progressPercent.toFixed(0)}%
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Expanded Details */}
