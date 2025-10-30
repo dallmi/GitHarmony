@@ -331,3 +331,46 @@ export function getCurrentSprint(issues) {
 
   return mostRecentSprint
 }
+
+/**
+ * Get all unique iteration/sprint names from issues
+ * Returns array of iteration names sorted by start date (most recent first)
+ */
+export function getUniqueIterations(issues) {
+  if (!issues || issues.length === 0) return []
+
+  const iterationSet = new Set()
+
+  issues.forEach((issue) => {
+    const sprint = getSprintFromLabels(issue.labels, issue.iteration)
+    if (sprint) {
+      iterationSet.add(sprint)
+    }
+  })
+
+  return Array.from(iterationSet).sort((a, b) => {
+    // Try to get dates for sorting
+    const issueA = issues.find(i => getSprintFromLabels(i.labels, i.iteration) === a)
+    const issueB = issues.find(i => getSprintFromLabels(i.labels, i.iteration) === b)
+
+    const dateA = issueA?.iteration?.start_date
+    const dateB = issueB?.iteration?.start_date
+
+    if (dateA && dateB) {
+      return new Date(dateB) - new Date(dateA) // Most recent first
+    }
+    if (dateA) return -1
+    if (dateB) return 1
+
+    // Fallback: try numeric sort
+    const numA = typeof a === 'number' ? a : parseInt(a, 10)
+    const numB = typeof b === 'number' ? b : parseInt(b, 10)
+
+    if (!isNaN(numA) && !isNaN(numB)) {
+      return numB - numA // Highest first
+    }
+
+    // Alphabetical sort
+    return String(b).localeCompare(String(a))
+  })
+}

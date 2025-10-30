@@ -8,6 +8,7 @@ const KEYS = {
   GITLAB_TOKEN: 'gitlab_token',
   PROJECT_ID: 'gitlab_project',
   GROUP_PATH: 'gitlab_group_path',
+  FILTER_2025: 'gitlab_filter_2025',
   RISKS: 'project_risks',
   PROJECTS: 'portfolio_projects', // Multi-project configuration
   ACTIVE_PROJECT: 'active_project_id' // Currently active project
@@ -21,17 +22,26 @@ export function saveConfig(config) {
   localStorage.setItem(KEYS.GITLAB_TOKEN, config.token || '')
   localStorage.setItem(KEYS.PROJECT_ID, config.projectId || '')
   localStorage.setItem(KEYS.GROUP_PATH, config.groupPath || '')
+  // Save filter2025 setting (store as string to handle boolean properly)
+  if (config.filter2025 !== undefined) {
+    localStorage.setItem(KEYS.FILTER_2025, config.filter2025.toString())
+  }
 }
 
 /**
  * Load GitLab configuration
  */
 export function loadConfig() {
+  // Load filter2025 setting from localStorage (default to false if not set)
+  const filter2025Stored = localStorage.getItem(KEYS.FILTER_2025)
+  const filter2025 = filter2025Stored !== null ? filter2025Stored === 'true' : false
+
   return {
     gitlabUrl: localStorage.getItem(KEYS.GITLAB_URL) || 'https://gitlab.com',
     token: localStorage.getItem(KEYS.GITLAB_TOKEN) || '',
     projectId: localStorage.getItem(KEYS.PROJECT_ID) || '',
-    groupPath: localStorage.getItem(KEYS.GROUP_PATH) || ''
+    groupPath: localStorage.getItem(KEYS.GROUP_PATH) || '',
+    filter2025
   }
 }
 
@@ -51,6 +61,7 @@ export function clearConfig() {
   localStorage.removeItem(KEYS.GITLAB_TOKEN)
   localStorage.removeItem(KEYS.PROJECT_ID)
   localStorage.removeItem(KEYS.GROUP_PATH)
+  localStorage.removeItem(KEYS.FILTER_2025)
 }
 
 /**

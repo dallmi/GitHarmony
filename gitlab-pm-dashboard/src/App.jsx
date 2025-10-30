@@ -21,6 +21,7 @@ import VelocityView from './components/VelocityView'
 import DependencyGraphView from './components/DependencyGraphView'
 import RiskRegisterView from './components/RiskRegisterView'
 import ResourceCapacityView from './components/ResourceCapacityView'
+import SprintPlanningView from './components/SprintPlanningView'
 import StakeholderHubView from './components/StakeholderHubView'
 import InsightsView from './components/InsightsView'
 import IssueComplianceView from './components/IssueComplianceView'
@@ -112,7 +113,7 @@ function App() {
 
         {/* Iteration Filter - Shows on views that benefit from iteration filtering */}
         {isConfigured() && issues.length > 0 && (
-          ['compliance', 'cycletime', 'resources', 'sprint', 'velocity'].includes(activeView)
+          ['compliance', 'cycletime', 'resources', 'sprint', 'velocity', 'sprintplanning'].includes(activeView)
         ) && (
           <IterationFilterDropdown />
         )}
@@ -184,6 +185,7 @@ function App() {
             {activeView === 'dependencies' && <DependencyGraphView issues={issues} />}
             {activeView === 'risks' && <RiskRegisterView />}
             {activeView === 'resources' && <ResourceCapacityView issues={issues} />}
+            {activeView === 'sprintplanning' && <SprintPlanningView issues={issues} />}
             {activeView === 'stakeholders' && <StakeholderHubView stats={stats} healthScore={healthScore} />}
           </>
         )}

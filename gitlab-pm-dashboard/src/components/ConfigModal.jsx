@@ -8,7 +8,7 @@ export default function ConfigModal({ show, onClose, onSave }) {
   const [projectId, setProjectId] = useState(existingConfig.projectId || '')
   const [groupPath, setGroupPath] = useState(existingConfig.groupPath || '')
   const [token, setToken] = useState(existingConfig.token || '')
-  const [filter2025, setFilter2025] = useState(existingConfig.filter2025 !== undefined ? existingConfig.filter2025 : true)
+  const [filter2025, setFilter2025] = useState(existingConfig.filter2025 || false)
 
   if (!show) return null
 

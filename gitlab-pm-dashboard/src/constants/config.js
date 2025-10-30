@@ -49,6 +49,7 @@ export const VIEW_TABS = [
   { id: 'riskanalysis', label: 'Risk Analysis' },
   { id: 'roadmap', label: 'Roadmap' },
   { id: 'sprint', label: 'Sprint Board' },
+  { id: 'sprintplanning', label: 'Sprint Planning' },
   { id: 'velocity', label: 'Velocity & Burndown' },
   { id: 'dependencies', label: 'Dependencies' },
   { id: 'risks', label: 'Risk Register' },

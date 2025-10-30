@@ -41,6 +41,27 @@ export async function fetchIssues(gitlabUrl, projectId, token) {
   }
 
   console.log(`✓ Loaded ${allIssues.length} total issues from ${page} page(s)`)
+
+  // Debug: Check iteration data on first few issues
+  if (allIssues.length > 0) {
+    console.log('=== ITERATION DEBUG ===')
+    const sampleSize = Math.min(3, allIssues.length)
+    for (let i = 0; i < sampleSize; i++) {
+      const issue = allIssues[i]
+      console.log(`Issue #${issue.iid} (${issue.title}):`)
+      console.log('  - iteration field:', issue.iteration)
+      console.log('  - labels:', issue.labels)
+    }
+
+    // Count how many issues have iteration data
+    const withIteration = allIssues.filter(i => i.iteration).length
+    const withIterationLabels = allIssues.filter(i =>
+      i.labels && i.labels.some(l => l.toLowerCase().startsWith('sprint') || l.toLowerCase().startsWith('iteration'))
+    ).length
+    console.log(`Summary: ${withIteration} issues with iteration field, ${withIterationLabels} with iteration/sprint labels`)
+    console.log('======================')
+  }
+
   return allIssues
 }
 
