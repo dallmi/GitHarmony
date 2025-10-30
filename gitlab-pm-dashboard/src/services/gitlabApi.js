@@ -4,41 +4,89 @@
  */
 
 /**
- * Fetch issues from a GitLab project
+ * Fetch issues from a GitLab project with pagination
  */
 export async function fetchIssues(gitlabUrl, projectId, token) {
   const encodedProjectId = encodeURIComponent(projectId)
-  const response = await fetch(
-    `${gitlabUrl}/api/v4/projects/${encodedProjectId}/issues?per_page=200&scope=all`,
-    { headers: { 'PRIVATE-TOKEN': token } }
-  )
+  let allIssues = []
+  let page = 1
+  const perPage = 100
 
-  if (!response.ok) {
-    throw new Error(`Issues API Error: ${response.status}`)
+  console.log('Fetching issues with pagination...')
+
+  while (true) {
+    const response = await fetch(
+      `${gitlabUrl}/api/v4/projects/${encodedProjectId}/issues?per_page=${perPage}&page=${page}&scope=all`,
+      { headers: { 'PRIVATE-TOKEN': token } }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Issues API Error: ${response.status}`)
+    }
+
+    const issues = await response.json()
+
+    if (issues.length === 0) {
+      break // No more issues
+    }
+
+    allIssues = allIssues.concat(issues)
+    console.log(`  Fetched page ${page}: ${issues.length} issues (total: ${allIssues.length})`)
+
+    if (issues.length < perPage) {
+      break // Last page (partial results)
+    }
+
+    page++
   }
 
-  return response.json()
+  console.log(`✓ Loaded ${allIssues.length} total issues from ${page} page(s)`)
+  return allIssues
 }
 
 /**
- * Fetch milestones from a GitLab project
+ * Fetch milestones from a GitLab project with pagination
  */
 export async function fetchMilestones(gitlabUrl, projectId, token) {
   const encodedProjectId = encodeURIComponent(projectId)
-  const response = await fetch(
-    `${gitlabUrl}/api/v4/projects/${encodedProjectId}/milestones`,
-    { headers: { 'PRIVATE-TOKEN': token } }
-  )
+  let allMilestones = []
+  let page = 1
+  const perPage = 100
 
-  if (!response.ok) {
-    throw new Error(`Milestones API Error: ${response.status}`)
+  console.log('Fetching milestones with pagination...')
+
+  while (true) {
+    const response = await fetch(
+      `${gitlabUrl}/api/v4/projects/${encodedProjectId}/milestones?per_page=${perPage}&page=${page}`,
+      { headers: { 'PRIVATE-TOKEN': token } }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Milestones API Error: ${response.status}`)
+    }
+
+    const milestones = await response.json()
+
+    if (milestones.length === 0) {
+      break // No more milestones
+    }
+
+    allMilestones = allMilestones.concat(milestones)
+    console.log(`  Fetched page ${page}: ${milestones.length} milestones (total: ${allMilestones.length})`)
+
+    if (milestones.length < perPage) {
+      break // Last page (partial results)
+    }
+
+    page++
   }
 
-  return response.json()
+  console.log(`✓ Loaded ${allMilestones.length} total milestones from ${page} page(s)`)
+  return allMilestones
 }
 
 /**
- * Fetch epics from a GitLab group (Premium/Ultimate only)
+ * Fetch epics from a GitLab group (Premium/Ultimate only) with pagination
  */
 export async function fetchEpics(gitlabUrl, groupPath, token) {
   if (!groupPath) {
@@ -46,23 +94,46 @@ export async function fetchEpics(gitlabUrl, groupPath, token) {
   }
 
   const encodedGroupPath = encodeURIComponent(groupPath)
+  let allEpics = []
+  let page = 1
+  const perPage = 100
+
+  console.log('Fetching epics with pagination...')
 
   try {
-    const response = await fetch(
-      `${gitlabUrl}/api/v4/groups/${encodedGroupPath}/epics?per_page=100`,
-      { headers: { 'PRIVATE-TOKEN': token } }
-    )
+    while (true) {
+      const response = await fetch(
+        `${gitlabUrl}/api/v4/groups/${encodedGroupPath}/epics?per_page=${perPage}&page=${page}`,
+        { headers: { 'PRIVATE-TOKEN': token } }
+      )
 
-    if (response.status === 404) {
-      console.warn('Epics not available (requires Premium/Ultimate)')
-      return []
+      if (response.status === 404) {
+        console.warn('Epics not available (requires Premium/Ultimate)')
+        return []
+      }
+
+      if (!response.ok) {
+        throw new Error(`Epics API Error: ${response.status}`)
+      }
+
+      const epics = await response.json()
+
+      if (epics.length === 0) {
+        break // No more epics
+      }
+
+      allEpics = allEpics.concat(epics)
+      console.log(`  Fetched page ${page}: ${epics.length} epics (total: ${allEpics.length})`)
+
+      if (epics.length < perPage) {
+        break // Last page (partial results)
+      }
+
+      page++
     }
 
-    if (!response.ok) {
-      throw new Error(`Epics API Error: ${response.status}`)
-    }
-
-    return response.json()
+    console.log(`✓ Loaded ${allEpics.length} total epics from ${page} page(s)`)
+    return allEpics
   } catch (error) {
     console.error('Epic fetch failed:', error)
     return []
