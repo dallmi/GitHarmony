@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
 import { generateInsights, getInsightStats } from '../services/insightsService'
+import DependencyAlertsSection from './DependencyAlertsSection'
 
 /**
  * AI Insights Engine View
@@ -113,6 +114,9 @@ export default function InsightsView({ issues, milestones, epics, stats, healthS
           </div>
         </div>
       </div>
+
+      {/* Dependency Alerts Section */}
+      <DependencyAlertsSection issues={issues} />
 
       {/* Insights List */}
       {insights.length === 0 ? (
