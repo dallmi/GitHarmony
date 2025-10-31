@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import SprintPlanningView from './SprintPlanningView'
 import SprintBoardView from './SprintBoardView'
 import SprintGoalSection from './SprintGoalSection'
+import RetrospectiveActionsSection from './RetrospectiveActionsSection'
 
 /**
  * Unified Sprint Management View
@@ -11,6 +12,7 @@ import SprintGoalSection from './SprintGoalSection'
  */
 export default function SprintManagementView({ issues }) {
   const [showPlanning, setShowPlanning] = useState(false)
+  const [showRetro, setShowRetro] = useState(false)
 
   return (
     <div className="container-fluid">
@@ -26,6 +28,50 @@ export default function SprintManagementView({ issues }) {
 
       {/* Sprint Goal Section */}
       <SprintGoalSection sprintId="current" sprintName="Current Sprint" />
+
+      {/* Retrospective Actions Section - Collapsible */}
+      <div className="card" style={{ marginBottom: '24px' }}>
+        <button
+          onClick={() => setShowRetro(!showRetro)}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: '100%',
+            padding: '16px',
+            background: '#F9FAFB',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = '#F3F4F6'}
+          onMouseLeave={(e) => e.currentTarget.style.background = '#F9FAFB'}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '20px' }}>
+              {showRetro ? '▼' : '▶'}
+            </span>
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: '16px', fontWeight: '600', color: '#1F2937' }}>
+                🔄 Retrospective Actions
+              </div>
+              <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '2px' }}>
+                Track continuous improvement actions from retros
+              </div>
+            </div>
+          </div>
+          <div style={{ fontSize: '13px', color: '#6B7280', fontWeight: '500' }}>
+            {showRetro ? 'Click to collapse' : 'Click to expand'}
+          </div>
+        </button>
+
+        {showRetro && (
+          <div style={{ padding: '20px', borderTop: '1px solid #E5E7EB' }}>
+            <RetrospectiveActionsSection sprintId="current" sprintName="Current Sprint" />
+          </div>
+        )}
+      </div>
 
       {/* Planning Section - Collapsible */}
       <div className="card" style={{ marginBottom: '24px' }}>
