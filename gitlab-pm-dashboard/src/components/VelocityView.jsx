@@ -333,16 +333,20 @@ export default function VelocityView({ issues }) {
                 {/* Chart area */}
                 <div style={{ position: 'absolute', left: '50px', right: 0, top: 0, bottom: 40, borderLeft: '2px solid #E5E7EB', borderBottom: '2px solid #E5E7EB', display: 'flex', alignItems: 'flex-end', gap: '8px', padding: '10px' }}>
                   {velocityData.map((sprint, index) => {
-                    const barHeight = (sprint.velocity / maxVelocity) * 100
+                    const barHeightPercent = (sprint.velocity / maxVelocity) * 100
                     const isRecent = index >= velocityData.length - 3
 
+                    // Calculate actual pixel height from the container (300px total - 40px for x-axis - 20px padding = 240px chart area)
+                    const chartHeightPx = 240
+                    const barHeightPx = Math.max((barHeightPercent / 100) * chartHeightPx, 24)
+
                     return (
-                      <div key={sprint.sprint} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                      <div key={sprint.sprint} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end' }}>
                         {/* Bar */}
                         <div
                           style={{
                             width: '100%',
-                            height: `${barHeight}%`,
+                            height: `${barHeightPx}px`,
                             background: isRecent ? '#2563EB' : '#93C5FD',
                             borderRadius: '4px 4px 0 0',
                             display: 'flex',
@@ -350,8 +354,7 @@ export default function VelocityView({ issues }) {
                             justifyContent: 'center',
                             color: 'white',
                             fontSize: '12px',
-                            fontWeight: '600',
-                            minHeight: '24px'
+                            fontWeight: '600'
                           }}
                         >
                           {sprint.velocity}
