@@ -32,28 +32,19 @@ export default function InsightsView({ issues, milestones, epics, stats, healthS
     }
   }
 
-  const getTypeIcon = (type) => {
+  const getTypeLabel = (type) => {
     switch (type) {
-      case 'critical': return '🚨'
-      case 'warning': return '⚠️'
-      case 'info': return 'ℹ️'
-      case 'success': return '✅'
-      default: return '💡'
+      case 'critical': return 'CRITICAL'
+      case 'warning': return 'WARNING'
+      case 'info': return 'INFO'
+      case 'success': return 'SUCCESS'
+      default: return 'INSIGHT'
     }
   }
 
-  const getCategoryIcon = (category) => {
-    switch (category) {
-      case 'Velocity': return '📈'
-      case 'Bottlenecks': return '🔴'
-      case 'Resources': return '👥'
-      case 'Milestones': return '🎯'
-      case 'Epics': return '📦'
-      case 'Risks': return '⚠️'
-      case 'Forecast': return '🔮'
-      case 'Quality': return '✨'
-      default: return '💡'
-    }
+  const getCategoryLabel = (category) => {
+    // Return category as-is, no icons
+    return category
   }
 
   return (
@@ -121,7 +112,6 @@ export default function InsightsView({ issues, milestones, epics, stats, healthS
       {/* Insights List */}
       {insights.length === 0 ? (
         <div className="card text-center" style={{ padding: '60px 20px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>🎯</div>
           <h3 className="mb-2">No Insights Available</h3>
           <p className="text-muted">
             The AI engine needs more project data to generate insights.
@@ -144,31 +134,29 @@ export default function InsightsView({ issues, milestones, epics, stats, healthS
             >
               {/* Header */}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '16px' }}>
-                <div style={{ fontSize: '32px' }}>
-                  {getTypeIcon(insight.type)}
-                </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                     <span style={{
                       padding: '4px 12px',
-                      background: getTypeColor(insight.type) + '20',
-                      color: getTypeColor(insight.type),
-                      borderRadius: '12px',
+                      background: getTypeColor(insight.type),
+                      color: 'white',
+                      borderRadius: '4px',
                       fontSize: '11px',
                       fontWeight: '700',
-                      textTransform: 'uppercase'
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
                     }}>
-                      {insight.type}
+                      {getTypeLabel(insight.type)}
                     </span>
                     <span style={{
                       padding: '4px 12px',
                       background: '#F3F4F6',
                       color: '#6B7280',
-                      borderRadius: '12px',
+                      borderRadius: '4px',
                       fontSize: '11px',
                       fontWeight: '600'
                     }}>
-                      {getCategoryIcon(insight.category)} {insight.category}
+                      {getCategoryLabel(insight.category)}
                     </span>
                     <span style={{
                       fontSize: '11px',

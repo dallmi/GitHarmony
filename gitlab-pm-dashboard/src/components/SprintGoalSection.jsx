@@ -127,7 +127,7 @@ export default function SprintGoalSection({ sprintId = 'current', sprintName = '
               letterSpacing: '0.5px',
               fontWeight: '500'
             }}>
-              🎯 Sprint Goal
+              Sprint Goal
             </div>
             <div style={{ fontSize: '12px', opacity: 0.7 }}>
               {sprintName}

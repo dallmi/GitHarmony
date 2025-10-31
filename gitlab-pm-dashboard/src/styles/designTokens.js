@@ -12,7 +12,7 @@
 export const colors = {
   // Primary Brand Color (Red accent)
   primary: {
-    main: '#E60000',      // UBS Red
+    main: '#E60000',      // Professional red
     hover: '#CC0000',     // Darker red for hover
     light: '#FFE5E5',     // Light red background
     subtle: '#FFF5F5'     // Very subtle red tint

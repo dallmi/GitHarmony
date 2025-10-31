@@ -13,9 +13,12 @@ export default function Header({ stats, healthScore, onRefresh, onConfigure, onE
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div>
             <h1 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '4px' }}>
-              GitLab Project Management
+              GitHarmony
             </h1>
-            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: '4px' }}>
+              teams in tune
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
               {stats && (
                 <>
                   {stats.total} Issues · {stats.open} Open · {stats.closed} Closed
