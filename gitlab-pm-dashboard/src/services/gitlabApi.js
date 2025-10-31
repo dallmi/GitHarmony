@@ -4,6 +4,42 @@
  */
 
 /**
+ * Validate and fetch project information
+ * Helps diagnose 404 errors by checking if project exists and is accessible
+ */
+export async function validateProject(gitlabUrl, projectId, token) {
+  const encodedProjectId = encodeURIComponent(projectId)
+  const url = `${gitlabUrl}/api/v4/projects/${encodedProjectId}`
+
+  console.log('Validating project access...')
+  console.log('  URL:', url)
+
+  const response = await fetch(url, {
+    headers: { 'PRIVATE-TOKEN': token }
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error('Project validation failed:', errorText)
+
+    if (response.status === 404) {
+      throw new Error(`Project not found: "${projectId}"\n\nPossible issues:\n- Project ID might be incorrect\n- Use either numeric ID (e.g., "12345") or full path (e.g., "namespace/project-name")\n- Check if the token has access to this project\n- Verify the GitLab URL is correct`)
+    } else if (response.status === 401) {
+      throw new Error(`Authentication failed: Invalid or expired access token`)
+    } else {
+      throw new Error(`Project validation error: ${response.status} - ${response.statusText}`)
+    }
+  }
+
+  const project = await response.json()
+  console.log('✓ Project validated:', project.name)
+  console.log('  Full path:', project.path_with_namespace)
+  console.log('  Numeric ID:', project.id)
+
+  return project
+}
+
+/**
  * Fetch issues from a GitLab project with pagination
  */
 export async function fetchIssues(gitlabUrl, projectId, token) {
@@ -13,15 +49,22 @@ export async function fetchIssues(gitlabUrl, projectId, token) {
   const perPage = 100
 
   console.log('Fetching issues with pagination...')
+  console.log('  GitLab URL:', gitlabUrl)
+  console.log('  Project ID:', projectId)
+  console.log('  Encoded Project ID:', encodedProjectId)
 
   while (true) {
-    const response = await fetch(
-      `${gitlabUrl}/api/v4/projects/${encodedProjectId}/issues?per_page=${perPage}&page=${page}&scope=all&with_iterations=true`,
-      { headers: { 'PRIVATE-TOKEN': token } }
-    )
+    const url = `${gitlabUrl}/api/v4/projects/${encodedProjectId}/issues?per_page=${perPage}&page=${page}&scope=all&with_iterations=true`
+    console.log('  API Request URL:', url)
+
+    const response = await fetch(url, {
+      headers: { 'PRIVATE-TOKEN': token }
+    })
 
     if (!response.ok) {
-      throw new Error(`Issues API Error: ${response.status}`)
+      const errorText = await response.text()
+      console.error('API Error Response:', errorText)
+      throw new Error(`Issues API Error: ${response.status} - ${response.statusText}\nURL: ${url}\nProject ID: ${projectId}\nEncoded: ${encodedProjectId}\nResponse: ${errorText}`)
     }
 
     const issues = await response.json()
@@ -305,6 +348,12 @@ function filterByYear2025(data, dateFields) {
  */
 export async function fetchAllData(config) {
   const { gitlabUrl, projectId, groupPath, token, filter2025 } = config
+
+  // First validate project access to provide clear error messages
+  console.log('=== Starting GitLab Data Fetch ===')
+  console.log('Config:', { gitlabUrl, projectId, groupPath: groupPath || '(none)' })
+
+  await validateProject(gitlabUrl, projectId, token)
 
   const [allIssues, allMilestones, allEpics] = await Promise.all([
     fetchIssues(gitlabUrl, projectId, token),
