@@ -13,6 +13,7 @@ import { searchIssues } from '../utils/searchUtils'
 import { exportIssuesToCSV, downloadCSV as downloadCSVUtil } from '../utils/csvExportUtils'
 import { loadTeamConfig } from '../services/teamConfigService'
 import QualityCriteriaConfigModal from './QualityCriteriaConfigModal'
+import DoDComplianceSection from './DoDComplianceSection'
 
 /**
  * Issue Compliance & Quality Check View
@@ -24,6 +25,7 @@ export default function IssueComplianceView({ issues: allIssues }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [activeFilter, setActiveFilter] = useState(null) // Track active tile filter
   const [showConfigModal, setShowConfigModal] = useState(false)
+  const [activeTab, setActiveTab] = useState('quality') // 'quality' or 'dod'
 
   const { nonCompliantIssues, stats, staleIssues } = useMemo(() => {
     if (!issues || issues.length === 0) {
@@ -172,19 +174,67 @@ Best regards`
         </div>
       </div>
 
+      {/* Tab Navigation */}
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        borderBottom: '2px solid #E5E7EB',
+        marginBottom: '24px'
+      }}>
+        <button
+          onClick={() => setActiveTab('quality')}
+          style={{
+            padding: '12px 24px',
+            background: activeTab === 'quality' ? 'white' : 'transparent',
+            border: 'none',
+            borderBottom: activeTab === 'quality' ? '3px solid #E60000' : '3px solid transparent',
+            fontSize: '14px',
+            fontWeight: activeTab === 'quality' ? '600' : '500',
+            color: activeTab === 'quality' ? '#E60000' : '#6B7280',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            marginBottom: '-2px'
+          }}
+        >
+          📋 Quality Criteria
+        </button>
+        <button
+          onClick={() => setActiveTab('dod')}
+          style={{
+            padding: '12px 24px',
+            background: activeTab === 'dod' ? 'white' : 'transparent',
+            border: 'none',
+            borderBottom: activeTab === 'dod' ? '3px solid #E60000' : '3px solid transparent',
+            fontSize: '14px',
+            fontWeight: activeTab === 'dod' ? '600' : '500',
+            color: activeTab === 'dod' ? '#E60000' : '#6B7280',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            marginBottom: '-2px'
+          }}
+        >
+          ✅ Definition of Done
+        </button>
+      </div>
+
       {/* Quality Criteria Config Modal */}
       <QualityCriteriaConfigModal
         isOpen={showConfigModal}
         onClose={() => setShowConfigModal(false)}
       />
 
-      {/* Search Bar */}
-      <SearchBar
-        value={searchTerm}
-        onChange={setSearchTerm}
-        placeholder="Search issues by title, labels, assignees, epic, milestone, description..."
-        onClear={() => setActiveFilter(null)}
-      />
+      {/* Tab Content */}
+      {activeTab === 'dod' ? (
+        <DoDComplianceSection issues={issues} />
+      ) : (
+        <>
+          {/* Search Bar */}
+          <SearchBar
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Search issues by title, labels, assignees, epic, milestone, description..."
+            onClear={() => setActiveFilter(null)}
+          />
 
       {/* Stats Cards */}
       {stats && (
@@ -648,6 +698,8 @@ Best regards`
             </p>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   )
