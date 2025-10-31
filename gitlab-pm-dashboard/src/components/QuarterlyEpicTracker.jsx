@@ -393,7 +393,7 @@ export default function QuarterlyEpicTracker({ epics, issues }) {
 
                 <div>
                   <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>Iterations</div>
-                  <div style={{ fontSize: '16px', fontWeight: '600', color: '#7C3AED' }}>
+                  <div style={{ fontSize: '16px', fontWeight: '600', color: '#1F2937' }}>
                     {epic.iterations.length > 0 ? epic.iterations.join(', ') : 'None'}
                   </div>
                 </div>

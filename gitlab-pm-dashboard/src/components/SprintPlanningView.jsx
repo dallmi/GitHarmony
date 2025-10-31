@@ -9,6 +9,7 @@ import {
 } from '../services/teamConfigService'
 import { getUniqueIterations } from '../services/velocityService'
 import { getIterationName } from '../utils/labelUtils'
+import SearchableSelect from './SearchableSelect'
 
 /**
  * Sprint Planning View
@@ -57,16 +58,22 @@ export default function SprintPlanningView({ issues: allIssues }) {
       .sort((a, b) => {
         if (!a.startDate) return 1
         if (!b.startDate) return -1
-        return new Date(a.startDate) - new Date(b.startDate) // Upcoming first
+        return new Date(b.startDate) - new Date(a.startDate) // Most recent first (descending)
       })
   }, [issues])
 
-  // Default to first upcoming sprint
+  // Default to current or most recent sprint
   useEffect(() => {
     if (sprints.length > 0 && !selectedSprint) {
       const today = new Date()
-      const upcomingSprint = sprints.find(s => s.startDate && new Date(s.startDate) >= today)
-      setSelectedSprint(upcomingSprint || sprints[0])
+      // Find current sprint (start <= today <= due)
+      const currentSprint = sprints.find(s =>
+        s.startDate && s.dueDate &&
+        new Date(s.startDate) <= today &&
+        new Date(s.dueDate) >= today
+      )
+      // Otherwise use most recent sprint (first in descending list)
+      setSelectedSprint(currentSprint || sprints[0])
     }
   }, [sprints, selectedSprint])
 
@@ -107,7 +114,20 @@ export default function SprintPlanningView({ issues: allIssues }) {
         if (filterWeight === 'medium' && (!issue.weight || issue.weight < 4 || issue.weight > 7)) return
         if (filterWeight === 'high' && (!issue.weight || issue.weight < 8)) return
       }
-      if (searchTerm && !issue.title.toLowerCase().includes(searchTerm.toLowerCase())) return
+
+      // Enhanced search: title, epic, assignees, weight, issue ID
+      if (searchTerm) {
+        const search = searchTerm.toLowerCase()
+        const titleMatch = issue.title.toLowerCase().includes(search)
+        const epicMatch = issue.epic?.title.toLowerCase().includes(search)
+        const assigneeMatch = issue.assignees?.some(a =>
+          a.name.toLowerCase().includes(search) || a.username.toLowerCase().includes(search)
+        )
+        const weightMatch = issue.weight && issue.weight.toString().includes(search)
+        const idMatch = issue.iid.toString().includes(search)
+
+        if (!titleMatch && !epicMatch && !assigneeMatch && !weightMatch && !idMatch) return
+      }
 
       // Only consider open issues
       if (issue.state !== 'opened') return
@@ -199,90 +219,91 @@ export default function SprintPlanningView({ issues: allIssues }) {
 
   return (
     <div className="container-fluid">
-      {/* Header with Sprint Selector */}
-      <div className="card" style={{ marginBottom: '24px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', border: 'none' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h2 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: '600' }}>
-              Sprint Planning
-            </h2>
-            <div style={{ fontSize: '14px', opacity: 0.9 }}>
-              Plan your sprints with real-time capacity tracking
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', marginBottom: '6px', opacity: 0.9 }}>
-                Select Sprint
-              </label>
-              <select
-                value={selectedSprint?.name || ''}
-                onChange={(e) => {
-                  const sprint = sprints.find(s => s.name === e.target.value)
-                  setSelectedSprint(sprint)
-                }}
-                style={{
-                  padding: '10px 16px',
-                  border: '2px solid rgba(255,255,255,0.3)',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  background: 'rgba(255,255,255,0.2)',
-                  color: 'white',
-                  fontWeight: '500',
-                  minWidth: '250px'
-                }}
-              >
-                {sprints.map(sprint => {
-                  const isPast = sprint.dueDate && new Date(sprint.dueDate) < new Date()
-                  const isCurrent = sprint.startDate && sprint.dueDate &&
-                    new Date(sprint.startDate) <= new Date() && new Date(sprint.dueDate) >= new Date()
-
-                  return (
-                    <option key={sprint.id} value={sprint.name} style={{ color: '#1F2937' }}>
-                      {sprint.name}
-                      {isCurrent && ' (Current)'}
-                      {isPast && ' (Past)'}
-                      {sprint.startDate && ` - ${new Date(sprint.startDate).toLocaleDateString()}`}
-                    </option>
-                  )
-                })}
-              </select>
-            </div>
+      {/* Header */}
+      <div className="card" style={{ marginBottom: '24px', background: '#FFFFFF', border: '1px solid #E5E7EB' }}>
+        <div>
+          <h2 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: '600', color: '#1F2937' }}>
+            Sprint Planning: {selectedSprint?.name}
+          </h2>
+          <div style={{ fontSize: '14px', color: '#6B7280' }}>
+            Plan your sprints with real-time capacity tracking. Use the iteration filter at the top to switch sprints.
           </div>
         </div>
 
         {/* Sprint Dates */}
-        {selectedSprint.startDate && (
-          <div style={{
-            marginTop: '16px',
-            padding: '12px',
-            background: 'rgba(255,255,255,0.15)',
-            borderRadius: '8px',
-            fontSize: '13px',
-            display: 'flex',
-            gap: '24px'
-          }}>
-            <div>
-              <span style={{ opacity: 0.8 }}>Start:</span>{' '}
-              <strong>{new Date(selectedSprint.startDate).toLocaleDateString()}</strong>
+        {selectedSprint.startDate && (() => {
+          const today = new Date()
+          const startDate = new Date(selectedSprint.startDate)
+          const dueDate = selectedSprint.dueDate ? new Date(selectedSprint.dueDate) : null
+          const totalDays = dueDate ? Math.ceil((dueDate - startDate) / (1000 * 60 * 60 * 24)) : 0
+          const daysElapsed = Math.max(0, Math.ceil((today - startDate) / (1000 * 60 * 60 * 24)))
+          const daysRemaining = dueDate ? Math.max(0, Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24))) : 0
+          const progressPercent = dueDate && totalDays > 0 ? Math.min(100, (daysElapsed / totalDays) * 100) : 0
+          const isOverdue = dueDate && today > dueDate
+          const isCurrent = startDate <= today && (!dueDate || dueDate >= today)
+
+          return (
+            <div style={{
+              marginTop: '16px',
+              padding: '12px',
+              background: '#F9FAFB',
+              borderRadius: '8px',
+              fontSize: '13px',
+              border: '1px solid #E5E7EB'
+            }}>
+              <div style={{ display: 'flex', gap: '24px', marginBottom: dueDate ? '12px' : '0' }}>
+                <div>
+                  <span style={{ color: '#6B7280' }}>Start:</span>{' '}
+                  <strong style={{ color: '#1F2937' }}>{startDate.toLocaleDateString()}</strong>
+                </div>
+                {dueDate && (
+                  <>
+                    <div>
+                      <span style={{ color: '#6B7280' }}>End:</span>{' '}
+                      <strong style={{ color: '#1F2937' }}>{dueDate.toLocaleDateString()}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: '#6B7280' }}>Duration:</span>{' '}
+                      <strong style={{ color: '#1F2937' }}>{totalDays} days</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: '#6B7280' }}>
+                        {isOverdue ? 'Overdue:' : isCurrent ? 'Remaining:' : 'Starts in:'}
+                      </span>{' '}
+                      <strong style={{ color: isOverdue ? '#DC2626' : '#E60000' }}>
+                        {isOverdue
+                          ? `${Math.abs(daysRemaining)} days`
+                          : isCurrent
+                          ? `${daysRemaining} days`
+                          : `${Math.abs(daysElapsed)} days`}
+                      </strong>
+                    </div>
+                    <div>
+                      <span style={{ color: '#6B7280' }}>Progress:</span>{' '}
+                      <strong style={{ color: '#1F2937' }}>{Math.round(progressPercent)}%</strong>
+                    </div>
+                  </>
+                )}
+              </div>
+              {dueDate && (
+                <div style={{
+                  width: '100%',
+                  height: '6px',
+                  background: '#E5E7EB',
+                  borderRadius: '3px',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    width: `${progressPercent}%`,
+                    height: '100%',
+                    background: isOverdue ? '#DC2626' : '#E60000',
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+              )}
             </div>
-            {selectedSprint.dueDate && (
-              <>
-                <div>
-                  <span style={{ opacity: 0.8 }}>End:</span>{' '}
-                  <strong>{new Date(selectedSprint.dueDate).toLocaleDateString()}</strong>
-                </div>
-                <div>
-                  <span style={{ opacity: 0.8 }}>Duration:</span>{' '}
-                  <strong>
-                    {Math.ceil((new Date(selectedSprint.dueDate) - new Date(selectedSprint.startDate)) / (1000 * 60 * 60 * 24))} days
-                  </strong>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+          )
+        })()}
       </div>
 
       {/* Capacity Overview Cards */}
@@ -345,7 +366,7 @@ export default function SprintPlanningView({ issues: allIssues }) {
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by title..."
+                  placeholder="Search by title, epic, assignee, weight, or #ID..."
                   style={{
                     width: '100%',
                     padding: '8px 12px',
@@ -356,72 +377,48 @@ export default function SprintPlanningView({ issues: allIssues }) {
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '6px', color: '#6B7280' }}>
-                  Filter by Epic
-                </label>
-                <select
-                  value={filterEpic}
-                  onChange={(e) => setFilterEpic(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '6px',
-                    fontSize: '14px'
-                  }}
-                >
-                  <option value="all">All Epics</option>
-                  {epics.map(epic => (
-                    <option key={epic.id} value={epic.id}>{epic.title}</option>
-                  ))}
-                </select>
-              </div>
+              <SearchableSelect
+                label="Filter by Epic"
+                value={filterEpic}
+                onChange={setFilterEpic}
+                placeholder="All Epics"
+                options={[
+                  { value: 'all', label: 'All Epics' },
+                  ...epics.map(epic => ({
+                    value: epic.id,
+                    label: epic.title
+                  }))
+                ]}
+              />
 
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '6px', color: '#6B7280' }}>
-                  Filter by Assignee
-                </label>
-                <select
-                  value={filterAssignee}
-                  onChange={(e) => setFilterAssignee(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '6px',
-                    fontSize: '14px'
-                  }}
-                >
-                  <option value="all">All Assignees</option>
-                  {assignees.map(assignee => (
-                    <option key={assignee.username} value={assignee.username}>{assignee.name}</option>
-                  ))}
-                </select>
-              </div>
+              <SearchableSelect
+                label="Filter by Assignee"
+                value={filterAssignee}
+                onChange={setFilterAssignee}
+                placeholder="All Assignees"
+                options={[
+                  { value: 'all', label: 'All Assignees' },
+                  ...assignees.map(assignee => ({
+                    value: assignee.username,
+                    label: assignee.name,
+                    subtitle: assignee.username
+                  }))
+                ]}
+              />
 
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '6px', color: '#6B7280' }}>
-                  Filter by Weight
-                </label>
-                <select
-                  value={filterWeight}
-                  onChange={(e) => setFilterWeight(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '6px',
-                    fontSize: '14px'
-                  }}
-                >
-                  <option value="all">All Weights</option>
-                  <option value="none">No Weight</option>
-                  <option value="low">Low (1-3)</option>
-                  <option value="medium">Medium (4-7)</option>
-                  <option value="high">High (8+)</option>
-                </select>
-              </div>
+              <SearchableSelect
+                label="Filter by Weight"
+                value={filterWeight}
+                onChange={setFilterWeight}
+                placeholder="All Weights"
+                options={[
+                  { value: 'all', label: 'All Weights' },
+                  { value: 'none', label: 'No Weight' },
+                  { value: 'low', label: 'Low (1-3)' },
+                  { value: 'medium', label: 'Medium (4-7)' },
+                  { value: 'high', label: 'High (8+)' }
+                ]}
+              />
             </div>
           </div>
 

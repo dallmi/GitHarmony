@@ -19,8 +19,6 @@ import { exportIssuesToCSV, downloadCSV as downloadCSVUtil } from '../utils/csvE
 export default function IssueComplianceView({ issues: allIssues }) {
   // Use filtered issues from iteration context
   const { filteredIssues: issues } = useIterationFilter()
-  const [filterSeverity, setFilterSeverity] = useState('all') // all, high, medium, low
-  const [showStaleOnly, setShowStaleOnly] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeFilter, setActiveFilter] = useState(null) // Track active tile filter
 
@@ -50,19 +48,7 @@ export default function IssueComplianceView({ issues: allIssues }) {
       filtered = searchIssues(filtered, searchTerm)
     }
 
-    // Filter by severity
-    if (filterSeverity !== 'all') {
-      filtered = filtered.filter(issue => {
-        return issue.violations.some(v => v.severity === filterSeverity)
-      })
-    }
-
-    // Filter by stale status
-    if (showStaleOnly) {
-      filtered = filtered.filter(issue => issue.staleStatus?.isStale)
-    }
-
-    // Apply active tile filter
+    // Apply active tile filter (simplified - only use tile clicks)
     if (activeFilter) {
       switch (activeFilter) {
         case 'highSeverity':
@@ -71,6 +57,9 @@ export default function IssueComplianceView({ issues: allIssues }) {
         case 'mediumSeverity':
           filtered = filtered.filter(issue => issue.violations.some(v => v.severity === 'medium'))
           break
+        case 'lowSeverity':
+          filtered = filtered.filter(issue => issue.violations.some(v => v.severity === 'low'))
+          break
         case 'stale':
           filtered = filtered.filter(issue => issue.staleStatus?.isStale)
           break
@@ -78,7 +67,7 @@ export default function IssueComplianceView({ issues: allIssues }) {
     }
 
     return filtered
-  }, [nonCompliantIssues, searchTerm, filterSeverity, showStaleOnly, activeFilter])
+  }, [nonCompliantIssues, searchTerm, activeFilter])
 
   const handleExportCSV = () => {
     // Export filtered issues using new CSV export utility
@@ -197,19 +186,41 @@ export default function IssueComplianceView({ issues: allIssues }) {
 
           <div
             className="card"
+            onClick={() => handleTileClick('lowSeverity')}
+            style={{
+              borderLeft: '4px solid #6B7280',
+              cursor: 'pointer',
+              transform: activeFilter === 'lowSeverity' ? 'scale(0.98)' : 'scale(1)',
+              boxShadow: activeFilter === 'lowSeverity' ? '0 0 0 3px rgba(107, 114, 128, 0.2)' : undefined,
+              transition: 'all 0.2s'
+            }}
+          >
+            <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
+              Low Severity {activeFilter === 'lowSeverity' && '✓'}
+            </div>
+            <div style={{ fontSize: '32px', fontWeight: '600', color: '#6B7280' }}>
+              {stats.lowSeverity}
+            </div>
+            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
+              {activeFilter === 'lowSeverity' ? 'Click to clear filter' : 'Click to filter'}
+            </div>
+          </div>
+
+          <div
+            className="card"
             onClick={() => handleTileClick('stale')}
             style={{
-              borderLeft: '4px solid #7C3AED',
+              borderLeft: '4px solid #9CA3AF',
               cursor: 'pointer',
               transform: activeFilter === 'stale' ? 'scale(0.98)' : 'scale(1)',
-              boxShadow: activeFilter === 'stale' ? '0 0 0 3px #7C3AED33' : undefined,
+              boxShadow: activeFilter === 'stale' ? '0 0 0 3px rgba(156, 163, 175, 0.2)' : undefined,
               transition: 'all 0.2s'
             }}
           >
             <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
               Stale Issues {activeFilter === 'stale' && '✓'}
             </div>
-            <div style={{ fontSize: '32px', fontWeight: '600', color: '#7C3AED' }}>
+            <div style={{ fontSize: '32px', fontWeight: '600', color: '#6B7280' }}>
               {stats.staleIssues.total}
             </div>
             <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
@@ -250,64 +261,54 @@ export default function IssueComplianceView({ issues: allIssues }) {
         </div>
       </div>
 
-      {/* Filters */}
-      {nonCompliantIssues.length > 0 && (
-        <div style={{ marginBottom: '20px', display: 'flex', gap: '24px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <span style={{ fontSize: '14px', fontWeight: '600' }}>Filter by Severity:</span>
-            {['all', 'high', 'medium', 'low'].map(severity => (
-              <button
-                key={severity}
-                onClick={() => setFilterSeverity(severity)}
-                style={{
-                  padding: '6px 16px',
-                  background: filterSeverity === severity ? '#E60000' : '#F3F4F6',
-                  color: filterSeverity === severity ? 'white' : '#6B7280',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  textTransform: 'capitalize'
-                }}
-              >
-                {severity}
-              </button>
-            ))}
+      {/* Active Filter Indicator */}
+      {activeFilter && filteredIssues.length > 0 && (
+        <div style={{
+          marginBottom: '20px',
+          padding: '12px 16px',
+          background: '#F9FAFB',
+          borderRadius: '8px',
+          border: '1px solid #E5E7EB',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '14px', color: '#374151' }}>
+              📌 Filtered by:
+            </span>
+            <span style={{
+              padding: '4px 12px',
+              background: '#E5E7EB',
+              color: '#1F2937',
+              borderRadius: '12px',
+              fontSize: '13px',
+              fontWeight: '600'
+            }}>
+              {activeFilter === 'highSeverity' && 'High Severity'}
+              {activeFilter === 'mediumSeverity' && 'Medium Severity'}
+              {activeFilter === 'lowSeverity' && 'Low Severity'}
+              {activeFilter === 'stale' && 'Stale Issues'}
+            </span>
+            <span style={{ fontSize: '13px', color: '#6B7280' }}>
+              ({filteredIssues.length} {filteredIssues.length === 1 ? 'issue' : 'issues'})
+            </span>
           </div>
-
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <button
-              onClick={() => setShowStaleOnly(!showStaleOnly)}
-              style={{
-                padding: '6px 16px',
-                background: showStaleOnly ? '#7C3AED' : '#F3F4F6',
-                color: showStaleOnly ? 'white' : '#6B7280',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '13px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              ⏰ Stale Only
-              {stats && stats.staleIssues.total > 0 && (
-                <span style={{
-                  background: showStaleOnly ? 'rgba(255,255,255,0.3)' : '#DC2626',
-                  color: showStaleOnly ? 'white' : 'white',
-                  padding: '2px 6px',
-                  borderRadius: '10px',
-                  fontSize: '11px',
-                  fontWeight: '700'
-                }}>
-                  {stats.staleIssues.total}
-                </span>
-              )}
-            </button>
-          </div>
+          <button
+            onClick={() => setActiveFilter(null)}
+            style={{
+              padding: '4px 12px',
+              background: '#E60000',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Clear Filter
+          </button>
         </div>
       )}
 

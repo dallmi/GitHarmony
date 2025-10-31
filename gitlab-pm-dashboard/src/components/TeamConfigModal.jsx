@@ -270,7 +270,7 @@ export default function TeamConfigModal({ isOpen, onClose, issues }) {
               </div>
 
               {/* Add/Edit Form */}
-              {(editingMember !== null || formData.username === '') && formData.name === '' && (
+              {(editingMember !== null || (formData.username === '' && formData.name === '')) && (
                 <div style={{
                   border: '2px solid #2563EB',
                   borderRadius: '8px',

@@ -420,7 +420,7 @@ export default function CycleTimeView({ issues: allIssues }) {
                   <div style={{
                     width: `${percentage}%`,
                     height: '100%',
-                    background: 'linear-gradient(90deg, #3B82F6, #2563EB)',
+                    background: '#6B7280',
                     transition: 'width 0.3s'
                   }} />
                 </div>

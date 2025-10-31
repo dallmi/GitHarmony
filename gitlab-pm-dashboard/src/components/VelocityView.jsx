@@ -502,7 +502,7 @@ export default function VelocityView({ issues }) {
               </tr>
             </thead>
             <tbody>
-              {velocityData.map((sprint) => (
+              {[...velocityData].reverse().map((sprint) => (
                 <tr key={sprint.sprint} style={{ borderBottom: '1px solid #E5E7EB' }}>
                   <td style={{ padding: '12px', fontWeight: '600' }}>Sprint {sprint.sprint}</td>
                   <td style={{ padding: '12px', textAlign: 'center' }}>{sprint.totalIssues}</td>
