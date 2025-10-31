@@ -4,6 +4,21 @@ import { isBlocked } from '../utils/labelUtils'
 import { getPhaseLabel, getPhaseColor, detectIssuePhase } from '../services/cycleTimeService'
 
 /**
+ * Calculate issue progress percentage based on state and phase
+ */
+function getIssueProgressPercent(issue) {
+  if (issue.state === 'closed') return 100
+
+  const phase = detectIssuePhase(issue)
+  if (phase === 'testing') return 85
+  if (phase === 'review') return 70
+  if (phase === 'inProgress') return 40
+  if (phase === 'todo') return 5
+
+  return 0
+}
+
+/**
  * Executive-Ready Gantt Chart
  * Epic-first view with RAG status, root cause analysis, and actionable insights
  */
@@ -11,6 +26,7 @@ export default function GanttView({ issues, epics: allEpics }) {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [selectedQuarter, setSelectedQuarter] = useState('all')
   const [expandedEpics, setExpandedEpics] = useState(new Set())
+  const [expandedDiagnostics, setExpandedDiagnostics] = useState(new Set())
   const [showExecutiveSummary, setShowExecutiveSummary] = useState(true)
 
   // Get epics with issues, filtered by year
@@ -127,6 +143,16 @@ export default function GanttView({ issues, epics: allEpics }) {
       newExpanded.add(epicId)
     }
     setExpandedEpics(newExpanded)
+  }
+
+  const toggleDiagnostics = (epicId) => {
+    const newExpanded = new Set(expandedDiagnostics)
+    if (newExpanded.has(epicId)) {
+      newExpanded.delete(epicId)
+    } else {
+      newExpanded.add(epicId)
+    }
+    setExpandedDiagnostics(newExpanded)
   }
 
   const getRAGColor = (status) => {
@@ -363,6 +389,8 @@ export default function GanttView({ issues, epics: allEpics }) {
             return phase === 'inProgress' || phase === 'review' || phase === 'testing'
           })
 
+          const progressPercent = analysis.metrics.progressPercent
+
           return (
             <div key={epic.id} style={{ marginBottom: '24px' }}>
               {/* Epic Header Row */}
@@ -374,7 +402,7 @@ export default function GanttView({ issues, epics: allEpics }) {
               }}>
                 {/* Epic Info */}
                 <div style={{ width: '350px', paddingRight: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                     <button
                       onClick={() => toggleEpic(epic.id)}
                       style={{
@@ -426,32 +454,11 @@ export default function GanttView({ issues, epics: allEpics }) {
                         {openIssues.length} open
                         {inProgressIssues.length > 0 && ` | ${inProgressIssues.length} in progress`}
                       </div>
-
-                      {analysis.metrics.remainingIterations !== null && (
-                        <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>
-                          {analysis.metrics.remainingIterations} iterations left
-                          {' • '}
-                          Velocity: {analysis.metrics.currentVelocity.toFixed(1)} (need {analysis.metrics.requiredVelocity.toFixed(1)})
-                        </div>
-                      )}
                     </div>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div style={{ width: '100%', height: '8px', background: '#E5E7EB', borderRadius: '4px', overflow: 'hidden', marginTop: '8px' }}>
-                    <div style={{
-                      width: `${analysis.metrics.progressPercent}%`,
-                      height: '100%',
-                      background: getRAGColor(analysis.status),
-                      transition: 'width 0.3s'
-                    }} />
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>
-                    {analysis.metrics.progressPercent.toFixed(0)}% complete
                   </div>
                 </div>
 
-                {/* Timeline Bar */}
+                {/* Timeline Bar with Progress Fill */}
                 <div style={{ flex: 1, position: 'relative', height: '40px' }}>
                   {timelinePos && (
                     <div
@@ -460,27 +467,212 @@ export default function GanttView({ issues, epics: allEpics }) {
                         left: timelinePos.left,
                         width: timelinePos.width,
                         height: '32px',
-                        background: `linear-gradient(90deg, ${getRAGColor(analysis.status)}, ${getRAGColor(analysis.status)}DD)`,
+                        background: '#E5E7EB',
                         borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '0 12px',
+                        overflow: 'hidden',
                         cursor: 'pointer',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        border: `1px solid ${getRAGColor(analysis.status)}40`
                       }}
                       onClick={() => window.open(epic.web_url, '_blank')}
-                      title={`${epic.title} - ${analysis.metrics.progressPercent.toFixed(0)}% complete`}
+                      title={`${epic.title} - ${progressPercent.toFixed(0)}% complete`}
                     >
-                      <span style={{ color: 'white', fontSize: '12px', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {analysis.metrics.progressPercent.toFixed(0)}%
-                      </span>
+                      {/* Filled Progress Portion */}
+                      <div style={{
+                        width: `${progressPercent}%`,
+                        height: '100%',
+                        background: `linear-gradient(90deg, ${getRAGColor(analysis.status)}, ${getRAGColor(analysis.status)}DD)`,
+                        transition: 'width 0.3s ease'
+                      }} />
+                      {/* Percentage Label */}
+                      <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <span style={{
+                          color: progressPercent > 30 ? 'white' : '#1F2937',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          textShadow: progressPercent > 30 ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          padding: '0 8px'
+                        }}>
+                          {progressPercent.toFixed(0)}%
+                        </span>
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Expanded: Diagnostics Panel */}
+              {/* Expanded: Issues List */}
+              {isExpanded && (
+                <div style={{
+                  marginTop: '12px',
+                  marginLeft: '32px',
+                  paddingLeft: '16px',
+                  borderLeft: '2px solid #E5E7EB'
+                }}>
+                  {epicIssues.slice(0, 10).map(issue => {
+                    const issueProgress = getIssueProgressPercent(issue)
+                    const issueTimelinePos = getTimelinePosition(
+                      issue.created_at,
+                      issue.due_date || issue.milestone?.due_date || epic.end_date
+                    )
+                    const phase = detectIssuePhase(issue)
+                    const phaseColor = getPhaseColor(phase)
+
+                    return (
+                      <div
+                        key={issue.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '8px 0',
+                          borderBottom: '1px solid #F3F4F6'
+                        }}
+                      >
+                        {/* Issue Info */}
+                        <div style={{ width: '318px', paddingRight: '16px' }}>
+                          <a
+                            href={issue.web_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              fontSize: '12px',
+                              color: issue.state === 'closed' ? '#6B7280' : '#1F2937',
+                              textDecoration: 'none',
+                              display: 'block',
+                              marginBottom: '4px',
+                              textOverflow: 'ellipsis',
+                              overflow: 'hidden',
+                              whiteSpace: 'nowrap'
+                            }}
+                            onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                            onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                          >
+                            #{issue.iid} {issue.title}
+                          </a>
+                          <div style={{ fontSize: '10px', color: '#6B7280' }}>
+                            {issue.assignees?.[0]?.name || 'Unassigned'}
+                            {' • '}
+                            <span style={{ color: phaseColor, fontWeight: '600' }}>
+                              {getPhaseLabel(phase)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Issue Timeline Bar */}
+                        <div style={{ flex: 1, position: 'relative', height: '24px' }}>
+                          {issueTimelinePos && (
+                            <div
+                              style={{
+                                position: 'absolute',
+                                left: issueTimelinePos.left,
+                                width: issueTimelinePos.width,
+                                height: '20px',
+                                background: '#F3F4F6',
+                                borderRadius: '4px',
+                                overflow: 'hidden',
+                                cursor: 'pointer',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                border: `1px solid ${phaseColor}40`
+                              }}
+                              onClick={() => window.open(issue.web_url, '_blank')}
+                              title={`${issue.title} - ${issueProgress}% complete`}
+                            >
+                              {/* Filled Progress Portion */}
+                              <div style={{
+                                width: `${issueProgress}%`,
+                                height: '100%',
+                                background: phaseColor,
+                                transition: 'width 0.3s ease'
+                              }} />
+                              {/* Percentage Label */}
+                              {issueProgress > 20 && (
+                                <div style={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 0,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}>
+                                  <span style={{
+                                    color: issueProgress > 30 ? 'white' : '#1F2937',
+                                    fontSize: '10px',
+                                    fontWeight: '600',
+                                    textShadow: issueProgress > 30 ? '0 1px 2px rgba(0,0,0,0.3)' : 'none'
+                                  }}>
+                                    {issueProgress}%
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {epicIssues.length > 10 && (
+                    <div style={{
+                      padding: '8px 0',
+                      fontSize: '11px',
+                      color: '#6B7280',
+                      fontStyle: 'italic'
+                    }}>
+                      + {epicIssues.length - 10} more issues
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Expanded: Diagnostics Panel (Collapsible) */}
               {isExpanded && analysis.factors.length > 0 && (
+                <div style={{ marginTop: '12px', marginLeft: '32px' }}>
+                  {/* Diagnostics Toggle Button */}
+                  <button
+                    onClick={() => toggleDiagnostics(epic.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 12px',
+                      background: '#F9FAFB',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      color: '#1F2937',
+                      width: '100%',
+                      justifyContent: 'space-between'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '14px' }}>⚠️</span>
+                      <span>Analysis & Recommendations</span>
+                      <span style={{ fontSize: '11px', fontWeight: '400', color: '#6B7280' }}>
+                        ({analysis.factors.length} factors, {analysis.actions.length} actions)
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '12px', color: '#6B7280' }}>
+                      {expandedDiagnostics.has(epic.id) ? '▼' : '▶'}
+                    </span>
+                  </button>
+
+                  {/* Diagnostics Content */}
+                  {expandedDiagnostics.has(epic.id) && (
                 <div style={{
                   background: '#F9FAFB',
                   border: '1px solid #E5E7EB',
@@ -572,10 +764,12 @@ export default function GanttView({ issues, epics: allEpics }) {
                     </div>
                   )}
                 </div>
+                  )}
+                </div>
               )}
 
-              {/* Expanded: Issue Breakdown */}
-              {isExpanded && (
+              {/* Old Issue Breakdown - REMOVED, replaced with new hierarchical view above */}
+              {false && isExpanded && (
                 <div style={{ marginLeft: '40px', marginTop: '12px' }}>
                   {/* Open Issues */}
                   {openIssues.length > 0 && (

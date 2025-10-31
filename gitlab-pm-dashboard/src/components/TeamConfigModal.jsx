@@ -20,6 +20,7 @@ export default function TeamConfigModal({ isOpen, onClose, issues }) {
   const [historicalData, setHistoricalData] = useState(null)
 
   // Form state for adding/editing member
+  const [showForm, setShowForm] = useState(false)
   const [editingMember, setEditingMember] = useState(null)
   const [formData, setFormData] = useState({
     username: '',
@@ -42,10 +43,15 @@ export default function TeamConfigModal({ isOpen, onClose, issues }) {
       const settings = loadCapacitySettings()
       setCapacitySettings(settings)
       setHistoricalData(settings.historicalData)
+
+      // Reset form state when modal opens
+      setShowForm(false)
+      setEditingMember(null)
     }
   }, [isOpen])
 
   const handleAddMember = () => {
+    setShowForm(true)
     setEditingMember(null)
     setFormData({
       username: '',
@@ -58,6 +64,7 @@ export default function TeamConfigModal({ isOpen, onClose, issues }) {
   }
 
   const handleEditMember = (member) => {
+    setShowForm(true)
     setEditingMember(member)
     setFormData({
       username: member.username,
@@ -66,6 +73,19 @@ export default function TeamConfigModal({ isOpen, onClose, issues }) {
       customRole: member.customRole || '',
       defaultCapacity: member.defaultCapacity,
       email: member.email || ''
+    })
+  }
+
+  const handleCancel = () => {
+    setShowForm(false)
+    setEditingMember(null)
+    setFormData({
+      username: '',
+      name: '',
+      role: DEFAULT_ROLES[0],
+      customRole: '',
+      defaultCapacity: 40,
+      email: ''
     })
   }
 
@@ -92,8 +112,17 @@ export default function TeamConfigModal({ isOpen, onClose, issues }) {
     const config = loadTeamConfig()
     setTeamMembers(config.teamMembers || [])
 
-    // Reset form
-    handleAddMember()
+    // Reset form and hide it
+    setShowForm(false)
+    setEditingMember(null)
+    setFormData({
+      username: '',
+      name: '',
+      role: DEFAULT_ROLES[0],
+      customRole: '',
+      defaultCapacity: 40,
+      email: ''
+    })
   }
 
   const handleDeleteMember = (username) => {
@@ -270,7 +299,7 @@ export default function TeamConfigModal({ isOpen, onClose, issues }) {
               </div>
 
               {/* Add/Edit Form */}
-              {(editingMember !== null || (formData.username === '' && formData.name === '')) && (
+              {showForm && (
                 <div style={{
                   border: '2px solid #2563EB',
                   borderRadius: '8px',
@@ -417,7 +446,7 @@ export default function TeamConfigModal({ isOpen, onClose, issues }) {
                       Save Member
                     </button>
                     <button
-                      onClick={handleAddMember}
+                      onClick={handleCancel}
                       style={{
                         padding: '8px 16px',
                         background: '#9CA3AF',

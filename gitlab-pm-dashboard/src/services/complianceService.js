@@ -3,13 +3,18 @@
  * Validates issues against quality criteria
  */
 
+import { getStaleThresholds, getEnabledCriteria } from './criteriaConfigService'
+
 /**
  * Configurable thresholds for stale issue detection
+ * Now loaded from localStorage config
  */
-export const STALE_THRESHOLDS = {
-  warning: 4 * 7, // 4 weeks in days
-  critical: 8 * 7  // 8 weeks in days
+export function getStaleThresholdsConfig() {
+  return getStaleThresholds()
 }
+
+// Keep for backwards compatibility
+export const STALE_THRESHOLDS = getStaleThresholdsConfig()
 
 /**
  * Calculate how many days an issue has been open
@@ -31,10 +36,11 @@ export function checkStaleStatus(issue) {
   }
 
   const daysOpen = getDaysOpen(issue)
+  const thresholds = getStaleThresholdsConfig()
 
-  if (daysOpen >= STALE_THRESHOLDS.critical) {
+  if (daysOpen >= thresholds.critical) {
     return { isStale: true, daysOpen, severity: 'critical' }
-  } else if (daysOpen >= STALE_THRESHOLDS.warning) {
+  } else if (daysOpen >= thresholds.warning) {
     return { isStale: true, daysOpen, severity: 'warning' }
   }
 
@@ -42,90 +48,92 @@ export function checkStaleStatus(issue) {
 }
 
 /**
- * Issue Quality Criteria
+ * Validation functions for each criterion type
  */
-const QUALITY_CRITERIA = {
-  assignee: {
-    name: 'Assignee',
-    description: 'Issue must be assigned to a team member',
-    validate: (issue) => issue.assignees && issue.assignees.length > 0,
-    severity: 'high'
+const VALIDATION_FUNCTIONS = {
+  assignee: (issue) => issue.assignees && issue.assignees.length > 0,
+  weight: (issue) => issue.weight !== null && issue.weight !== undefined && issue.weight > 0,
+  epic: (issue) => issue.epic !== null && issue.epic !== undefined,
+  description: (issue, config) => {
+    const threshold = config?.threshold || 20
+    return issue.description && issue.description.trim().length >= threshold
   },
-  weight: {
-    name: 'Weight/Estimation',
-    description: 'Issue must have story points or time estimate',
-    validate: (issue) => issue.weight !== null && issue.weight !== undefined && issue.weight > 0,
-    severity: 'high'
+  labels: (issue) => {
+    if (!issue.labels || issue.labels.length === 0) return false
+    const hasTypeLabel = issue.labels.some(l =>
+      l.toLowerCase().includes('bug') ||
+      l.toLowerCase().includes('feature') ||
+      l.toLowerCase().includes('enhancement') ||
+      l.toLowerCase().includes('type::')
+    )
+    return hasTypeLabel
   },
-  epic: {
-    name: 'Epic Assignment',
-    description: 'Issue must be assigned to an epic',
-    validate: (issue) => issue.epic !== null && issue.epic !== undefined,
-    severity: 'medium'
+  milestone: (issue) => issue.milestone !== null && issue.milestone !== undefined,
+  dueDate: (issue) => issue.due_date !== null && issue.due_date !== undefined,
+  priority: (issue) => {
+    if (!issue.labels || issue.labels.length === 0) return false
+    return issue.labels.some(l =>
+      l.toLowerCase().includes('priority') ||
+      l.toLowerCase().includes('p1') ||
+      l.toLowerCase().includes('p2') ||
+      l.toLowerCase().includes('p3')
+    )
   },
-  description: {
-    name: 'Description',
-    description: 'Issue must have a meaningful description (min 20 characters)',
-    validate: (issue) => issue.description && issue.description.trim().length >= 20,
-    severity: 'high'
-  },
-  labels: {
-    name: 'Type Label',
-    description: 'Issue must have a type label (Bug, Feature, etc.)',
-    validate: (issue) => {
-      if (!issue.labels || issue.labels.length === 0) return false
-      const hasTypeLabel = issue.labels.some(l =>
-        l.toLowerCase().includes('bug') ||
-        l.toLowerCase().includes('feature') ||
-        l.toLowerCase().includes('enhancement') ||
-        l.toLowerCase().includes('type::')
-      )
-      return hasTypeLabel
-    },
-    severity: 'high'
-  },
-  milestone: {
-    name: 'Milestone',
-    description: 'Issue should be assigned to a milestone',
-    validate: (issue) => issue.milestone !== null && issue.milestone !== undefined,
-    severity: 'medium'
-  },
-  dueDate: {
-    name: 'Due Date',
-    description: 'Issue should have a due date (for tracking)',
-    validate: (issue) => issue.due_date !== null && issue.due_date !== undefined,
-    severity: 'low'
-  },
-  priority: {
-    name: 'Priority',
-    description: 'Issue should have a priority label',
-    validate: (issue) => {
-      if (!issue.labels || issue.labels.length === 0) return false
-      return issue.labels.some(l =>
-        l.toLowerCase().includes('priority') ||
-        l.toLowerCase().includes('p1') ||
-        l.toLowerCase().includes('p2') ||
-        l.toLowerCase().includes('p3')
-      )
-    },
-    severity: 'medium'
-  },
-  stale: {
-    name: 'Stale Issue',
-    description: `Issue has been open too long (Warning: ${STALE_THRESHOLDS.warning} days, Critical: ${STALE_THRESHOLDS.critical} days)`,
-    validate: (issue) => {
-      const staleStatus = checkStaleStatus(issue)
-      return !staleStatus.isStale
-    },
-    severity: 'low',
-    getDynamicSeverity: (issue) => {
-      const staleStatus = checkStaleStatus(issue)
-      if (staleStatus.severity === 'critical') return 'high'
-      if (staleStatus.severity === 'warning') return 'medium'
-      return 'low'
-    }
+  stale: (issue) => {
+    const staleStatus = checkStaleStatus(issue)
+    return !staleStatus.isStale
   }
 }
+
+/**
+ * Get dynamic severity for criteria that can change severity based on issue state
+ */
+const DYNAMIC_SEVERITY_FUNCTIONS = {
+  stale: (issue) => {
+    const staleStatus = checkStaleStatus(issue)
+    if (staleStatus.severity === 'critical') return 'high'
+    if (staleStatus.severity === 'warning') return 'medium'
+    return 'low'
+  }
+}
+
+/**
+ * Build quality criteria from config
+ * This allows criteria to be enabled/disabled and configured via UI
+ */
+function getQualityCriteria() {
+  const enabledCriteria = getEnabledCriteria()
+  const thresholds = getStaleThresholdsConfig()
+  const qualityCriteria = {}
+
+  Object.entries(enabledCriteria).forEach(([key, config]) => {
+    qualityCriteria[key] = {
+      name: config.name,
+      description: config.description,
+      severity: config.severity,
+      validate: (issue) => {
+        const validationFn = VALIDATION_FUNCTIONS[key]
+        return validationFn ? validationFn(issue, config) : true
+      },
+      ...(DYNAMIC_SEVERITY_FUNCTIONS[key] && {
+        getDynamicSeverity: DYNAMIC_SEVERITY_FUNCTIONS[key]
+      })
+    }
+  })
+
+  // Update stale description with current thresholds
+  if (qualityCriteria.stale) {
+    qualityCriteria.stale.description = `Issue has been open too long (Warning: ${thresholds.warning} days, Critical: ${thresholds.critical} days)`
+  }
+
+  return qualityCriteria
+}
+
+/**
+ * Issue Quality Criteria
+ * Now dynamically loaded from config
+ */
+const QUALITY_CRITERIA = getQualityCriteria()
 
 /**
  * Check single issue against all quality criteria

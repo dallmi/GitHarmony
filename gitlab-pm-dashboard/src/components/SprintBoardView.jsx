@@ -15,12 +15,11 @@ export default function SprintBoardView({ issues }) {
     // Build map of iteration name to start date for sorting
     const iterationDates = new Map()
     issues.forEach(issue => {
-      if (issue.iteration) {
-        const title = typeof issue.iteration === 'object' ? issue.iteration.title : issue.iteration
+      // Use the SAME function to get the sprint name that will be used for display
+      const sprintName = getSprintFromLabels(issue.labels, issue.iteration)
+      if (sprintName && !iterationDates.has(sprintName)) {
         const startDate = issue.iteration?.start_date || null
-        if (title && !iterationDates.has(title)) {
-          iterationDates.set(title, startDate)
-        }
+        iterationDates.set(sprintName, startDate)
       }
     })
 
@@ -34,8 +33,12 @@ export default function SprintBoardView({ issues }) {
       const dateB = iterationDates.get(b)
 
       if (dateA && dateB) {
-        return new Date(dateB) - new Date(dateA) // Newest first
+        return new Date(dateB) - new Date(dateA) // Newest first (descending)
       }
+
+      // If one has a date and the other doesn't, prioritize the one with a date
+      if (dateA && !dateB) return -1
+      if (!dateA && dateB) return 1
 
       // Fallback to alphabetical sort
       return a.localeCompare(b)

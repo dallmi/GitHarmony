@@ -478,7 +478,17 @@ export default function CycleTimeView({ issues: allIssues }) {
               {filteredIssues.slice(0, 50).map(issue => {
                 const lifecycle = getIssueLifecycleData(issue)
                 return (
-                  <tr key={issue.id} style={{ borderBottom: '1px solid #E5E7EB' }}>
+                  <tr
+                    key={issue.id}
+                    onClick={() => window.open(issue.web_url, '_blank')}
+                    style={{
+                      borderBottom: '1px solid #E5E7EB',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>

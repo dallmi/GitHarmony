@@ -36,10 +36,11 @@ export function exportIssuesToCSV(issues) {
     return 'No data to export'
   }
 
-  // CSV Headers
+  // CSV Headers - URL moved right after Title for better visibility
   const headers = [
     'Issue ID',
     'Title',
+    'URL',
     'State',
     'Labels',
     'Assignees',
@@ -53,8 +54,7 @@ export function exportIssuesToCSV(issues) {
     'Weight',
     'Time Estimate',
     'Time Spent',
-    'Description',
-    'URL'
+    'Description'
   ]
 
   // CSV Rows
@@ -63,20 +63,21 @@ export function exportIssuesToCSV(issues) {
     const assignees = issue.assignees?.map(a => a.name).join('; ') || 'Unassigned'
     const epic = issue.epic?.title || ''
     const milestone = issue.milestone?.title || ''
-    const dueDate = issue.due_date || ''
-    const created = issue.created_at ? new Date(issue.created_at).toLocaleDateString() : ''
-    const updated = issue.updated_at ? new Date(issue.updated_at).toLocaleDateString() : ''
+    const dueDate = issue.due_date || issue.dueDate || ''
+    const created = (issue.created_at || issue.createdAt) ? new Date(issue.created_at || issue.createdAt).toLocaleDateString() : ''
+    const updated = (issue.updated_at || issue.updatedAt) ? new Date(issue.updated_at || issue.updatedAt).toLocaleDateString() : ''
     const author = issue.author?.name || ''
     const priority = issue.labels?.find(l => l.toLowerCase().includes('priority'))?.split('::')[1] || ''
     const weight = issue.weight || ''
     const timeEstimate = issue.time_stats?.human_time_estimate || ''
     const timeSpent = issue.time_stats?.human_total_time_spent || ''
     const description = issue.description?.substring(0, 500) || '' // Limit description length
-    const url = issue.web_url || ''
+    const url = issue.web_url || issue.webUrl || '' // Support both snake_case and camelCase
 
     return [
       issue.iid || issue.id,
       issue.title,
+      url,
       issue.state,
       labels,
       assignees,
@@ -90,8 +91,7 @@ export function exportIssuesToCSV(issues) {
       weight,
       timeEstimate,
       timeSpent,
-      description,
-      url
+      description
     ]
   })
 
@@ -115,6 +115,7 @@ export function exportEpicsToCSV(epics) {
   const headers = [
     'Epic ID',
     'Title',
+    'URL',
     'State',
     'Labels',
     'Start Date',
@@ -125,8 +126,7 @@ export function exportEpicsToCSV(epics) {
     'Completion %',
     'Health Score',
     'Author',
-    'Description',
-    'URL'
+    'Description'
   ]
 
   const rows = epics.map(epic => {
@@ -145,6 +145,7 @@ export function exportEpicsToCSV(epics) {
     return [
       epic.iid || epic.id,
       epic.title,
+      url,
       epic.state,
       labels,
       startDate,
@@ -155,8 +156,7 @@ export function exportEpicsToCSV(epics) {
       `${completion}%`,
       healthScore,
       author,
-      description,
-      url
+      description
     ]
   })
 
@@ -179,6 +179,7 @@ export function exportMilestonesToCSV(milestones, issues = []) {
   const headers = [
     'Milestone ID',
     'Title',
+    'URL',
     'State',
     'Start Date',
     'Due Date',
@@ -186,8 +187,7 @@ export function exportMilestonesToCSV(milestones, issues = []) {
     'Open Issues',
     'Closed Issues',
     'Completion %',
-    'Description',
-    'URL'
+    'Description'
   ]
 
   const rows = milestones.map(milestone => {
@@ -200,6 +200,7 @@ export function exportMilestonesToCSV(milestones, issues = []) {
     return [
       milestone.iid || milestone.id,
       milestone.title,
+      milestone.web_url || '',
       milestone.state,
       milestone.start_date || '',
       milestone.due_date || '',
@@ -207,8 +208,7 @@ export function exportMilestonesToCSV(milestones, issues = []) {
       openIssues,
       closedIssues,
       `${completion}%`,
-      milestone.description?.substring(0, 500) || '',
-      milestone.web_url || ''
+      milestone.description?.substring(0, 500) || ''
     ]
   })
 

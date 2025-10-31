@@ -11,6 +11,8 @@ import { useIterationFilter } from '../contexts/IterationFilterContext'
 import SearchBar from './SearchBar'
 import { searchIssues } from '../utils/searchUtils'
 import { exportIssuesToCSV, downloadCSV as downloadCSVUtil } from '../utils/csvExportUtils'
+import { loadTeamConfig } from '../services/teamConfigService'
+import QualityCriteriaConfigModal from './QualityCriteriaConfigModal'
 
 /**
  * Issue Compliance & Quality Check View
@@ -21,6 +23,7 @@ export default function IssueComplianceView({ issues: allIssues }) {
   const { filteredIssues: issues } = useIterationFilter()
   const [searchTerm, setSearchTerm] = useState('')
   const [activeFilter, setActiveFilter] = useState(null) // Track active tile filter
+  const [showConfigModal, setShowConfigModal] = useState(false)
 
   const { nonCompliantIssues, stats, staleIssues } = useMemo(() => {
     if (!issues || issues.length === 0) {
@@ -63,6 +66,10 @@ export default function IssueComplianceView({ issues: allIssues }) {
         case 'stale':
           filtered = filtered.filter(issue => issue.staleStatus?.isStale)
           break
+        default:
+          // Check if it's a criterion-based filter (e.g., 'assignee', 'weight', 'epic', etc.)
+          filtered = filtered.filter(issue => issue.violations.some(v => v.criterion === activeFilter))
+          break
       }
     }
 
@@ -74,6 +81,44 @@ export default function IssueComplianceView({ issues: allIssues }) {
     const csvContent = exportIssuesToCSV(filteredIssues)
     const date = new Date().toISOString().split('T')[0]
     downloadCSVUtil(csvContent, `issue-compliance-report-${date}.csv`)
+  }
+
+  const handleEmailReport = () => {
+    // Get Scrum Master email from team config
+    const teamConfig = loadTeamConfig()
+    const scrumMaster = teamConfig.teamMembers?.find(m => m.role === 'Scrum Master')
+    const toEmail = scrumMaster?.email || ''
+
+    // Create email subject and body
+    const subject = `Issue Quality Compliance Report - ${new Date().toLocaleDateString()}`
+    const totalIssues = filteredIssues.length
+    const highSeverity = filteredIssues.filter(i => i.violations.some(v => v.severity === 'high')).length
+    const mediumSeverity = filteredIssues.filter(i => i.violations.some(v => v.severity === 'medium')).length
+    const lowSeverity = filteredIssues.filter(i => i.violations.some(v => v.severity === 'low')).length
+
+    const body = `Hi,
+
+Please find the Issue Quality Compliance Report attached.
+
+Summary:
+- Total non-compliant issues: ${totalIssues}
+- High severity: ${highSeverity}
+- Medium severity: ${mediumSeverity}
+- Low severity: ${lowSeverity}
+- Compliance rate: ${stats?.complianceRate}%
+
+The CSV report has been downloaded to your Downloads folder. Please attach it to this email before sending.
+
+Best regards`
+
+    // Download CSV
+    const csvContent = exportIssuesToCSV(filteredIssues)
+    const date = new Date().toISOString().split('T')[0]
+    downloadCSVUtil(csvContent, `issue-compliance-report-${date}.csv`)
+
+    // Open email client with pre-filled content
+    const mailtoLink = `mailto:${toEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+    window.location.href = mailtoLink
   }
 
   const handleTileClick = (filterType) => {
@@ -102,12 +147,36 @@ export default function IssueComplianceView({ issues: allIssues }) {
             Quality criteria validation for all issues
           </p>
         </div>
-        {filteredIssues.length > 0 && (
-          <button className="btn btn-primary" onClick={handleExportCSV}>
-            📊 Export CSV ({filteredIssues.length} issues)
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            className="btn"
+            onClick={() => setShowConfigModal(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            ⚙️ Configure Criteria
           </button>
-        )}
+          {filteredIssues.length > 0 && (
+            <>
+              <button className="btn btn-primary" onClick={handleEmailReport}>
+                📧 Email Report
+              </button>
+              <button className="btn" onClick={handleExportCSV}>
+                📊 Export CSV
+              </button>
+            </>
+          )}
+        </div>
       </div>
+
+      {/* Quality Criteria Config Modal */}
+      <QualityCriteriaConfigModal
+        isOpen={showConfigModal}
+        onClose={() => setShowConfigModal(false)}
+      />
 
       {/* Search Bar */}
       <SearchBar
@@ -236,28 +305,50 @@ export default function IssueComplianceView({ issues: allIssues }) {
           Issue Quality Criteria
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '12px' }}>
-          {criteria.map(criterion => (
-            <div key={criterion.key} style={{ display: 'flex', gap: '12px', padding: '12px', background: 'white', borderRadius: '6px', border: '1px solid #E5E7EB' }}>
-              <div style={{
-                width: '8px',
-                background: getSeverityColor(criterion.severity),
-                borderRadius: '4px'
-              }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: '#1F2937', marginBottom: '4px' }}>
-                  {criterion.name}
-                </div>
-                <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                  {criterion.description}
-                </div>
-                {stats && (
-                  <div style={{ fontSize: '11px', color: '#DC2626', marginTop: '6px' }}>
-                    {stats.violationsByCriterion[criterion.key]} violations
+          {criteria.map(criterion => {
+            const isActive = activeFilter === criterion.key
+            const violationCount = stats?.violationsByCriterion[criterion.key] || 0
+
+            return (
+              <div
+                key={criterion.key}
+                onClick={() => violationCount > 0 && handleTileClick(criterion.key)}
+                style={{
+                  display: 'flex',
+                  gap: '12px',
+                  padding: '12px',
+                  background: 'white',
+                  borderRadius: '6px',
+                  border: isActive ? `2px solid ${getSeverityColor(criterion.severity)}` : '1px solid #E5E7EB',
+                  cursor: violationCount > 0 ? 'pointer' : 'default',
+                  opacity: violationCount === 0 ? 0.5 : 1,
+                  transform: isActive ? 'scale(0.98)' : 'scale(1)',
+                  boxShadow: isActive ? `0 0 0 3px ${getSeverityColor(criterion.severity)}33` : undefined,
+                  transition: 'all 0.2s'
+                }}
+              >
+                <div style={{
+                  width: '8px',
+                  background: getSeverityColor(criterion.severity),
+                  borderRadius: '4px'
+                }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#1F2937', marginBottom: '4px' }}>
+                    {criterion.name} {isActive && '✓'}
                   </div>
-                )}
+                  <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                    {criterion.description}
+                  </div>
+                  {stats && (
+                    <div style={{ fontSize: '11px', color: violationCount > 0 ? '#DC2626' : '#6B7280', marginTop: '6px', fontWeight: violationCount > 0 ? '600' : '400' }}>
+                      {violationCount} violation{violationCount !== 1 ? 's' : ''}
+                      {violationCount > 0 && ' • Click to filter'}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
@@ -289,6 +380,8 @@ export default function IssueComplianceView({ issues: allIssues }) {
               {activeFilter === 'mediumSeverity' && 'Medium Severity'}
               {activeFilter === 'lowSeverity' && 'Low Severity'}
               {activeFilter === 'stale' && 'Stale Issues'}
+              {!['highSeverity', 'mediumSeverity', 'lowSeverity', 'stale'].includes(activeFilter) &&
+                (criteria.find(c => c.key === activeFilter)?.name || activeFilter)}
             </span>
             <span style={{ fontSize: '13px', color: '#6B7280' }}>
               ({filteredIssues.length} {filteredIssues.length === 1 ? 'issue' : 'issues'})
