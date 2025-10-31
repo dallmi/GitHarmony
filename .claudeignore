@@ -1,0 +1,38 @@
+# Claude Code ignore file - reduces context size
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+build/
+**/build/
+
+# Lock files (not needed for Claude)
+package-lock.json
+**/package-lock.json
+.package-lock.json
+**/.package-lock.json
+yarn.lock
+
+# Git internals
+.git/
+
+# Large generated files
+*.bundle.js
+*.min.js
+*.map
+
+# Documentation that's too large
+SWOT-ANALYSIS.md
+IMPLEMENTATION-STATUS.md
+
+# Old versions
+*-v2.html
+*-v3.html
+*-v4*.html
+
+# Patches
+*.patch

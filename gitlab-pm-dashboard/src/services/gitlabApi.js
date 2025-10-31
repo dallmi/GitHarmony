@@ -16,7 +16,7 @@ export async function fetchIssues(gitlabUrl, projectId, token) {
 
   while (true) {
     const response = await fetch(
-      `${gitlabUrl}/api/v4/projects/${encodedProjectId}/issues?per_page=${perPage}&page=${page}&scope=all`,
+      `${gitlabUrl}/api/v4/projects/${encodedProjectId}/issues?per_page=${perPage}&page=${page}&scope=all&with_iterations=true`,
       { headers: { 'PRIVATE-TOKEN': token } }
     )
 
