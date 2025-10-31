@@ -337,26 +337,24 @@ export default function VelocityView({ issues }) {
                     const isRecent = index >= velocityData.length - 3
 
                     return (
-                      <div key={sprint.sprint} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                      <div key={sprint.sprint} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
                         {/* Bar */}
-                        <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'flex-end' }}>
-                          <div
-                            style={{
-                              width: '100%',
-                              height: `${barHeight}%`,
-                              background: isRecent ? '#2563EB' : '#93C5FD',
-                              borderRadius: '4px 4px 0 0',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: 'white',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              minHeight: '24px'
-                            }}
-                          >
-                            {sprint.velocity}
-                          </div>
+                        <div
+                          style={{
+                            width: '100%',
+                            height: `${barHeight}%`,
+                            background: isRecent ? '#2563EB' : '#93C5FD',
+                            borderRadius: '4px 4px 0 0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            minHeight: '24px'
+                          }}
+                        >
+                          {sprint.velocity}
                         </div>
                       </div>
                     )
