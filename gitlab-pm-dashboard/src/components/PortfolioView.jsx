@@ -8,6 +8,7 @@ import { getAllProjects, saveProject, removeProject, setActiveProject } from '..
 export default function PortfolioView({ onProjectSwitch }) {
   const [projects, setProjects] = useState(getAllProjects())
   const [showAddForm, setShowAddForm] = useState(false)
+  const [editingProject, setEditingProject] = useState(null)
   const [formData, setFormData] = useState({
     name: '',
     gitlabUrl: 'https://gitlab.com',
@@ -32,6 +33,32 @@ export default function PortfolioView({ onProjectSwitch }) {
       groupPath: ''
     })
     setShowAddForm(false)
+    setEditingProject(null)
+  }
+
+  const handleEditProject = (project) => {
+    setEditingProject(project.id)
+    setFormData({
+      id: project.id,
+      name: project.name,
+      gitlabUrl: project.gitlabUrl,
+      token: project.token,
+      projectId: project.projectId,
+      groupPath: project.groupPath || ''
+    })
+    setShowAddForm(true)
+  }
+
+  const handleCancelEdit = () => {
+    setShowAddForm(false)
+    setEditingProject(null)
+    setFormData({
+      name: '',
+      gitlabUrl: 'https://gitlab.com',
+      token: '',
+      projectId: '',
+      groupPath: ''
+    })
   }
 
   const handleRemoveProject = (projectId) => {
@@ -64,17 +91,23 @@ export default function PortfolioView({ onProjectSwitch }) {
         </div>
         <button
           className="btn btn-primary"
-          onClick={() => setShowAddForm(!showAddForm)}
+          onClick={() => {
+            if (showAddForm) {
+              handleCancelEdit()
+            } else {
+              setShowAddForm(true)
+            }
+          }}
         >
           {showAddForm ? 'Cancel' : '+ Add Project'}
         </button>
       </div>
 
-      {/* Add Project Form */}
+      {/* Add/Edit Project Form */}
       {showAddForm && (
         <div className="card" style={{ marginBottom: '30px', background: '#F9FAFB' }}>
           <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
-            Add New Project
+            {editingProject ? 'Edit Project' : 'Add New Project'}
           </h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -177,7 +210,7 @@ export default function PortfolioView({ onProjectSwitch }) {
           <div style={{ marginTop: '20px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
             <button
               className="btn btn-secondary"
-              onClick={() => setShowAddForm(false)}
+              onClick={handleCancelEdit}
             >
               Cancel
             </button>
@@ -185,7 +218,7 @@ export default function PortfolioView({ onProjectSwitch }) {
               className="btn btn-primary"
               onClick={handleAddProject}
             >
-              Add Project
+              {editingProject ? 'Save Changes' : 'Add Project'}
             </button>
           </div>
         </div>
@@ -283,8 +316,17 @@ export default function PortfolioView({ onProjectSwitch }) {
                   </button>
                   <button
                     className="btn btn-secondary"
+                    onClick={() => handleEditProject(project)}
+                    style={{ padding: '8px 16px' }}
+                    title="Edit Project"
+                  >
+                    ⚙️
+                  </button>
+                  <button
+                    className="btn btn-secondary"
                     onClick={() => handleRemoveProject(project.id)}
                     style={{ padding: '8px 16px' }}
+                    title="Delete Project"
                   >
                     🗑️
                   </button>
