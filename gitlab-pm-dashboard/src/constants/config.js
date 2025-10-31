@@ -51,7 +51,7 @@ export const VIEW_TABS = [
   { id: 'sprint', label: 'Sprint Board' },
   { id: 'sprintplanning', label: 'Sprint Planning' },
   { id: 'velocity', label: 'Velocity & Burndown' },
-  { id: 'dependencies', label: 'Dependencies' },
+  // REMOVED: Dependencies tab - Dependencies now integrated contextually into Gantt and Sprint views
   { id: 'risks', label: 'Risk Register' },
   { id: 'resources', label: 'Team Resources' },
   { id: 'stakeholders', label: 'Stakeholders' }

@@ -182,7 +182,7 @@ function App() {
             {activeView === 'roadmap' && <RoadmapView issues={issues} milestones={milestones} />}
             {activeView === 'sprint' && <SprintBoardView issues={issues} />}
             {activeView === 'velocity' && <VelocityView issues={issues} />}
-            {activeView === 'dependencies' && <DependencyGraphView issues={issues} />}
+            {/* REMOVED: Dependencies view - now integrated contextually into other views */}
             {activeView === 'risks' && <RiskRegisterView />}
             {activeView === 'resources' && <ResourceCapacityView issues={issues} />}
             {activeView === 'sprintplanning' && <SprintPlanningView issues={issues} />}
