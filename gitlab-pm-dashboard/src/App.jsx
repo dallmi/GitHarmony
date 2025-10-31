@@ -12,21 +12,17 @@ import ConfigModal from './components/ConfigModal'
 import StatusGeneratorModal from './components/StatusGeneratorModal'
 import ExecutiveDashboard from './components/ExecutiveDashboard'
 import PortfolioView from './components/PortfolioView'
-import EpicDashboardView from './components/EpicDashboardView'
-import QuarterlyEpicTracker from './components/QuarterlyEpicTracker'
-import GanttView from './components/GanttView'
 import RoadmapView from './components/RoadmapView'
-import SprintBoardView from './components/SprintBoardView'
 import VelocityView from './components/VelocityView'
-import DependencyGraphView from './components/DependencyGraphView'
-import RiskRegisterView from './components/RiskRegisterView'
 import ResourceCapacityView from './components/ResourceCapacityView'
-import SprintPlanningView from './components/SprintPlanningView'
 import StakeholderHubView from './components/StakeholderHubView'
 import InsightsView from './components/InsightsView'
 import IssueComplianceView from './components/IssueComplianceView'
 import CycleTimeView from './components/CycleTimeView'
-import RiskAnalysisView from './components/RiskAnalysisView'
+// Consolidated views
+import EpicManagementView from './components/EpicManagementView'
+import RiskManagementView from './components/RiskManagementView'
+import SprintManagementView from './components/SprintManagementView'
 
 function App() {
   console.log('App: Component initializing...')
@@ -113,7 +109,7 @@ function App() {
 
         {/* Iteration Filter - Shows on views that benefit from iteration filtering */}
         {isConfigured() && issues.length > 0 && (
-          ['compliance', 'cycletime', 'resources', 'sprint', 'velocity', 'sprintplanning'].includes(activeView)
+          ['compliance', 'cycletime', 'resources', 'velocity', 'sprintmanagement'].includes(activeView)
         ) && (
           <IterationFilterDropdown />
         )}
@@ -175,17 +171,12 @@ function App() {
             )}
             {activeView === 'compliance' && <IssueComplianceView issues={issues} />}
             {activeView === 'cycletime' && <CycleTimeView issues={issues} />}
-            {activeView === 'epics' && <EpicDashboardView epics={epics} issues={issues} />}
-            {activeView === 'quarterly' && <QuarterlyEpicTracker epics={epics} issues={issues} />}
-            {activeView === 'gantt' && <GanttView issues={issues} epics={epics} />}
-            {activeView === 'riskanalysis' && <RiskAnalysisView epics={epics} issues={issues} />}
+            {activeView === 'epicmanagement' && <EpicManagementView epics={epics} issues={issues} />}
+            {activeView === 'riskmanagement' && <RiskManagementView epics={epics} issues={issues} />}
             {activeView === 'roadmap' && <RoadmapView issues={issues} milestones={milestones} />}
-            {activeView === 'sprint' && <SprintBoardView issues={issues} />}
+            {activeView === 'sprintmanagement' && <SprintManagementView issues={issues} />}
             {activeView === 'velocity' && <VelocityView issues={issues} />}
-            {/* REMOVED: Dependencies view - now integrated contextually into other views */}
-            {activeView === 'risks' && <RiskRegisterView />}
             {activeView === 'resources' && <ResourceCapacityView issues={issues} />}
-            {activeView === 'sprintplanning' && <SprintPlanningView issues={issues} />}
             {activeView === 'stakeholders' && <StakeholderHubView stats={stats} healthScore={healthScore} />}
           </>
         )}

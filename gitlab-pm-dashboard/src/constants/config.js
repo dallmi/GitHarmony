@@ -38,23 +38,33 @@ export const RISK_MATRIX = {
 }
 
 export const VIEW_TABS = [
+  // Strategic Layer
   { id: 'executive', label: 'Executive Dashboard' },
-  { id: 'insights', label: 'AI Insights' },
+  { id: 'epicmanagement', label: 'Epic Management' }, // CONSOLIDATED: Epic Portfolio + Quarterly + Gantt
+  { id: 'roadmap', label: 'Roadmap' },
+  { id: 'riskmanagement', label: 'Risk Management' }, // CONSOLIDATED: Risk Analysis + Risk Register
+  { id: 'portfolio', label: 'Portfolio' },
+
+  // Tactical/Operational Layer
+  { id: 'sprintmanagement', label: 'Sprint Management' }, // CONSOLIDATED: Sprint Board + Sprint Planning
+  { id: 'velocity', label: 'Velocity & Metrics' },
   { id: 'compliance', label: 'Issue Quality' },
   { id: 'cycletime', label: 'Cycle Time' },
-  { id: 'portfolio', label: 'Portfolio' },
-  { id: 'epics', label: 'Epic Portfolio' },
-  { id: 'quarterly', label: 'Quarterly Tracker' },
-  { id: 'gantt', label: 'Gantt Chart' },
-  { id: 'riskanalysis', label: 'Risk Analysis' },
-  { id: 'roadmap', label: 'Roadmap' },
-  { id: 'sprint', label: 'Sprint Board' },
-  { id: 'sprintplanning', label: 'Sprint Planning' },
-  { id: 'velocity', label: 'Velocity & Burndown' },
-  // REMOVED: Dependencies tab - Dependencies now integrated contextually into Gantt and Sprint views
-  { id: 'risks', label: 'Risk Register' },
+
+  // Support/Analysis
+  { id: 'insights', label: 'AI Insights' },
   { id: 'resources', label: 'Team Resources' },
   { id: 'stakeholders', label: 'Stakeholders' }
+
+  // REMOVED/CONSOLIDATED:
+  // - dependencies → integrated into Gantt and Sprint views
+  // - epics → merged into epicmanagement
+  // - quarterly → merged into epicmanagement
+  // - gantt → merged into epicmanagement
+  // - riskanalysis → merged into riskmanagement
+  // - risks → merged into riskmanagement
+  // - sprint → merged into sprintmanagement
+  // - sprintplanning → merged into sprintmanagement
 ]
 
 export const LABEL_CONVENTIONS = {
