@@ -157,7 +157,7 @@ function App() {
         {isConfigured() && issues.length > 0 && (
           <>
             {activeView === 'executive' && (
-              <ExecutiveDashboard stats={stats} healthScore={healthScore} />
+              <ExecutiveDashboard stats={stats} healthScore={healthScore} issues={issues} />
             )}
             {activeView === 'insights' && (
               <InsightsView

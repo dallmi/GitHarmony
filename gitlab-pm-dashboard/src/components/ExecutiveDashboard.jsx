@@ -1,8 +1,9 @@
 import React from 'react'
 import MetricCard from './MetricCard'
 import HealthCircle from './HealthCircle'
+import BacklogHealthCard from './BacklogHealthCard'
 
-export default function ExecutiveDashboard({ stats, healthScore }) {
+export default function ExecutiveDashboard({ stats, healthScore, issues = [] }) {
   if (!stats || !healthScore) {
     return (
       <div className="container">
@@ -15,8 +16,10 @@ export default function ExecutiveDashboard({ stats, healthScore }) {
 
   return (
     <div className="container">
-      {/* Health Score Section */}
-      <div className="card mb-3">
+      {/* Two-column layout: Health Score + Backlog Health */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '20px', marginBottom: '24px' }}>
+        {/* Health Score Section */}
+        <div className="card">
         <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: '40px', alignItems: 'center' }}>
           <div className="text-center">
             <HealthCircle score={healthScore.score} status={healthScore.status} />
@@ -51,6 +54,10 @@ export default function ExecutiveDashboard({ stats, healthScore }) {
             </div>
           </div>
         </div>
+        </div>
+
+        {/* Backlog Health Card */}
+        <BacklogHealthCard issues={issues} />
       </div>
 
       {/* Key Metrics Grid */}
