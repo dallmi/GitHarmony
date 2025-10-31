@@ -90,46 +90,27 @@ export default function SprintGoalSection({ sprintId = 'current', sprintName = '
   }
 
   return (
-    <div style={{
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      borderRadius: '12px',
-      padding: '24px',
-      marginBottom: '24px',
-      color: 'white',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
-      {/* Background pattern */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        opacity: 0.1,
-        backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,.05) 10px, rgba(255,255,255,.05) 20px)'
-      }} />
-
+    <div className="card" style={{ marginBottom: '24px' }}>
       {/* Content */}
-      <div style={{ position: 'relative', zIndex: 1 }}>
+      <div>
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'flex-start',
-          marginBottom: '16px'
+          marginBottom: '16px',
+          paddingBottom: '12px',
+          borderBottom: '2px solid #E5E7EB'
         }}>
           <div>
             <div style={{
-              fontSize: '14px',
-              opacity: 0.9,
+              fontSize: '16px',
               marginBottom: '4px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-              fontWeight: '500'
+              fontWeight: '600',
+              color: '#1F2937'
             }}>
               Sprint Goal
             </div>
-            <div style={{ fontSize: '12px', opacity: 0.7 }}>
+            <div style={{ fontSize: '13px', color: '#6B7280' }}>
               {sprintName}
             </div>
           </div>
@@ -137,14 +118,14 @@ export default function SprintGoalSection({ sprintId = 'current', sprintName = '
           {/* Stats Badge */}
           {stats && stats.hasGoals && (
             <div style={{
-              background: 'rgba(255,255,255,0.2)',
-              padding: '8px 16px',
-              borderRadius: '20px',
-              fontSize: '13px',
+              background: '#F3F4F6',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              fontSize: '12px',
               fontWeight: '600',
-              backdropFilter: 'blur(10px)'
+              color: '#374151'
             }}>
-              {stats.achievementRate}% Achievement Rate
+              Achievement: {stats.achievementRate}%
             </div>
           )}
         </div>
@@ -154,18 +135,18 @@ export default function SprintGoalSection({ sprintId = 'current', sprintName = '
           <div>
             {goal && goal.goal ? (
               <div style={{
-                background: 'rgba(255,255,255,0.15)',
+                background: '#F9FAFB',
                 padding: '16px',
-                borderRadius: '8px',
-                marginBottom: '12px',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255,255,255,0.2)'
+                borderRadius: '6px',
+                marginBottom: '16px',
+                border: '1px solid #E5E7EB'
               }}>
                 <div style={{
-                  fontSize: '18px',
-                  fontWeight: '600',
-                  lineHeight: '1.5',
-                  marginBottom: '8px'
+                  fontSize: '15px',
+                  fontWeight: '500',
+                  lineHeight: '1.6',
+                  marginBottom: '12px',
+                  color: '#1F2937'
                 }}>
                   {goal.goal}
                 </div>
@@ -176,13 +157,13 @@ export default function SprintGoalSection({ sprintId = 'current', sprintName = '
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
-                    background: getAchievementColor(goal.achievement) + '20',
-                    padding: '4px 12px',
-                    borderRadius: '12px',
-                    fontSize: '13px',
+                    background: 'white',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    fontSize: '12px',
                     fontWeight: '600',
                     color: getAchievementColor(goal.achievement),
-                    border: `1px solid ${getAchievementColor(goal.achievement)}40`
+                    border: `2px solid ${getAchievementColor(goal.achievement)}`
                   }}>
                     {getAchievementIcon(goal.achievement)} {getAchievementLabel(goal.achievement)}
                   </div>
@@ -190,100 +171,97 @@ export default function SprintGoalSection({ sprintId = 'current', sprintName = '
               </div>
             ) : (
               <div style={{
-                background: 'rgba(255,255,255,0.1)',
-                padding: '16px',
-                borderRadius: '8px',
-                marginBottom: '12px',
+                background: '#F9FAFB',
+                padding: '24px',
+                borderRadius: '6px',
+                marginBottom: '16px',
                 textAlign: 'center',
-                opacity: 0.7,
-                border: '2px dashed rgba(255,255,255,0.3)'
+                border: '2px dashed #D1D5DB'
               }}>
-                <div style={{ fontSize: '14px' }}>
+                <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '4px' }}>
                   No sprint goal set yet
                 </div>
-                <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                <div style={{ fontSize: '12px', color: '#9CA3AF' }}>
                   Click "Set Goal" to define your sprint objective
                 </div>
               </div>
             )}
 
             {/* Action Buttons */}
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
               <button
                 onClick={() => setIsEditing(true)}
-                style={{
-                  padding: '8px 16px',
-                  background: 'rgba(255,255,255,0.2)',
-                  color: 'white',
-                  border: '1px solid rgba(255,255,255,0.3)',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  backdropFilter: 'blur(10px)',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                className="btn btn-secondary"
+                style={{ fontSize: '13px' }}
               >
                 {goal && goal.goal ? 'Edit Goal' : 'Set Goal'}
               </button>
 
               {/* Achievement Selector */}
               {goal && goal.goal && (
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <button
-                    onClick={() => handleAchievementChange('met')}
-                    style={{
-                      padding: '8px 12px',
-                      background: goal.achievement === 'met' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255,255,255,0.1)',
-                      color: 'white',
-                      border: `1px solid ${goal.achievement === 'met' ? '#10B981' : 'rgba(255,255,255,0.2)'}`,
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    title="Mark as Met"
-                  >
-                    ✅
-                  </button>
-                  <button
-                    onClick={() => handleAchievementChange('partial')}
-                    style={{
-                      padding: '8px 12px',
-                      background: goal.achievement === 'partial' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(255,255,255,0.1)',
-                      color: 'white',
-                      border: `1px solid ${goal.achievement === 'partial' ? '#F59E0B' : 'rgba(255,255,255,0.2)'}`,
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    title="Mark as Partially Met"
-                  >
-                    ⚡
-                  </button>
-                  <button
-                    onClick={() => handleAchievementChange('not-met')}
-                    style={{
-                      padding: '8px 12px',
-                      background: goal.achievement === 'not-met' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(255,255,255,0.1)',
-                      color: 'white',
-                      border: `1px solid ${goal.achievement === 'not-met' ? '#EF4444' : 'rgba(255,255,255,0.2)'}`,
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    title="Mark as Not Met"
-                  >
-                    ❌
-                  </button>
-                </div>
+                <>
+                  <div style={{
+                    fontSize: '12px',
+                    color: '#6B7280',
+                    fontWeight: '500',
+                    marginLeft: '4px'
+                  }}>
+                    Mark as:
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      onClick={() => handleAchievementChange('met')}
+                      style={{
+                        padding: '6px 12px',
+                        background: goal.achievement === 'met' ? '#D1FAE5' : 'white',
+                        color: goal.achievement === 'met' ? '#059669' : '#6B7280',
+                        border: `2px solid ${goal.achievement === 'met' ? '#10B981' : '#E5E7EB'}`,
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      title="Mark as Met"
+                    >
+                      ✅ Met
+                    </button>
+                    <button
+                      onClick={() => handleAchievementChange('partial')}
+                      style={{
+                        padding: '6px 12px',
+                        background: goal.achievement === 'partial' ? '#FEF3C7' : 'white',
+                        color: goal.achievement === 'partial' ? '#D97706' : '#6B7280',
+                        border: `2px solid ${goal.achievement === 'partial' ? '#F59E0B' : '#E5E7EB'}`,
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      title="Mark as Partially Met"
+                    >
+                      ⚡ Partial
+                    </button>
+                    <button
+                      onClick={() => handleAchievementChange('not-met')}
+                      style={{
+                        padding: '6px 12px',
+                        background: goal.achievement === 'not-met' ? '#FEE2E2' : 'white',
+                        color: goal.achievement === 'not-met' ? '#DC2626' : '#6B7280',
+                        border: `2px solid ${goal.achievement === 'not-met' ? '#EF4444' : '#E5E7EB'}`,
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      title="Mark as Not Met"
+                    >
+                      ❌ Not Met
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -297,9 +275,9 @@ export default function SprintGoalSection({ sprintId = 'current', sprintName = '
                 width: '100%',
                 minHeight: '100px',
                 padding: '12px',
-                background: 'rgba(255,255,255,0.9)',
-                border: '1px solid rgba(255,255,255,0.3)',
-                borderRadius: '8px',
+                background: 'white',
+                border: '2px solid #D1D5DB',
+                borderRadius: '6px',
                 fontSize: '14px',
                 color: '#1F2937',
                 resize: 'vertical',
@@ -312,35 +290,15 @@ export default function SprintGoalSection({ sprintId = 'current', sprintName = '
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
                 onClick={handleSave}
-                style={{
-                  padding: '8px 20px',
-                  background: '#10B981',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#059669'}
-                onMouseLeave={(e) => e.currentTarget.style.background = '#10B981'}
+                className="btn btn-primary"
+                style={{ fontSize: '13px' }}
               >
                 Save Goal
               </button>
               <button
                 onClick={handleCancel}
-                style={{
-                  padding: '8px 20px',
-                  background: 'rgba(255,255,255,0.2)',
-                  color: 'white',
-                  border: '1px solid rgba(255,255,255,0.3)',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
+                className="btn btn-secondary"
+                style={{ fontSize: '13px' }}
               >
                 Cancel
               </button>
