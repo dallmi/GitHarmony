@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import SprintPlanningView from './SprintPlanningView'
 import SprintBoardView from './SprintBoardView'
+import SprintGoalSection from './SprintGoalSection'
 
 /**
  * Unified Sprint Management View
@@ -22,6 +23,9 @@ export default function SprintManagementView({ issues }) {
           Plan sprints, manage board, and track team capacity
         </p>
       </div>
+
+      {/* Sprint Goal Section */}
+      <SprintGoalSection sprintId="current" sprintName="Current Sprint" />
 
       {/* Planning Section - Collapsible */}
       <div className="card" style={{ marginBottom: '24px' }}>
