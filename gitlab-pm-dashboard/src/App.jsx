@@ -8,6 +8,7 @@ import { IterationFilterProvider } from './contexts/IterationFilterContext'
 import Header from './components/Header'
 import Tabs from './components/Tabs'
 import IterationFilterDropdown from './components/IterationFilterDropdown'
+import PortfolioFilterDropdown from './components/PortfolioFilterDropdown'
 import ConfigModal from './components/ConfigModal'
 import StatusGeneratorModal from './components/StatusGeneratorModal'
 import ExecutiveDashboard from './components/ExecutiveDashboard'
@@ -106,6 +107,23 @@ function App() {
         />
 
         <Tabs activeView={activeView} onViewChange={setActiveView} />
+
+        {/* Portfolio Filter - Shows on all views when multiple projects configured */}
+        {isConfigured() && (
+          <PortfolioFilterDropdown
+            onProjectChange={(projectId) => {
+              if (projectId === 'portfolio-manage') {
+                setActiveView('portfolio')
+              } else if (projectId === 'cross-project') {
+                // Stay on current view, data will aggregate
+                console.log('Cross-project view activated')
+              } else {
+                // Project switched, data will reload
+                handleProjectSwitch(projectId)
+              }
+            }}
+          />
+        )}
 
         {/* Iteration Filter - Shows on views that benefit from iteration filtering */}
         {isConfigured() && issues.length > 0 && (
