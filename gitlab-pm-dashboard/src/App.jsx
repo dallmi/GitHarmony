@@ -115,8 +115,9 @@ function App() {
               if (projectId === 'portfolio-manage') {
                 setActiveView('portfolio')
               } else if (projectId === 'cross-project') {
-                // Stay on current view, data will aggregate
-                console.log('Cross-project view activated')
+                // Cross-project mode: trigger data refresh to aggregate all projects
+                console.log('Cross-project view activated - refreshing data')
+                refresh()
               } else {
                 // Project switched, data will reload
                 handleProjectSwitch(projectId)

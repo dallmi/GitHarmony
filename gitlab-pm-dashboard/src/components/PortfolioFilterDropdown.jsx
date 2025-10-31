@@ -37,6 +37,8 @@ export default function PortfolioFilterDropdown({ onProjectChange }) {
   }
 
   const handleCrossProjectView = () => {
+    // Store cross-project mode in localStorage
+    setActiveProject('cross-project')
     setActiveProjectId('cross-project')
     setIsOpen(false)
 

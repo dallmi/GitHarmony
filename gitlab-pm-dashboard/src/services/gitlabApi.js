@@ -163,13 +163,18 @@ export async function fetchEpics(gitlabUrl, groupPath, token) {
   const perPage = 100
 
   console.log('Fetching epics with pagination...')
+  console.log('  GitLab URL:', gitlabUrl)
+  console.log('  Group Path:', groupPath)
+  console.log('  Encoded Group Path:', encodedGroupPath)
 
   try {
     while (true) {
-      const response = await fetch(
-        `${gitlabUrl}/api/v4/groups/${encodedGroupPath}/epics?per_page=${perPage}&page=${page}`,
-        { headers: { 'PRIVATE-TOKEN': token } }
-      )
+      const url = `${gitlabUrl}/api/v4/groups/${encodedGroupPath}/epics?per_page=${perPage}&page=${page}`
+      console.log('  Epic API Request URL:', url)
+
+      const response = await fetch(url, { headers: { 'PRIVATE-TOKEN': token } })
+
+      console.log(`  Epic API Response Status: ${response.status}`)
 
       if (response.status === 404) {
         console.warn('Epics not available (requires Premium/Ultimate)')
@@ -177,10 +182,13 @@ export async function fetchEpics(gitlabUrl, groupPath, token) {
       }
 
       if (!response.ok) {
-        throw new Error(`Epics API Error: ${response.status}`)
+        const errorText = await response.text()
+        console.error('Epic API Error Response:', errorText)
+        throw new Error(`Epics API Error: ${response.status} - ${errorText}`)
       }
 
       const epics = await response.json()
+      console.log(`  Epics returned on page ${page}:`, epics.length)
 
       if (epics.length === 0) {
         break // No more epics
@@ -351,7 +359,14 @@ export async function fetchAllData(config) {
 
   // First validate project access to provide clear error messages
   console.log('=== Starting GitLab Data Fetch ===')
-  console.log('Config:', { gitlabUrl, projectId, groupPath: groupPath || '(none)' })
+  console.log('Full config object:', config)
+  console.log('Config values:', {
+    gitlabUrl,
+    projectId,
+    groupPath: groupPath || '(none)',
+    groupPathType: typeof groupPath,
+    groupPathLength: groupPath?.length
+  })
 
   await validateProject(gitlabUrl, projectId, token)
 
