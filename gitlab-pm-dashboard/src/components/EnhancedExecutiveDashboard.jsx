@@ -152,10 +152,14 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues,
                           fontWeight: '600',
                           color: badge.color,
                           background: badge.background,
-                          whiteSpace: 'nowrap'
+                          whiteSpace: 'nowrap',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
                         }}
                       >
-                        {badge.label}
+                        <span>{badge.icon}</span>
+                        <span>{badge.label}</span>
                       </span>
                     </div>
 
@@ -319,10 +323,14 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues,
                       fontWeight: '600',
                       color: badge.color,
                       background: badge.background,
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
                     }}
                   >
-                    {badge.label}
+                    <span>{badge.icon}</span>
+                    <span>{badge.label}</span>
                   </span>
                 </div>
               )

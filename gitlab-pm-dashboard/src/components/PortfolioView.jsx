@@ -227,7 +227,6 @@ export default function PortfolioView({ onProjectSwitch }) {
       {/* Portfolio Overview */}
       {projects.length === 0 ? (
         <div className="card text-center" style={{ padding: '60px 20px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>📁</div>
           <h3 className="mb-2">No Projects Yet</h3>
           <p className="text-muted" style={{ marginBottom: '20px' }}>
             Add your first project to start managing your portfolio
@@ -320,7 +319,7 @@ export default function PortfolioView({ onProjectSwitch }) {
                     style={{ padding: '8px 16px' }}
                     title="Edit Project"
                   >
-                    ⚙️
+                    Edit
                   </button>
                   <button
                     className="btn btn-secondary"
@@ -328,7 +327,7 @@ export default function PortfolioView({ onProjectSwitch }) {
                     style={{ padding: '8px 16px' }}
                     title="Delete Project"
                   >
-                    🗑️
+                    Delete
                   </button>
                 </div>
               </div>
@@ -347,7 +346,6 @@ export default function PortfolioView({ onProjectSwitch }) {
         }}
       >
         <div style={{ display: 'flex', gap: '12px' }}>
-          <div style={{ fontSize: '24px' }}>ℹ️</div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '14px', fontWeight: '600', color: '#1E40AF', marginBottom: '4px' }}>
               Portfolio Management

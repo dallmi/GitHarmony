@@ -112,16 +112,19 @@ export function getMilestoneStatusBadge(status) {
   const badges = {
     'on-track': {
       label: 'On Track',
+      icon: '●',
       color: '#059669',
       background: '#D1FAE5'
     },
     'at-risk': {
       label: 'At Risk',
+      icon: '▲',
       color: '#D97706',
       background: '#FEF3C7'
     },
     'overdue': {
       label: 'Overdue',
+      icon: '■',
       color: '#DC2626',
       background: '#FEE2E2'
     }

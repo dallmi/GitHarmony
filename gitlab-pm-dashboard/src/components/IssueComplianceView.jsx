@@ -159,15 +159,15 @@ Best regards`
               gap: '6px'
             }}
           >
-            ⚙️ Configure Criteria
+            Configure Criteria
           </button>
           {filteredIssues.length > 0 && (
             <>
               <button className="btn btn-primary" onClick={handleEmailReport}>
-                📧 Email Report
+                Email Report
               </button>
               <button className="btn" onClick={handleExportCSV}>
-                📊 Export CSV
+                Export CSV
               </button>
             </>
           )}
@@ -196,7 +196,7 @@ Best regards`
             marginBottom: '-2px'
           }}
         >
-          📋 Quality Criteria
+          Quality Criteria
         </button>
         <button
           onClick={() => setActiveTab('dod')}
@@ -213,7 +213,7 @@ Best regards`
             marginBottom: '-2px'
           }}
         >
-          ✅ Definition of Done
+          Definition of Done
         </button>
       </div>
 
@@ -271,7 +271,7 @@ Best regards`
             }}
           >
             <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
-              High Severity {activeFilter === 'highSeverity' && '✓'}
+              High Severity {activeFilter === 'highSeverity' && '[Active]'}
             </div>
             <div style={{ fontSize: '32px', fontWeight: '600', color: '#DC2626' }}>
               {stats.highSeverity}
@@ -293,7 +293,7 @@ Best regards`
             }}
           >
             <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
-              Medium Severity {activeFilter === 'mediumSeverity' && '✓'}
+              Medium Severity {activeFilter === 'mediumSeverity' && '[Active]'}
             </div>
             <div style={{ fontSize: '32px', fontWeight: '600', color: '#D97706' }}>
               {stats.mediumSeverity}
@@ -315,7 +315,7 @@ Best regards`
             }}
           >
             <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
-              Low Severity {activeFilter === 'lowSeverity' && '✓'}
+              Low Severity {activeFilter === 'lowSeverity' && '[Active]'}
             </div>
             <div style={{ fontSize: '32px', fontWeight: '600', color: '#6B7280' }}>
               {stats.lowSeverity}
@@ -337,7 +337,7 @@ Best regards`
             }}
           >
             <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
-              Stale Issues {activeFilter === 'stale' && '✓'}
+              Stale Issues {activeFilter === 'stale' && '[Active]'}
             </div>
             <div style={{ fontSize: '32px', fontWeight: '600', color: '#6B7280' }}>
               {stats.staleIssues.total}
@@ -384,7 +384,7 @@ Best regards`
                 }} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '13px', fontWeight: '600', color: '#1F2937', marginBottom: '4px' }}>
-                    {criterion.name} {isActive && '✓'}
+                    {criterion.name} {isActive && '[Active]'}
                   </div>
                   <div style={{ fontSize: '12px', color: '#6B7280' }}>
                     {criterion.description}
@@ -416,7 +416,7 @@ Best regards`
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '14px', color: '#374151' }}>
-              📌 Filtered by:
+              Filtered by:
             </span>
             <span style={{
               padding: '4px 12px',
@@ -458,7 +458,6 @@ Best regards`
       {/* Non-Compliant Issues List */}
       {filteredIssues.length === 0 ? (
         <div className="card text-center" style={{ padding: '60px 20px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>✅</div>
           <h3 className="mb-2">
             {nonCompliantIssues.length === 0 ? 'All Issues Compliant!' : 'No Issues in Selected Filter'}
           </h3>
@@ -517,7 +516,7 @@ Best regards`
                           alignItems: 'center',
                           gap: '4px'
                         }}>
-                          ⏰ {issue.staleStatus.daysOpen} days open
+                          {issue.staleStatus.daysOpen} days open
                         </span>
                       )}
                     </div>
@@ -540,7 +539,7 @@ Best regards`
                 {/* Violations */}
                 <div style={{ marginBottom: '16px' }}>
                   <div style={{ fontSize: '13px', fontWeight: '600', color: '#1F2937', marginBottom: '8px' }}>
-                    ⚠️ Violations ({issue.violations.length})
+                    Violations ({issue.violations.length})
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {highViolations.map((v, idx) => (
@@ -670,7 +669,7 @@ Best regards`
       {nonCompliantIssues.length > 0 && (
         <div className="card" style={{ marginTop: '30px', background: '#EFF6FF', borderColor: '#BFDBFE' }}>
           <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1E40AF', marginBottom: '12px' }}>
-            📋 Summary for Scrum Master
+            Summary for Scrum Master
           </h3>
           <div style={{ fontSize: '14px', color: '#1E40AF', lineHeight: '1.6' }}>
             <p style={{ marginBottom: '12px' }}>

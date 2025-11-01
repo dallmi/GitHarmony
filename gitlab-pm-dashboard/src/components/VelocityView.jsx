@@ -158,7 +158,6 @@ export default function VelocityView({ issues }) {
     return (
       <div className="container">
         <div className="card text-center" style={{ padding: '60px 20px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>📊</div>
           <h3 className="mb-2">No Velocity Data</h3>
           <p className="text-muted">Add "Sprint X" labels to your issues to track velocity and burndown.</p>
         </div>
@@ -170,9 +169,9 @@ export default function VelocityView({ issues }) {
 
   // Helper to get trend color and icon
   const getTrendDisplay = (trendValue) => {
-    if (trendValue > 10) return { color: '#059669', icon: '📈', label: 'Improving' }
-    if (trendValue < -10) return { color: '#DC2626', icon: '📉', label: 'Declining' }
-    return { color: '#D97706', icon: '➡️', label: 'Stable' }
+    if (trendValue > 10) return { color: '#059669', icon: '↑', label: 'Improving' }
+    if (trendValue < -10) return { color: '#DC2626', icon: '↓', label: 'Declining' }
+    return { color: '#D97706', icon: '→', label: 'Stable' }
   }
 
   const trendDisplay = getTrendDisplay(trend)
@@ -232,14 +231,14 @@ export default function VelocityView({ issues }) {
         return (
           <div className="card" style={{ marginBottom: '20px', background: '#F9FAFB' }}>
             <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
-              📊 Velocity Analysis
+              Velocity Analysis
             </h3>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
               {/* Root Causes */}
               <div>
                 <div style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937', marginBottom: '12px' }}>
-                  🔍 Analysis:
+                  Analysis:
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {causes.map((cause, idx) => (
@@ -257,9 +256,6 @@ export default function VelocityView({ issues }) {
                       }}
                     >
                       <div style={{ fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>
-                        {cause.severity === 'critical' && '🔴'}
-                        {cause.severity === 'warning' && '🟡'}
-                        {cause.severity === 'info' && 'ℹ️'}
                         {cause.description}
                       </div>
                       <div style={{ fontSize: '12px', color: '#6B7280' }}>
@@ -274,7 +270,7 @@ export default function VelocityView({ issues }) {
               {actions.length > 0 && (
                 <div>
                   <div style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937', marginBottom: '12px' }}>
-                    💡 Recommended Actions:
+                    Recommended Actions:
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {actions.map((action, idx) => (
@@ -474,8 +470,8 @@ export default function VelocityView({ issues }) {
               <div style={{ marginTop: '16px', padding: '12px', background: burndown.actual[burndown.actual.length - 1]?.remaining <= burndown.ideal[burndown.actual.length - 1]?.remaining ? '#D1FAE5' : '#FEE2E2', borderRadius: '8px', textAlign: 'center' }}>
                 <div style={{ fontSize: '14px', fontWeight: '600', color: burndown.actual[burndown.actual.length - 1]?.remaining <= burndown.ideal[burndown.actual.length - 1]?.remaining ? '#059669' : '#DC2626' }}>
                   {burndown.actual[burndown.actual.length - 1]?.remaining <= burndown.ideal[burndown.actual.length - 1]?.remaining
-                    ? '✅ On Track'
-                    : '⚠️ Behind Schedule'}
+                    ? 'On Track'
+                    : 'Behind Schedule'}
                 </div>
                 <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
                   {burndown.actual[burndown.actual.length - 1]?.remaining || 0} issues remaining
