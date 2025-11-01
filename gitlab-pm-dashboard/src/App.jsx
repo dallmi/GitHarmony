@@ -15,6 +15,7 @@ import PortfolioFilterDropdown from './components/PortfolioFilterDropdown'
 import ConfigModal from './components/ConfigModal'
 import StatusGeneratorModal from './components/StatusGeneratorModal'
 import ExecutiveDashboard from './components/ExecutiveDashboard'
+import EnhancedExecutiveDashboard from './components/EnhancedExecutiveDashboard'
 import CommunicationsDashboard from './components/CommunicationsDashboard'
 import PortfolioView from './components/PortfolioView'
 import RoadmapView from './components/RoadmapView'
@@ -187,7 +188,14 @@ function App() {
         {isConfigured() && issues.length > 0 && (
           <>
             {activeView === 'executive' && (
-              <ExecutiveDashboard stats={stats} healthScore={healthScore} issues={issues} />
+              <EnhancedExecutiveDashboard
+                stats={stats}
+                healthScore={healthScore}
+                issues={issues}
+                milestones={milestones}
+                epics={epics}
+                risks={risks}
+              />
             )}
             {activeView === 'communications' && (
               <CommunicationsDashboard issues={issues} />

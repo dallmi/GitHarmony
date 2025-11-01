@@ -106,5 +106,6 @@ export const LABEL_CONVENTIONS = {
   sprint: 'Sprint X',
   priority: 'Priority::High|Medium|Low',
   type: 'Type::Bug|Feature|Enhancement',
-  blocker: 'Blocker'
+  blocker: 'Blocker',
+  initiative: 'initiative::initiative-name'
 }
