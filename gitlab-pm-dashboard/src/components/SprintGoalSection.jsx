@@ -73,10 +73,10 @@ export default function SprintGoalSection({ sprintId = 'current', sprintName = '
 
   const getAchievementIcon = (achievement) => {
     switch (achievement) {
-      case 'met': return '✅'
-      case 'partial': return '⚡'
-      case 'not-met': return '❌'
-      default: return '⏳'
+      case 'met': return '●'
+      case 'partial': return '◐'
+      case 'not-met': return '○'
+      default: return '○'
     }
   }
 

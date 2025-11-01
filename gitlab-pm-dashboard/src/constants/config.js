@@ -49,7 +49,6 @@ export const VIEW_GROUPS = [
   {
     id: 'overview',
     label: 'Overview',
-    icon: '📊',
     views: [
       { id: 'executive', label: 'Dashboard', roles: ['executive', 'manager', 'team'] },
       { id: 'communications', label: 'Communications', roles: ['executive', 'manager'] },
@@ -59,7 +58,6 @@ export const VIEW_GROUPS = [
   {
     id: 'planning',
     label: 'Planning',
-    icon: '🎯',
     views: [
       { id: 'portfolio', label: 'Portfolio', roles: ['executive', 'manager'] },
       { id: 'roadmap', label: 'Roadmap', roles: ['executive', 'manager', 'team'] },
@@ -69,7 +67,6 @@ export const VIEW_GROUPS = [
   {
     id: 'execution',
     label: 'Execution',
-    icon: '⚡',
     views: [
       { id: 'sprintmanagement', label: 'Sprints', roles: ['manager', 'team'] },
       { id: 'resources', label: 'Resources', roles: ['manager', 'team'] }
@@ -78,7 +75,6 @@ export const VIEW_GROUPS = [
   {
     id: 'analysis',
     label: 'Analytics',
-    icon: '📈',
     views: [
       { id: 'velocity', label: 'Velocity', roles: ['manager', 'team'] },
       { id: 'cycletime', label: 'Cycle Time', roles: ['manager', 'team'] },
@@ -88,7 +84,6 @@ export const VIEW_GROUPS = [
   {
     id: 'governance',
     label: 'Governance',
-    icon: '🛡️',
     views: [
       { id: 'riskmanagement', label: 'Risks', roles: ['executive', 'manager'] },
       { id: 'stakeholders', label: 'Stakeholders', roles: ['executive', 'manager'] }

@@ -64,7 +64,6 @@ export default function RoleSelectorModal({ show, onClose }) {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '24px' }}>{role.icon}</span>
                   <div>
                     <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)' }}>
                       {role.label}
@@ -76,7 +75,7 @@ export default function RoleSelectorModal({ show, onClose }) {
                     </span>
                   )}
                 </div>
-                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginLeft: '36px' }}>
+                <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
                   {role.description}
                 </div>
               </div>

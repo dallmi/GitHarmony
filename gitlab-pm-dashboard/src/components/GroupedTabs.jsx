@@ -73,7 +73,6 @@ export default function GroupedTabs({ activeView, onViewChange }) {
                 if (!isActive) e.target.style.color = 'var(--text-secondary)'
               }}
             >
-              <span>{group.icon}</span>
               <span>{group.label}</span>
               <span style={{
                 fontSize: '10px',
@@ -150,9 +149,9 @@ export default function GroupedTabs({ activeView, onViewChange }) {
           borderRadius: '12px',
           fontWeight: '600'
         }}>
-          {userRole === 'executive' && '👔 Executive'}
-          {userRole === 'manager' && '📋 Manager'}
-          {userRole === 'team' && '👥 Team'}
+          {userRole === 'executive' && 'Executive'}
+          {userRole === 'manager' && 'Manager'}
+          {userRole === 'team' && 'Team'}
         </span>
       </div>
     </div>

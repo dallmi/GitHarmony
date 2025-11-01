@@ -90,18 +90,15 @@ export function getRoleInfo(role) {
   const roleMap = {
     executive: {
       label: 'Executive',
-      description: 'High-level overview, strategic insights, and stakeholder reporting',
-      icon: '👔'
+      description: 'High-level overview, strategic insights, and stakeholder reporting'
     },
     manager: {
       label: 'Manager',
-      description: 'Full access to planning, execution, and team analytics',
-      icon: '📋'
+      description: 'Full access to planning, execution, and team analytics'
     },
     team: {
       label: 'Team Member',
-      description: 'Focus on execution, sprints, and operational metrics',
-      icon: '👥'
+      description: 'Focus on execution, sprints, and operational metrics'
     }
   }
 
