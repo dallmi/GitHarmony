@@ -7,6 +7,7 @@ import {
   predictCompletion,
   getCurrentSprint
 } from '../services/velocityService'
+import { exportVelocityToCSV, downloadCSV } from '../utils/csvExportUtils'
 
 /**
  * Velocity & Burndown Analytics View
@@ -180,8 +181,26 @@ export default function VelocityView({ issues }) {
   const maxVelocity = Math.max(...velocityData.map((s) => s.velocity), 10)
   const maxBurndown = burndown.total || 10
 
+  const handleExportCSV = () => {
+    const csvContent = exportVelocityToCSV(velocityData)
+    const date = new Date().toISOString().split('T')[0]
+    downloadCSV(csvContent, `velocity-data-${date}.csv`)
+  }
+
   return (
     <div className="container-fluid">
+      {/* Header with Export Button */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: '600' }}>Velocity & Burndown Analytics</h2>
+        <button
+          className="btn btn-primary"
+          onClick={handleExportCSV}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+        >
+          <span>Export Velocity CSV</span>
+        </button>
+      </div>
+
       {/* Summary Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
         <div className="card">

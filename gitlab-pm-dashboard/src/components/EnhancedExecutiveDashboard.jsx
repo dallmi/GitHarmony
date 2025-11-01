@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { getInitiatives, getStatusBadge, formatDate } from '../services/initiativeService'
 import { getUpcomingMilestones, getMilestoneStatusBadge } from '../services/milestoneTimelineService'
 import { calculateCommunicationsMetrics } from '../services/communicationsMetricsService'
+import { exportExecutiveSummaryToCSV, downloadCSV } from '../utils/csvExportUtils'
 
 /**
  * Enhanced Executive Dashboard
@@ -34,15 +35,41 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues,
       .slice(0, 3)
   }, [risks])
 
+  const handleExportCSV = () => {
+    const exportData = {
+      initiatives,
+      healthScore,
+      upcomingMilestones,
+      topRisks,
+      stats
+    }
+    const csvContent = exportExecutiveSummaryToCSV(exportData)
+    const date = new Date().toISOString().split('T')[0]
+    downloadCSV(csvContent, `executive-summary-${date}.csv`)
+  }
+
   return (
     <div className="container">
-      <div style={{ marginBottom: '30px' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
-          Executive Overview
-        </h2>
-        <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-          Comprehensive view of all initiatives and key performance indicators
-        </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px' }}>
+        <div>
+          <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
+            Executive Overview
+          </h2>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+            Comprehensive view of all initiatives and key performance indicators
+          </p>
+        </div>
+        <button
+          className="btn btn-primary"
+          onClick={handleExportCSV}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <span>Export Summary CSV</span>
+        </button>
       </div>
 
       {/* Top KPIs */}

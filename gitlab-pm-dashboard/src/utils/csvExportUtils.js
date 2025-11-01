@@ -243,6 +243,243 @@ export function downloadCSV(csvContent, filename) {
 }
 
 /**
+ * Export initiatives to CSV
+ */
+export function exportInitiativesToCSV(initiatives) {
+  if (!initiatives || initiatives.length === 0) {
+    return 'No data to export'
+  }
+
+  const headers = [
+    'Initiative Name',
+    'Status',
+    'Progress %',
+    'Total Epics',
+    'Total Issues',
+    'Open Issues',
+    'Closed Issues',
+    'Start Date',
+    'Due Date',
+    'Label'
+  ]
+
+  const rows = initiatives.map(initiative => [
+    initiative.name,
+    initiative.status,
+    `${initiative.progress}%`,
+    initiative.epics.length,
+    initiative.totalIssues,
+    initiative.openIssues,
+    initiative.closedIssues,
+    initiative.startDate ? new Date(initiative.startDate).toLocaleDateString() : '',
+    initiative.dueDate ? new Date(initiative.dueDate).toLocaleDateString() : '',
+    initiative.label
+  ])
+
+  const csvContent = [
+    arrayToCSVRow(headers),
+    ...rows.map(row => arrayToCSVRow(row))
+  ].join('\n')
+
+  return csvContent
+}
+
+/**
+ * Export velocity data to CSV
+ */
+export function exportVelocityToCSV(velocityData) {
+  if (!velocityData || velocityData.length === 0) {
+    return 'No data to export'
+  }
+
+  const headers = [
+    'Sprint',
+    'Velocity',
+    'Total Issues',
+    'Completed Issues',
+    'Open Issues',
+    'Completion Rate %',
+    'Sprint Start',
+    'Sprint End'
+  ]
+
+  const rows = velocityData.map(sprint => [
+    `Sprint ${sprint.sprint}`,
+    sprint.velocity,
+    sprint.totalIssues,
+    sprint.closedIssues,
+    sprint.openIssues,
+    sprint.completionRate ? `${sprint.completionRate}%` : '',
+    sprint.startDate ? new Date(sprint.startDate).toLocaleDateString() : '',
+    sprint.endDate ? new Date(sprint.endDate).toLocaleDateString() : ''
+  ])
+
+  const csvContent = [
+    arrayToCSVRow(headers),
+    ...rows.map(row => arrayToCSVRow(row))
+  ].join('\n')
+
+  return csvContent
+}
+
+/**
+ * Export risk data to CSV
+ */
+export function exportRisksToCSV(risks) {
+  if (!risks || risks.length === 0) {
+    return 'No data to export'
+  }
+
+  const headers = [
+    'Risk Title',
+    'Description',
+    'Impact',
+    'Probability',
+    'Risk Score',
+    'Mitigation Strategy',
+    'Owner',
+    'Status',
+    'Created Date'
+  ]
+
+  const rows = risks.map(risk => [
+    risk.title,
+    risk.description || '',
+    risk.impact,
+    risk.probability,
+    risk.riskScore || '',
+    risk.mitigation || '',
+    risk.owner || '',
+    risk.status || 'Open',
+    risk.createdAt ? new Date(risk.createdAt).toLocaleDateString() : ''
+  ])
+
+  const csvContent = [
+    arrayToCSVRow(headers),
+    ...rows.map(row => arrayToCSVRow(row))
+  ].join('\n')
+
+  return csvContent
+}
+
+/**
+ * Export cycle time data to CSV
+ */
+export function exportCycleTimeToCSV(cycleTimeData) {
+  if (!cycleTimeData || cycleTimeData.length === 0) {
+    return 'No data to export'
+  }
+
+  const headers = [
+    'Issue ID',
+    'Title',
+    'Lead Time (days)',
+    'Cycle Time (days)',
+    'Created Date',
+    'First Commit Date',
+    'Closed Date',
+    'Labels',
+    'Assignee'
+  ]
+
+  const rows = cycleTimeData.map(item => [
+    item.issueId || item.iid,
+    item.title,
+    item.leadTime || '',
+    item.cycleTime || '',
+    item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '',
+    item.firstCommit ? new Date(item.firstCommit).toLocaleDateString() : '',
+    item.closedAt ? new Date(item.closedAt).toLocaleDateString() : '',
+    item.labels?.join('; ') || '',
+    item.assignee || ''
+  ])
+
+  const csvContent = [
+    arrayToCSVRow(headers),
+    ...rows.map(row => arrayToCSVRow(row))
+  ].join('\n')
+
+  return csvContent
+}
+
+/**
+ * Export executive summary to CSV
+ */
+export function exportExecutiveSummaryToCSV(data) {
+  const { initiatives, healthScore, upcomingMilestones, topRisks, stats } = data
+
+  const sections = []
+
+  // Health Score Section
+  sections.push('HEALTH SCORE')
+  sections.push(`Score,${healthScore?.score || 'N/A'}`)
+  sections.push(`Status,${healthScore?.status || 'N/A'}`)
+  sections.push('')
+
+  // Overall Stats
+  sections.push('OVERALL STATISTICS')
+  sections.push(`Total Issues,${stats?.totalIssues || 0}`)
+  sections.push(`Open Issues,${stats?.openIssues || 0}`)
+  sections.push(`Closed Issues,${stats?.closedIssues || 0}`)
+  sections.push(`Total Epics,${stats?.totalEpics || 0}`)
+  sections.push('')
+
+  // Initiatives Summary
+  if (initiatives && initiatives.length > 0) {
+    sections.push('INITIATIVES SUMMARY')
+    sections.push(arrayToCSVRow([
+      'Name', 'Status', 'Progress %', 'Epics', 'Issues', 'Due Date'
+    ]))
+    initiatives.forEach(init => {
+      sections.push(arrayToCSVRow([
+        init.name,
+        init.status,
+        `${init.progress}%`,
+        init.epics.length,
+        init.totalIssues,
+        init.dueDate ? new Date(init.dueDate).toLocaleDateString() : ''
+      ]))
+    })
+    sections.push('')
+  }
+
+  // Upcoming Milestones
+  if (upcomingMilestones && upcomingMilestones.length > 0) {
+    sections.push('UPCOMING MILESTONES (Next 30 Days)')
+    sections.push(arrayToCSVRow([
+      'Title', 'Due Date', 'Days Until', 'Status'
+    ]))
+    upcomingMilestones.forEach(milestone => {
+      sections.push(arrayToCSVRow([
+        milestone.title,
+        milestone.due_date ? new Date(milestone.due_date).toLocaleDateString() : '',
+        milestone.daysUntil || '',
+        milestone.status || ''
+      ]))
+    })
+    sections.push('')
+  }
+
+  // Top Risks
+  if (topRisks && topRisks.length > 0) {
+    sections.push('TOP RISKS')
+    sections.push(arrayToCSVRow([
+      'Title', 'Impact', 'Probability', 'Description'
+    ]))
+    topRisks.forEach(risk => {
+      sections.push(arrayToCSVRow([
+        risk.title,
+        risk.impact,
+        risk.probability,
+        risk.description || ''
+      ]))
+    })
+  }
+
+  return sections.join('\n')
+}
+
+/**
  * Export filtered data based on view type
  */
 export function exportViewData(viewType, data, filename) {
@@ -261,6 +498,26 @@ export function exportViewData(viewType, data, filename) {
     case 'milestones':
       csvContent = exportMilestonesToCSV(data.milestones, data.issues)
       filename = filename || `milestones-export-${date}.csv`
+      break
+    case 'initiatives':
+      csvContent = exportInitiativesToCSV(data)
+      filename = filename || `initiatives-export-${date}.csv`
+      break
+    case 'velocity':
+      csvContent = exportVelocityToCSV(data)
+      filename = filename || `velocity-export-${date}.csv`
+      break
+    case 'risks':
+      csvContent = exportRisksToCSV(data)
+      filename = filename || `risks-export-${date}.csv`
+      break
+    case 'cycletime':
+      csvContent = exportCycleTimeToCSV(data)
+      filename = filename || `cycle-time-export-${date}.csv`
+      break
+    case 'executive':
+      csvContent = exportExecutiveSummaryToCSV(data)
+      filename = filename || `executive-summary-${date}.csv`
       break
     default:
       console.error('Unknown view type for export:', viewType)
