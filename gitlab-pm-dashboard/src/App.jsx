@@ -7,11 +7,15 @@ import useRisks from './hooks/useRisks'
 import { IterationFilterProvider } from './contexts/IterationFilterContext'
 import Header from './components/Header'
 import Tabs from './components/Tabs'
+import GroupedTabs from './components/GroupedTabs'
+import RoleSelectorModal from './components/RoleSelectorModal'
 import IterationFilterDropdown from './components/IterationFilterDropdown'
+import { getViewPreference } from './services/userPreferencesService'
 import PortfolioFilterDropdown from './components/PortfolioFilterDropdown'
 import ConfigModal from './components/ConfigModal'
 import StatusGeneratorModal from './components/StatusGeneratorModal'
 import ExecutiveDashboard from './components/ExecutiveDashboard'
+import CommunicationsDashboard from './components/CommunicationsDashboard'
 import PortfolioView from './components/PortfolioView'
 import RoadmapView from './components/RoadmapView'
 import VelocityView from './components/VelocityView'
@@ -36,6 +40,8 @@ function App() {
 
   const [showConfigModal, setShowConfigModal] = useState(!configured)
   const [showStatusModal, setShowStatusModal] = useState(false)
+  const [showRoleModal, setShowRoleModal] = useState(false)
+  const [useGroupedNav, setUseGroupedNav] = useState(getViewPreference() === 'grouped')
   console.log('App: showConfigModal:', !configured)
 
   console.log('App: Calling useGitLabData hook...')
@@ -103,10 +109,15 @@ function App() {
           onConfigure={() => setShowConfigModal(true)}
           onExportPPT={handleExportPPT}
           onGenerateStatus={() => setShowStatusModal(true)}
+          onChangeRole={() => setShowRoleModal(true)}
           loading={loading}
         />
 
-        <Tabs activeView={activeView} onViewChange={setActiveView} />
+        {useGroupedNav ? (
+          <GroupedTabs activeView={activeView} onViewChange={setActiveView} />
+        ) : (
+          <Tabs activeView={activeView} onViewChange={setActiveView} />
+        )}
 
         {/* Portfolio Filter - Shows on all views when multiple projects configured */}
         {isConfigured() && (
@@ -178,6 +189,9 @@ function App() {
             {activeView === 'executive' && (
               <ExecutiveDashboard stats={stats} healthScore={healthScore} issues={issues} />
             )}
+            {activeView === 'communications' && (
+              <CommunicationsDashboard issues={issues} />
+            )}
             {activeView === 'insights' && (
               <InsightsView
                 issues={issues}
@@ -216,6 +230,11 @@ function App() {
         issues={issues}
         milestones={milestones}
         risks={risks}
+      />
+
+      <RoleSelectorModal
+        show={showRoleModal}
+        onClose={() => setShowRoleModal(false)}
       />
       </div>
     </IterationFilterProvider>

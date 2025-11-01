@@ -37,35 +37,75 @@ export const RISK_MATRIX = {
   }
 }
 
-export const VIEW_TABS = [
-  // Strategic Layer
-  { id: 'executive', label: 'Executive Dashboard' },
-  { id: 'epicmanagement', label: 'Epic Management' }, // CONSOLIDATED: Epic Portfolio + Quarterly + Gantt
-  { id: 'roadmap', label: 'Roadmap' },
-  { id: 'riskmanagement', label: 'Risk Management' }, // CONSOLIDATED: Risk Analysis + Risk Register
-  { id: 'portfolio', label: 'Portfolio' },
+// Role-based view access control
+export const USER_ROLES = {
+  EXECUTIVE: 'executive',
+  MANAGER: 'manager',
+  TEAM: 'team'
+}
 
-  // Tactical/Operational Layer
-  { id: 'sprintmanagement', label: 'Sprint Management' }, // CONSOLIDATED: Sprint Board + Sprint Planning
-  { id: 'velocity', label: 'Velocity & Metrics' },
-  { id: 'compliance', label: 'Issue Quality' },
-  { id: 'cycletime', label: 'Cycle Time' },
-
-  // Support/Analysis
-  { id: 'insights', label: 'AI Insights' },
-  { id: 'resources', label: 'Team Resources' },
-  { id: 'stakeholders', label: 'Stakeholders' }
-
-  // REMOVED/CONSOLIDATED:
-  // - dependencies → integrated into Gantt and Sprint views
-  // - epics → merged into epicmanagement
-  // - quarterly → merged into epicmanagement
-  // - gantt → merged into epicmanagement
-  // - riskanalysis → merged into riskmanagement
-  // - risks → merged into riskmanagement
-  // - sprint → merged into sprintmanagement
-  // - sprintplanning → merged into sprintmanagement
+// Grouped navigation structure for better UX
+export const VIEW_GROUPS = [
+  {
+    id: 'overview',
+    label: 'Overview',
+    icon: '📊',
+    views: [
+      { id: 'executive', label: 'Dashboard', roles: ['executive', 'manager', 'team'] },
+      { id: 'communications', label: 'Communications', roles: ['executive', 'manager'] },
+      { id: 'insights', label: 'AI Insights', roles: ['executive', 'manager', 'team'] }
+    ]
+  },
+  {
+    id: 'planning',
+    label: 'Planning',
+    icon: '🎯',
+    views: [
+      { id: 'portfolio', label: 'Portfolio', roles: ['executive', 'manager'] },
+      { id: 'roadmap', label: 'Roadmap', roles: ['executive', 'manager', 'team'] },
+      { id: 'epicmanagement', label: 'Epics', roles: ['manager', 'team'] }
+    ]
+  },
+  {
+    id: 'execution',
+    label: 'Execution',
+    icon: '⚡',
+    views: [
+      { id: 'sprintmanagement', label: 'Sprints', roles: ['manager', 'team'] },
+      { id: 'resources', label: 'Resources', roles: ['manager', 'team'] }
+    ]
+  },
+  {
+    id: 'analysis',
+    label: 'Analytics',
+    icon: '📈',
+    views: [
+      { id: 'velocity', label: 'Velocity', roles: ['manager', 'team'] },
+      { id: 'cycletime', label: 'Cycle Time', roles: ['manager', 'team'] },
+      { id: 'compliance', label: 'Quality', roles: ['manager', 'team'] }
+    ]
+  },
+  {
+    id: 'governance',
+    label: 'Governance',
+    icon: '🛡️',
+    views: [
+      { id: 'riskmanagement', label: 'Risks', roles: ['executive', 'manager'] },
+      { id: 'stakeholders', label: 'Stakeholders', roles: ['executive', 'manager'] }
+    ]
+  }
 ]
+
+// Flatten all views for backward compatibility
+export const VIEW_TABS = VIEW_GROUPS.flatMap(group =>
+  group.views.map(view => ({
+    id: view.id,
+    label: view.label,
+    group: group.id,
+    groupLabel: group.label,
+    roles: view.roles
+  }))
+)
 
 export const LABEL_CONVENTIONS = {
   sprint: 'Sprint X',

@@ -1,6 +1,6 @@
 import React from 'react'
 
-export default function Header({ stats, healthScore, onRefresh, onConfigure, onExportPPT, onGenerateStatus, loading }) {
+export default function Header({ stats, healthScore, onRefresh, onConfigure, onExportPPT, onGenerateStatus, onChangeRole, loading }) {
   return (
     <div className="header">
       <div style={{
@@ -88,6 +88,14 @@ export default function Header({ stats, healthScore, onRefresh, onConfigure, onE
             disabled={loading || !stats}
           >
             Generate Status
+          </button>
+
+          <button
+            className="btn btn-secondary"
+            onClick={onChangeRole}
+            title="Change your role to customize navigation"
+          >
+            Change Role
           </button>
 
           <button
