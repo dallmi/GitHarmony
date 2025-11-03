@@ -414,9 +414,12 @@ export default function VelocityView({ issues: allIssues }) {
 
         {/* Burndown Chart */}
         <div className="card">
-          <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>
             Sprint {currentSprint} Burndown
           </h2>
+          <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '20px' }}>
+            Hover over data points to see details. Red line should stay below or match gray dashed line for on-track progress.
+          </p>
 
           {burndown.total === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#6B7280' }}>
@@ -427,7 +430,7 @@ export default function VelocityView({ issues: allIssues }) {
               {/* Chart */}
               <div style={{ position: 'relative', height: '300px', marginBottom: '20px' }}>
                 {/* Y-axis labels */}
-                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 40, width: '40px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: '12px', color: '#6B7280', textAlign: 'right', paddingRight: '8px' }}>
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 60, width: '40px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: '12px', color: '#6B7280', textAlign: 'right', paddingRight: '8px' }}>
                   <div>{burndown.total}</div>
                   <div>{Math.round(burndown.total * 0.75)}</div>
                   <div>{Math.round(burndown.total * 0.5)}</div>
@@ -436,7 +439,7 @@ export default function VelocityView({ issues: allIssues }) {
                 </div>
 
                 {/* Chart area */}
-                <div style={{ position: 'absolute', left: '50px', right: 0, top: 0, bottom: 40, borderLeft: '2px solid #E5E7EB', borderBottom: '2px solid #E5E7EB' }}>
+                <div style={{ position: 'absolute', left: '50px', right: 0, top: 0, bottom: 60, borderLeft: '2px solid #E5E7EB', borderBottom: '2px solid #E5E7EB' }}>
                   <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
                     {/* Ideal line - Draw line connecting all points */}
                     {burndown.ideal.length > 0 && (
@@ -456,22 +459,28 @@ export default function VelocityView({ issues: allIssues }) {
                             strokeLinejoin="round"
                           />
                         )}
-                        {/* Ideal line data points */}
+                        {/* Ideal line data points with hover */}
                         {burndown.ideal.map((point, i) => {
                           const x = burndown.ideal.length > 1
                             ? (i / (burndown.ideal.length - 1)) * 100
                             : 50
                           const y = 100 - (point.remaining / burndown.total) * 100
+                          const dateObj = new Date(point.date)
+                          const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' })
                           return (
-                            <circle
-                              key={`ideal-${i}`}
-                              cx={`${x}%`}
-                              cy={`${y}%`}
-                              r="4"
-                              fill="white"
-                              stroke="#9CA3AF"
-                              strokeWidth="2.5"
-                            />
+                            <g key={`ideal-${i}`}>
+                              <circle
+                                cx={`${x}%`}
+                                cy={`${y}%`}
+                                r="4"
+                                fill="white"
+                                stroke="#9CA3AF"
+                                strokeWidth="2.5"
+                                style={{ cursor: 'help' }}
+                              >
+                                <title>{`${dayName} ${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}\nIdeal: ${point.remaining} issues remaining`}</title>
+                              </circle>
+                            </g>
                           )
                         })}
                       </>
@@ -494,37 +503,137 @@ export default function VelocityView({ issues: allIssues }) {
                             strokeLinejoin="round"
                           />
                         )}
-                        {/* Actual line data points */}
+                        {/* Actual line data points with interactive hover */}
                         {burndown.actual.map((point, i) => {
                           const x = burndown.actual.length > 1
                             ? (i / (burndown.actual.length - 1)) * 100
                             : 50
                           const y = 100 - (point.remaining / burndown.total) * 100
+                          const dateObj = new Date(point.date)
+                          const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' })
+                          const idealAtSameDay = burndown.ideal[i]
+                          const diff = idealAtSameDay ? point.remaining - idealAtSameDay.remaining : 0
+                          const status = diff <= 0 ? 'On track' : `${diff} behind`
+
                           return (
-                            <circle
-                              key={`actual-${i}`}
-                              cx={`${x}%`}
-                              cy={`${y}%`}
-                              r="5"
-                              fill="#DC2626"
-                              stroke="white"
-                              strokeWidth="2.5"
-                            />
+                            <g key={`actual-${i}`}>
+                              {/* Larger invisible circle for better hover detection */}
+                              <circle
+                                cx={`${x}%`}
+                                cy={`${y}%`}
+                                r="12"
+                                fill="transparent"
+                                style={{ cursor: 'pointer' }}
+                              >
+                                <title>{`${dayName} ${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}\nActual: ${point.remaining} issues remaining\nStatus: ${status}\n\nClick to see sprint issues`}</title>
+                              </circle>
+                              {/* Visible circle */}
+                              <circle
+                                cx={`${x}%`}
+                                cy={`${y}%`}
+                                r="5"
+                                fill="#DC2626"
+                                stroke="white"
+                                strokeWidth="2.5"
+                                style={{
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.target.setAttribute('r', '7')
+                                  e.target.setAttribute('stroke-width', '3')
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.target.setAttribute('r', '5')
+                                  e.target.setAttribute('stroke-width', '2.5')
+                                }}
+                              />
+                            </g>
                           )
                         })}
                       </>
                     )}
+
+                    {/* Week markers */}
+                    {burndown.sprintStart && burndown.sprintEnd && (() => {
+                      const start = new Date(burndown.sprintStart)
+                      const end = new Date(burndown.sprintEnd)
+                      const totalDays = Math.ceil((end - start) / (24 * 60 * 60 * 1000))
+                      const weekMarkers = []
+
+                      for (let day = 0; day <= totalDays; day += 7) {
+                        if (day > 0 && day < totalDays) {
+                          const xPos = (day / totalDays) * 100
+                          weekMarkers.push(
+                            <line
+                              key={`week-${day}`}
+                              x1={`${xPos}%`}
+                              y1="0%"
+                              x2={`${xPos}%`}
+                              y2="100%"
+                              stroke="#E5E7EB"
+                              strokeWidth="1"
+                              strokeDasharray="3,3"
+                              opacity="0.5"
+                            />
+                          )
+                        }
+                      }
+                      return weekMarkers
+                    })()}
                   </svg>
                 </div>
 
-                {/* X-axis labels */}
-                <div style={{ position: 'absolute', left: '50px', right: 0, bottom: 0, height: '40px', display: 'flex', justifyContent: 'space-between', paddingTop: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                    {burndown.sprintStart ? new Date(burndown.sprintStart).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Start'}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#6B7280' }}>Today</div>
-                  <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                    {burndown.sprintEnd ? new Date(burndown.sprintEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'End'}
+                {/* X-axis labels with weekly markers */}
+                <div style={{ position: 'absolute', left: '50px', right: 0, bottom: 0, height: '60px' }}>
+                  {/* Week labels */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #E5E7EB' }}>
+                    {burndown.sprintStart && burndown.sprintEnd && (() => {
+                      const start = new Date(burndown.sprintStart)
+                      const end = new Date(burndown.sprintEnd)
+                      const totalDays = Math.ceil((end - start) / (24 * 60 * 60 * 1000))
+                      const labels = []
+
+                      // Start date
+                      labels.push(
+                        <div key="start" style={{ fontSize: '12px', color: '#6B7280', textAlign: 'left' }}>
+                          <div style={{ fontWeight: '600' }}>{start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                          <div style={{ fontSize: '10px', color: '#9CA3AF' }}>{start.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                        </div>
+                      )
+
+                      // Weekly markers
+                      for (let day = 7; day < totalDays; day += 7) {
+                        const weekDate = new Date(start.getTime() + day * 24 * 60 * 60 * 1000)
+                        labels.push(
+                          <div key={`week-${day}`} style={{ fontSize: '11px', color: '#9CA3AF', textAlign: 'center' }}>
+                            <div>{weekDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                            <div style={{ fontSize: '9px' }}>{weekDate.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                          </div>
+                        )
+                      }
+
+                      // Today marker (if within sprint)
+                      const today = new Date()
+                      if (today >= start && today <= end) {
+                        labels.push(
+                          <div key="today" style={{ fontSize: '11px', color: '#DC2626', fontWeight: '600', textAlign: 'center' }}>
+                            <div>Today</div>
+                            <div style={{ fontSize: '9px' }}>{today.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                          </div>
+                        )
+                      }
+
+                      // End date
+                      labels.push(
+                        <div key="end" style={{ fontSize: '12px', color: '#6B7280', textAlign: 'right' }}>
+                          <div style={{ fontWeight: '600' }}>{end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                          <div style={{ fontSize: '10px', color: '#9CA3AF' }}>{end.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                        </div>
+                      )
+
+                      return labels
+                    })()}
                   </div>
                 </div>
               </div>
