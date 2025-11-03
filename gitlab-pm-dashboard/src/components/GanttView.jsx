@@ -19,6 +19,28 @@ function getIssueProgressPercent(issue) {
 }
 
 /**
+ * Generate tooltip text explaining RAG status
+ */
+function generateRAGTooltip(analysis) {
+  if (!analysis) return ''
+
+  const lines = [`Status: ${analysis.status.toUpperCase()}`]
+  lines.push(`Reason: ${analysis.reason}`)
+
+  // Add top 2 factors
+  if (analysis.factors.length > 0) {
+    lines.push('') // blank line
+    lines.push('Key Factors:')
+    analysis.factors.slice(0, 2).forEach((factor, idx) => {
+      lines.push(`${idx + 1}. ${factor.title}`)
+      lines.push(`   ${factor.description}`)
+    })
+  }
+
+  return lines.join('\n')
+}
+
+/**
  * Executive-Ready Gantt Chart
  * Epic-first view with RAG status, root cause analysis, and actionable insights
  */
@@ -334,7 +356,37 @@ export default function GanttView({ issues, epics: allEpics }) {
       )}
 
       {/* Timeline Header */}
-      <div className="card" style={{ marginBottom: '20px', overflow: 'visible' }}>
+      <div className="card" style={{ marginBottom: '20px', overflow: 'visible', position: 'relative' }}>
+        {/* Today marker - extended to cover all epic rows */}
+        {todayPosition && (
+          <div style={{
+            position: 'absolute',
+            left: `calc(350px + ${todayPosition})`,
+            top: 0,
+            bottom: 0,
+            width: '2px',
+            background: '#EF4444',
+            zIndex: 5,
+            pointerEvents: 'none'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: '8px',
+              left: '-18px',
+              fontSize: '10px',
+              color: '#EF4444',
+              fontWeight: '600',
+              whiteSpace: 'nowrap',
+              background: 'white',
+              padding: '2px 4px',
+              borderRadius: '3px',
+              border: '1px solid #EF4444'
+            }}>
+              ↓ TODAY
+            </div>
+          </div>
+        )}
+
         <div style={{ display: 'flex', borderBottom: '2px solid #E5E7EB', paddingBottom: '12px', marginBottom: '12px' }}>
           <div style={{ width: '350px', fontWeight: '600', fontSize: '12px', color: '#6B7280', textTransform: 'uppercase' }}>
             Epic
@@ -347,31 +399,6 @@ export default function GanttView({ issues, epics: allEpics }) {
                 </div>
               ))}
             </div>
-
-            {/* Today marker */}
-            {todayPosition && (
-              <div style={{
-                position: 'absolute',
-                left: todayPosition,
-                top: 0,
-                bottom: -12,
-                width: '2px',
-                background: '#EF4444',
-                zIndex: 10
-              }}>
-                <div style={{
-                  position: 'absolute',
-                  top: '-20px',
-                  left: '-18px',
-                  fontSize: '10px',
-                  color: '#EF4444',
-                  fontWeight: '600',
-                  whiteSpace: 'nowrap'
-                }}>
-                  ↓ TODAY
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -475,7 +502,7 @@ export default function GanttView({ issues, epics: allEpics }) {
                         border: `1px solid ${getRAGColor(analysis.status)}40`
                       }}
                       onClick={() => window.open(epic.web_url, '_blank')}
-                      title={`${epic.title} - ${progressPercent.toFixed(0)}% complete`}
+                      title={generateRAGTooltip(analysis)}
                     >
                       {/* Filled Progress Portion */}
                       <div style={{
