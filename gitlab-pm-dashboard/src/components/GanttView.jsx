@@ -365,7 +365,7 @@ export default function GanttView({ issues, epics: allEpics }) {
           <div
             style={{
               position: 'absolute',
-              left: `calc(350px + ${todayPosition})`,
+              left: `calc(350px + (100% - 350px) * ${parseFloat(todayPosition) / 100})`,
               top: 0,
               bottom: 0,
               width: '2px',
