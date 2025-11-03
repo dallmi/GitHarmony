@@ -180,17 +180,68 @@ export default function HealthScoreConfigModal({ isOpen, onClose, onSave }) {
             ))}
           </div>
 
+          {/* Dynamic Impact Calculator */}
           <div style={{
-            marginTop: '12px',
-            padding: '8px 12px',
-            background: '#DBEAFE',
+            marginTop: '16px',
+            padding: '16px',
+            background: '#F0F9FF',
             border: '1px solid #3B82F6',
-            borderRadius: '6px',
-            fontSize: '12px',
-            color: '#1E40AF'
+            borderRadius: '8px'
           }}>
-            <strong>Example:</strong> With blocker amplifier = {config.amplifiers.blockers}, if 5% of issues are blockers,
-            the blocker score drops by {(0.05 * config.amplifiers.blockers).toFixed(0)} points.
+            <h4 style={{ fontSize: '13px', fontWeight: '600', color: '#1E40AF', marginBottom: '12px' }}>
+              Impact Analysis
+            </h4>
+
+            {Object.entries(config.amplifiers).map(([key, amplifier]) => {
+              // Calculate key thresholds
+              const scoreZeroPercent = (100 / amplifier * 100).toFixed(1)
+              const score50Percent = (50 / amplifier * 100).toFixed(1)
+              const score25Percent = (75 / amplifier * 100).toFixed(1)
+
+              // Calculate example percentages for common scenarios
+              const at5Percent = (100 - (0.05 * amplifier)).toFixed(0)
+              const at10Percent = Math.max(0, 100 - (0.10 * amplifier)).toFixed(0)
+              const at20Percent = Math.max(0, 100 - (0.20 * amplifier)).toFixed(0)
+
+              return (
+                <div key={key} style={{
+                  marginBottom: key === 'risk' ? '0' : '12px',
+                  paddingBottom: key === 'risk' ? '0' : '12px',
+                  borderBottom: key === 'risk' ? 'none' : '1px solid #BFDBFE'
+                }}>
+                  <div style={{ fontSize: '12px', fontWeight: '600', color: '#1E40AF', marginBottom: '6px', textTransform: 'capitalize' }}>
+                    {key} (×{amplifier})
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px', color: '#1E3A8A' }}>
+                    <div>
+                      <strong>{scoreZeroPercent}%</strong> {key} issues → score drops to <strong style={{ color: '#DC2626' }}>0</strong>
+                    </div>
+                    <div>
+                      <strong>{score50Percent}%</strong> {key} issues → score drops to <strong style={{ color: '#D97706' }}>50</strong>
+                    </div>
+                    <div>
+                      <strong>5%</strong> {key} issues → score: <strong style={{ color: at5Percent >= 80 ? '#059669' : at5Percent >= 60 ? '#D97706' : '#DC2626' }}>{at5Percent}</strong>
+                    </div>
+                    <div>
+                      <strong>10%</strong> {key} issues → score: <strong style={{ color: at10Percent >= 80 ? '#059669' : at10Percent >= 60 ? '#D97706' : '#DC2626' }}>{at10Percent}</strong>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+
+            <div style={{
+              marginTop: '12px',
+              padding: '8px',
+              background: '#DBEAFE',
+              borderRadius: '4px',
+              fontSize: '11px',
+              color: '#1E3A8A'
+            }}>
+              <strong>Tip:</strong> Lower amplifiers = more tolerant (need more issues to drop score).
+              Higher amplifiers = stricter (fewer issues cause bigger penalties).
+            </div>
           </div>
         </div>
 
