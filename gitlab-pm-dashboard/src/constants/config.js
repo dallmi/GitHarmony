@@ -59,7 +59,7 @@ export const VIEW_GROUPS = [
     id: 'planning',
     label: 'Planning',
     views: [
-      { id: 'portfolio', label: 'Portfolio', roles: ['executive', 'manager'] },
+      { id: 'portfolio', label: 'Initiative Config', roles: ['executive', 'manager'] },
       { id: 'roadmap', label: 'Roadmap', roles: ['executive', 'manager', 'team'] },
       { id: 'epicmanagement', label: 'Epics', roles: ['manager', 'team'] },
       { id: 'crossteam', label: 'Cross-Team Coordination', roles: ['executive', 'manager'] }
