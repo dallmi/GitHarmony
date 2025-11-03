@@ -359,16 +359,19 @@ export default function GanttView({ issues, epics: allEpics }) {
       <div className="card" style={{ marginBottom: '20px', overflow: 'visible', position: 'relative' }}>
         {/* Today marker - extended to cover all epic rows */}
         {todayPosition && (
-          <div style={{
-            position: 'absolute',
-            left: `calc(350px + ${todayPosition})`,
-            top: 0,
-            bottom: 0,
-            width: '2px',
-            background: '#EF4444',
-            zIndex: 5,
-            pointerEvents: 'none'
-          }}>
+          <div
+            style={{
+              position: 'absolute',
+              left: `calc(350px + ${todayPosition})`,
+              top: 0,
+              bottom: 0,
+              width: '2px',
+              background: '#EF4444',
+              zIndex: 5,
+              cursor: 'help'
+            }}
+            title={`Today: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}
+          >
             <div style={{
               position: 'absolute',
               top: '8px',
@@ -380,22 +383,40 @@ export default function GanttView({ issues, epics: allEpics }) {
               background: 'white',
               padding: '2px 4px',
               borderRadius: '3px',
-              border: '1px solid #EF4444'
+              border: '1px solid #EF4444',
+              pointerEvents: 'none'
             }}>
               ↓ TODAY
             </div>
           </div>
         )}
 
-        <div style={{ display: 'flex', borderBottom: '2px solid #E5E7EB', paddingBottom: '12px', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', borderBottom: '2px solid #E5E7EB', paddingBottom: '4px', marginBottom: '12px' }}>
           <div style={{ width: '350px', fontWeight: '600', fontSize: '12px', color: '#6B7280', textTransform: 'uppercase' }}>
             Epic
           </div>
-          <div style={{ flex: 1, position: 'relative', minHeight: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#6B7280', fontWeight: '600' }}>
+          <div style={{ flex: 1, position: 'relative', minHeight: '48px' }}>
+            {/* Quarter Headers */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#6B7280', fontWeight: '600', marginBottom: '4px' }}>
               {['Q1', 'Q2', 'Q3', 'Q4'].map((q, idx) => (
                 <div key={q} style={{ flex: 1, textAlign: 'center', borderRight: idx < 3 ? '1px dashed #D1D5DB' : 'none' }}>
                   {q} {selectedYear}
+                </div>
+              ))}
+            </div>
+            {/* Month Subdivisions */}
+            <div style={{ display: 'flex', fontSize: '10px', color: '#9CA3AF', borderTop: '1px solid #E5E7EB', paddingTop: '4px' }}>
+              {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, idx) => (
+                <div
+                  key={month}
+                  style={{
+                    flex: 1,
+                    textAlign: 'center',
+                    borderRight: idx < 11 ? '1px dotted #E5E7EB' : 'none',
+                    padding: '2px 0'
+                  }}
+                >
+                  {month}
                 </div>
               ))}
             </div>
