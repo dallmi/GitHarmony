@@ -119,9 +119,9 @@ export default function QualityViolationsByAuthor({ nonCompliantIssues }) {
     }
   }
 
-  const getCriterionLabel = (criterionId) => {
-    const criterion = criteria.find(c => c.id === criterionId)
-    return criterion?.label || criterionId
+  const getCriterionLabel = (criterionKey) => {
+    const criterion = criteria.find(c => c.key === criterionKey)
+    return criterion?.name || criterionKey
   }
 
   const handleCriterionFilterClick = (criterionKey) => {
@@ -142,7 +142,18 @@ export default function QualityViolationsByAuthor({ nonCompliantIssues }) {
     if (!authorData) return []
 
     const criterionData = authorData.byCriterion.get(selectedCriterion)
-    return criterionData?.issues || []
+    const issues = criterionData?.issues || []
+
+    // Debug logging
+    console.log('QualityViolationsByAuthor - filteredDetailIssues:', {
+      selectedAuthor,
+      selectedCriterion,
+      criterionDataCount: criterionData?.count,
+      issuesLength: issues.length,
+      issues: issues.map(i => ({ id: i.id, iid: i.iid, title: i.title }))
+    })
+
+    return issues
   }, [selectedAuthor, selectedCriterion, authorViolations])
 
   if (!nonCompliantIssues || nonCompliantIssues.length === 0) {

@@ -16,7 +16,7 @@ export default function Header({ stats, healthScore, onRefresh, onConfigure, onC
               GitHarmony
             </h1>
             <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: '4px' }}>
-              teams in tune
+              Teams in Tune
             </div>
             <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
               {stats && (
