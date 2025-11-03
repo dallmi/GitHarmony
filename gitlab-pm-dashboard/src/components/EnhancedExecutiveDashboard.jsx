@@ -31,10 +31,59 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
     return getUpcomingMilestones(milestones, 30)
   }, [milestones])
 
-  // Get communications metrics for KPIs
-  const commsMetrics = useMemo(() => {
-    return calculateCommunicationsMetrics(issues)
+  // Calculate velocity metrics
+  const velocityMetrics = useMemo(() => {
+    if (!issues || issues.length === 0) return null
+
+    // Calculate weekly velocity (issues closed in last 4 weeks)
+    const fourWeeksAgo = new Date()
+    fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28)
+
+    const recentlyClosed = issues.filter(i => {
+      if (i.state !== 'closed' || !i.closed_at) return false
+      const closedDate = new Date(i.closed_at)
+      return closedDate >= fourWeeksAgo
+    })
+
+    const weeklyVelocity = (recentlyClosed.length / 4).toFixed(1)
+
+    // Calculate team utilization (open issues per assignee)
+    const assigneeMap = new Map()
+    issues.filter(i => i.state === 'opened').forEach(issue => {
+      issue.assignees?.forEach(assignee => {
+        const count = assigneeMap.get(assignee.id) || 0
+        assigneeMap.set(assignee.id, count + 1)
+      })
+    })
+
+    const avgIssuesPerPerson = assigneeMap.size > 0
+      ? (issues.filter(i => i.state === 'opened' && i.assignees?.length > 0).length / assigneeMap.size).toFixed(1)
+      : 0
+
+    return {
+      weeklyVelocity,
+      activeMembers: assigneeMap.size,
+      avgIssuesPerPerson
+    }
   }, [issues])
+
+  // Calculate risk profile metrics
+  const riskMetrics = useMemo(() => {
+    if (!stats) return null
+
+    const highPriorityOpen = issues.filter(i => {
+      if (i.state !== 'opened') return false
+      const labels = i.labels?.map(l => l.toLowerCase()) || []
+      return labels.some(l => l.includes('priority::high') || l.includes('critical') || l.includes('urgent'))
+    }).length
+
+    return {
+      blockers: stats.blockers,
+      overdue: stats.overdue,
+      highPriority: highPriorityOpen,
+      total: stats.blockers + stats.overdue + highPriorityOpen
+    }
+  }, [issues, stats])
 
   // Get top 3 high-priority risks
   const topRisks = useMemo(() => {
@@ -116,6 +165,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
 
       {/* Top KPIs */}
       <div className="grid grid-4" style={{ marginBottom: '30px' }}>
+        {/* Tile 1: Active Initiatives */}
         <div className="card metric-card">
           <div className="metric-label">Active Initiatives</div>
           <div className="metric-value" style={{ color: 'var(--info)' }}>
@@ -126,6 +176,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
           </div>
         </div>
 
+        {/* Tile 2: Health Score */}
         <div className="card metric-card">
           <div className="metric-label">Health Score</div>
           <div className="metric-value" style={{
@@ -139,28 +190,33 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
           </div>
         </div>
 
-        {commsMetrics && (
-          <>
-            <div className="card metric-card">
-              <div className="metric-label">Reach Rate</div>
-              <div className="metric-value" style={{ color: 'var(--primary)' }}>
-                {commsMetrics.reach?.averageReach?.toLocaleString() || 0}
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
-                Average audience per initiative
-              </div>
+        {/* Tile 3: Velocity & Capacity */}
+        {velocityMetrics && (
+          <div className="card metric-card">
+            <div className="metric-label">Velocity & Capacity</div>
+            <div className="metric-value" style={{ color: 'var(--primary)' }}>
+              {velocityMetrics.weeklyVelocity}
             </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
+              issues/week · {velocityMetrics.activeMembers} members · {velocityMetrics.avgIssuesPerPerson} avg/person
+            </div>
+          </div>
+        )}
 
-            <div className="card metric-card">
-              <div className="metric-label">Stakeholder Satisfaction</div>
-              <div className="metric-value" style={{ color: 'var(--success)' }}>
-                {commsMetrics.stakeholder?.satisfactionRate || 0}%
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
-                Based on feedback received
-              </div>
+        {/* Tile 4: Risk Profile */}
+        {riskMetrics && (
+          <div className="card metric-card">
+            <div className="metric-label">Risk Profile</div>
+            <div className="metric-value" style={{
+              color: riskMetrics.total === 0 ? 'var(--success)' :
+                     riskMetrics.total <= 5 ? 'var(--warning)' : 'var(--danger)'
+            }}>
+              {riskMetrics.total}
             </div>
-          </>
+            <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
+              {riskMetrics.blockers} blockers · {riskMetrics.overdue} overdue · {riskMetrics.highPriority} high priority
+            </div>
+          </div>
         )}
       </div>
 
