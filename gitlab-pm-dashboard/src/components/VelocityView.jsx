@@ -465,213 +465,226 @@ export default function VelocityView({ issues: allIssues }) {
                 {/* Chart area */}
                 <div style={{ position: 'absolute', left: '50px', right: 0, top: 0, bottom: 60, borderLeft: '2px solid #E5E7EB', borderBottom: '2px solid #E5E7EB' }}>
                   <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
-                    {/* Ideal line - Draw line connecting all points */}
-                    {burndown.ideal.length > 0 && (
-                      <>
-                        {burndown.ideal.length > 1 && (
-                          <polyline
-                            points={burndown.ideal.map((point, i) => {
-                              const x = (i / Math.max(1, burndown.ideal.length - 1)) * 100
-                              const y = 100 - (point.remaining / burndown.total) * 100
-                              return `${x},${y}`
-                            }).join(' ')}
-                            fill="none"
-                            stroke="#9CA3AF"
-                            strokeWidth="0.8"
-                            strokeDasharray="2,1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            vectorEffect="non-scaling-stroke"
-                          />
-                        )}
-                        {/* Ideal line data points with hover */}
-                        {burndown.ideal.map((point, i) => {
-                          const x = burndown.ideal.length > 1
-                            ? (i / (burndown.ideal.length - 1)) * 100
-                            : 50
-                          const y = 100 - (point.remaining / burndown.total) * 100
-                          const dateObj = new Date(point.date)
-                          const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' })
-                          return (
-                            <g key={`ideal-${i}`}>
-                              <circle
-                                cx={x}
-                                cy={y}
-                                r="1.2"
-                                fill="white"
-                                stroke="#9CA3AF"
-                                strokeWidth="0.6"
-                                vectorEffect="non-scaling-stroke"
-                                style={{ cursor: 'default' }}
-                              >
-                                <title>{`${dayName} ${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}\nIdeal: ${point.remaining} issues remaining`}</title>
-                              </circle>
-                            </g>
-                          )
-                        })}
-                      </>
-                    )}
-
-                    {/* Actual line - Draw line connecting all points */}
-                    {burndown.actual.length > 0 && (
-                      <>
-                        {burndown.actual.length > 1 && (
-                          <polyline
-                            points={burndown.actual.map((point, i) => {
-                              const x = (i / Math.max(1, burndown.actual.length - 1)) * 100
-                              const y = 100 - (point.remaining / burndown.total) * 100
-                              return `${x},${y}`
-                            }).join(' ')}
-                            fill="none"
-                            stroke="#DC2626"
-                            strokeWidth="1"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            vectorEffect="non-scaling-stroke"
-                          />
-                        )}
-                        {/* Actual line data points with interactive hover */}
-                        {burndown.actual.map((point, i) => {
-                          const x = burndown.actual.length > 1
-                            ? (i / (burndown.actual.length - 1)) * 100
-                            : 50
-                          const y = 100 - (point.remaining / burndown.total) * 100
-                          const dateObj = new Date(point.date)
-                          const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' })
-                          const idealAtSameDay = burndown.ideal[i]
-                          const diff = idealAtSameDay ? point.remaining - idealAtSameDay.remaining : 0
-                          const completed = burndown.total - point.remaining
-                          const percentComplete = ((completed / burndown.total) * 100).toFixed(0)
-                          const idealCompleted = burndown.total - (idealAtSameDay ? idealAtSameDay.remaining : 0)
-                          const idealPercentComplete = ((idealCompleted / burndown.total) * 100).toFixed(0)
-
-                          let statusText = ''
-                          if (diff > 0) {
-                            statusText = `Behind by ${diff} issue${diff > 1 ? 's' : ''}`
-                          } else if (diff < 0) {
-                            statusText = `Ahead by ${Math.abs(diff)} issue${Math.abs(diff) > 1 ? 's' : ''}`
-                          } else {
-                            statusText = 'On track'
-                          }
-
-                          const tooltip = [
-                            `${dayName}, ${dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`,
-                            ``,
-                            `Remaining: ${point.remaining} of ${burndown.total} issues (${percentComplete}% complete)`,
-                            `Ideal: ${idealAtSameDay ? idealAtSameDay.remaining : 0} remaining (${idealPercentComplete}% complete)`,
-                            ``,
-                            `Status: ${statusText}`
-                          ].join('\n')
-
-                          return (
-                            <g key={`actual-${i}`}>
-                              {/* Larger invisible circle for better hover detection */}
-                              <circle
-                                cx={x}
-                                cy={y}
-                                r="3"
-                                fill="transparent"
-                                vectorEffect="non-scaling-stroke"
-                                style={{ cursor: 'pointer' }}
-                              >
-                                <title>{tooltip}</title>
-                              </circle>
-                              {/* Visible circle */}
-                              <circle
-                                cx={x}
-                                cy={y}
-                                r="1.5"
-                                fill="#DC2626"
-                                stroke="white"
-                                strokeWidth="0.6"
-                                vectorEffect="non-scaling-stroke"
-                                style={{
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s'
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.target.setAttribute('r', '2')
-                                  e.target.setAttribute('stroke-width', '0.8')
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.target.setAttribute('r', '1.5')
-                                  e.target.setAttribute('stroke-width', '0.6')
-                                }}
-                              />
-                            </g>
-                          )
-                        })}
-                      </>
-                    )}
-
-                    {/* Week markers and Today line */}
-                    {burndown.sprintStart && burndown.sprintEnd && (() => {
+                    {/* Calculate date-based positioning (needed for both ideal and actual lines) */}
+                    {(() => {
                       const start = new Date(burndown.sprintStart)
                       const end = new Date(burndown.sprintEnd)
-                      const today = new Date()
-                      today.setHours(0, 0, 0, 0)
                       const totalDays = Math.ceil((end - start) / (24 * 60 * 60 * 1000))
-                      const markers = []
 
-                      // Week markers
-                      for (let day = 0; day <= totalDays; day += 7) {
-                        if (day > 0 && day < totalDays) {
-                          const xPos = (day / totalDays) * 100
-                          markers.push(
-                            <line
-                              key={`week-${day}`}
-                              x1={xPos}
-                              y1="0"
-                              x2={xPos}
-                              y2="100"
-                              stroke="#E5E7EB"
-                              strokeWidth="0.3"
-                              strokeDasharray="1,1"
-                              opacity="0.5"
-                              vectorEffect="non-scaling-stroke"
-                            />
-                          )
-                        }
+                      // Helper function: convert date to X coordinate percentage
+                      const dateToXPos = (dateStr) => {
+                        const date = new Date(dateStr)
+                        const daysSinceStart = Math.floor((date - start) / (24 * 60 * 60 * 1000))
+                        return (daysSinceStart / totalDays) * 100
                       }
 
-                      // Today marker - only if within sprint period
-                      if (today >= start && today <= end) {
-                        const daysSinceStart = Math.floor((today - start) / (24 * 60 * 60 * 1000))
-                        const todayXPos = (daysSinceStart / totalDays) * 100
+                      return (
+                        <>
+                          {/* Ideal line - Draw line connecting all points */}
+                          {burndown.ideal.length > 0 && (
+                            <>
+                              {burndown.ideal.length > 1 && (
+                                <polyline
+                                  points={burndown.ideal.map((point) => {
+                                    const x = dateToXPos(point.date)
+                                    const y = 100 - (point.remaining / burndown.total) * 100
+                                    return `${x},${y}`
+                                  }).join(' ')}
+                                  fill="none"
+                                  stroke="#9CA3AF"
+                                  strokeWidth="0.8"
+                                  strokeDasharray="2,1.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  vectorEffect="non-scaling-stroke"
+                                />
+                              )}
+                              {/* Ideal line data points with hover */}
+                              {burndown.ideal.map((point, i) => {
+                                const x = dateToXPos(point.date)
+                                const y = 100 - (point.remaining / burndown.total) * 100
+                                const dateObj = new Date(point.date)
+                                const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' })
+                                return (
+                                  <g key={`ideal-${i}`}>
+                                    <circle
+                                      cx={x}
+                                      cy={y}
+                                      r="1.2"
+                                      fill="white"
+                                      stroke="#9CA3AF"
+                                      strokeWidth="0.6"
+                                      vectorEffect="non-scaling-stroke"
+                                      style={{ cursor: 'default' }}
+                                    >
+                                      <title>{`${dayName} ${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}\nIdeal: ${point.remaining} issues remaining`}</title>
+                                    </circle>
+                                  </g>
+                                )
+                              })}
+                            </>
+                          )}
 
-                        markers.push(
-                          <g key="today-marker">
-                            {/* Today line */}
-                            <line
-                              x1={todayXPos}
-                              y1="-10"
-                              x2={todayXPos}
-                              y2="100"
-                              stroke="#EF4444"
-                              strokeWidth="0.6"
-                              vectorEffect="non-scaling-stroke"
-                              style={{ cursor: 'default' }}
-                            >
-                              <title>{`Today: ${today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}</title>
-                            </line>
-                            {/* Today label */}
-                            <text
-                              x={todayXPos}
-                              y="-2"
-                              textAnchor="middle"
-                              fill="#EF4444"
-                              fontSize="3"
-                              fontWeight="600"
-                              style={{ cursor: 'default' }}
-                            >
-                              <title>{`Today: ${today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}</title>
-                              TODAY ↓
-                            </text>
-                          </g>
-                        )
-                      }
+                          {/* Actual line - Draw line connecting all points */}
+                          {burndown.actual.length > 0 && (
+                            <>
+                              {burndown.actual.length > 1 && (
+                                <polyline
+                                  points={burndown.actual.map((point) => {
+                                    const x = dateToXPos(point.date)
+                                    const y = 100 - (point.remaining / burndown.total) * 100
+                                    return `${x},${y}`
+                                  }).join(' ')}
+                                  fill="none"
+                                  stroke="#DC2626"
+                                  strokeWidth="1"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  vectorEffect="non-scaling-stroke"
+                                />
+                              )}
+                              {/* Actual line data points with interactive hover */}
+                              {burndown.actual.map((point, i) => {
+                                const x = dateToXPos(point.date)
+                                const y = 100 - (point.remaining / burndown.total) * 100
+                                const dateObj = new Date(point.date)
+                                const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' })
 
-                      return markers
+                                // Find ideal point for same date (not same index!)
+                                const idealAtSameDay = burndown.ideal.find(ip => ip.date === point.date)
+                                const diff = idealAtSameDay ? point.remaining - idealAtSameDay.remaining : 0
+                                const completed = burndown.total - point.remaining
+                                const percentComplete = ((completed / burndown.total) * 100).toFixed(0)
+                                const idealCompleted = burndown.total - (idealAtSameDay ? idealAtSameDay.remaining : 0)
+                                const idealPercentComplete = ((idealCompleted / burndown.total) * 100).toFixed(0)
+
+                                let statusText = ''
+                                if (diff > 0) {
+                                  statusText = `Behind by ${diff} issue${diff > 1 ? 's' : ''}`
+                                } else if (diff < 0) {
+                                  statusText = `Ahead by ${Math.abs(diff)} issue${Math.abs(diff) > 1 ? 's' : ''}`
+                                } else {
+                                  statusText = 'On track'
+                                }
+
+                                const tooltip = [
+                                  `${dayName}, ${dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`,
+                                  ``,
+                                  `Remaining: ${point.remaining} of ${burndown.total} issues (${percentComplete}% complete)`,
+                                  `Ideal: ${idealAtSameDay ? idealAtSameDay.remaining : 0} remaining (${idealPercentComplete}% complete)`,
+                                  ``,
+                                  `Status: ${statusText}`
+                                ].join('\n')
+
+                                return (
+                                  <g key={`actual-${i}`}>
+                                    {/* Larger invisible circle for better hover detection */}
+                                    <circle
+                                      cx={x}
+                                      cy={y}
+                                      r="3"
+                                      fill="transparent"
+                                      vectorEffect="non-scaling-stroke"
+                                      style={{ cursor: 'pointer' }}
+                                    >
+                                      <title>{tooltip}</title>
+                                    </circle>
+                                    {/* Visible circle */}
+                                    <circle
+                                      cx={x}
+                                      cy={y}
+                                      r="1.5"
+                                      fill="#DC2626"
+                                      stroke="white"
+                                      strokeWidth="0.6"
+                                      vectorEffect="non-scaling-stroke"
+                                      style={{
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        e.target.setAttribute('r', '2')
+                                        e.target.setAttribute('stroke-width', '0.8')
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.target.setAttribute('r', '1.5')
+                                        e.target.setAttribute('stroke-width', '0.6')
+                                      }}
+                                    />
+                                  </g>
+                                )
+                              })}
+                            </>
+                          )}
+
+                          {/* Week markers and Today line */}
+                          {(() => {
+                            const markers = []
+
+                            // Week markers
+                            for (let day = 0; day <= totalDays; day += 7) {
+                              if (day > 0 && day < totalDays) {
+                                const xPos = (day / totalDays) * 100
+                                markers.push(
+                                  <line
+                                    key={`week-${day}`}
+                                    x1={xPos}
+                                    y1="0"
+                                    x2={xPos}
+                                    y2="100"
+                                    stroke="#E5E7EB"
+                                    strokeWidth="0.3"
+                                    strokeDasharray="1,1"
+                                    opacity="0.5"
+                                    vectorEffect="non-scaling-stroke"
+                                  />
+                                )
+                              }
+                            }
+
+                            // Today marker - only if within sprint period
+                            const today = new Date()
+                            today.setHours(0, 0, 0, 0)
+                            if (today >= start && today <= end) {
+                              const daysSinceStart = Math.floor((today - start) / (24 * 60 * 60 * 1000))
+                              const todayXPos = (daysSinceStart / totalDays) * 100
+
+                              markers.push(
+                                <g key="today-marker">
+                                  {/* Today line */}
+                                  <line
+                                    x1={todayXPos}
+                                    y1="-10"
+                                    x2={todayXPos}
+                                    y2="100"
+                                    stroke="#EF4444"
+                                    strokeWidth="0.6"
+                                    vectorEffect="non-scaling-stroke"
+                                    style={{ cursor: 'default' }}
+                                  >
+                                    <title>{`Today: ${today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}</title>
+                                  </line>
+                                  {/* Today label */}
+                                  <text
+                                    x={todayXPos}
+                                    y="-2"
+                                    textAnchor="middle"
+                                    fill="#EF4444"
+                                    fontSize="3"
+                                    fontWeight="600"
+                                    style={{ cursor: 'default' }}
+                                  >
+                                    <title>{`Today: ${today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}</title>
+                                    TODAY ↓
+                                  </text>
+                                </g>
+                              )
+                            }
+
+                            return markers
+                          })()}
+                        </>
+                      )
                     })()}
                   </svg>
                 </div>

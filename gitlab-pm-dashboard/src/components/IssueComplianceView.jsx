@@ -14,6 +14,7 @@ import { exportIssuesToCSV, downloadCSV as downloadCSVUtil } from '../utils/csvE
 import { loadTeamConfig } from '../services/teamConfigService'
 import QualityCriteriaConfigModal from './QualityCriteriaConfigModal'
 import DoDComplianceSection from './DoDComplianceSection'
+import QualityViolationsByAuthor from './QualityViolationsByAuthor'
 
 /**
  * Issue Compliance & Quality Check View
@@ -25,7 +26,7 @@ export default function IssueComplianceView({ issues: allIssues }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [activeFilter, setActiveFilter] = useState(null) // Track active tile filter
   const [showConfigModal, setShowConfigModal] = useState(false)
-  const [activeTab, setActiveTab] = useState('quality') // 'quality' or 'dod'
+  const [activeTab, setActiveTab] = useState('quality') // 'quality', 'byauthor', or 'dod'
   const [isLegendCollapsed, setIsLegendCollapsed] = useState(() => {
     const saved = localStorage.getItem('quality.legendCollapsed')
     return saved === 'true'
@@ -211,6 +212,23 @@ Best regards`
           Quality Criteria
         </button>
         <button
+          onClick={() => setActiveTab('byauthor')}
+          style={{
+            padding: '12px 24px',
+            background: activeTab === 'byauthor' ? 'white' : 'transparent',
+            border: 'none',
+            borderBottom: activeTab === 'byauthor' ? '3px solid #E60000' : '3px solid transparent',
+            fontSize: '14px',
+            fontWeight: activeTab === 'byauthor' ? '600' : '500',
+            color: activeTab === 'byauthor' ? '#E60000' : '#6B7280',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            marginBottom: '-2px'
+          }}
+        >
+          By Author
+        </button>
+        <button
           onClick={() => setActiveTab('dod')}
           style={{
             padding: '12px 24px',
@@ -238,6 +256,8 @@ Best regards`
       {/* Tab Content */}
       {activeTab === 'dod' ? (
         <DoDComplianceSection issues={issues} />
+      ) : activeTab === 'byauthor' ? (
+        <QualityViolationsByAuthor nonCompliantIssues={nonCompliantIssues} />
       ) : (
         <>
           {/* Search Bar */}
