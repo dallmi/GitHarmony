@@ -206,8 +206,10 @@ export function calculateBurndown(issues, currentSprint) {
   // Generate actual burndown points (start at day 0 to match ideal)
   for (let day = 0; day <= days; day++) {
     const date = new Date(sprintStart.getTime() + day * 24 * 60 * 60 * 1000)
+    date.setHours(0, 0, 0, 0) // Normalize to midnight for comparison
 
     // Stop after today (don't generate future data points)
+    // Include today's data point by using > instead of >=
     if (date > today) break
 
     const dateKey = date.toISOString().split('T')[0]

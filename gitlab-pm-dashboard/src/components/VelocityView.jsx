@@ -511,12 +511,10 @@ export default function VelocityView({ issues: allIssues }) {
                                   />
                                 )
                               })}
-                              {/* Ideal line data points with hover */}
+                              {/* Ideal line data points - no hover for consistency */}
                               {burndown.ideal.map((point, i) => {
                                 const x = dateToXPos(point.date)
                                 const y = remainingToYPos(point.remaining)
-                                const dateObj = new Date(point.date)
-                                const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' })
                                 return (
                                   <g key={`ideal-${i}`}>
                                     <circle
@@ -526,10 +524,8 @@ export default function VelocityView({ issues: allIssues }) {
                                       fill="white"
                                       stroke="#9CA3AF"
                                       strokeWidth="1.5"
-                                      style={{ cursor: 'default' }}
-                                    >
-                                      <title>{`${dayName} ${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}\nIdeal: ${point.remaining} issues remaining`}</title>
-                                    </circle>
+                                      style={{ pointerEvents: 'none' }}
+                                    />
                                   </g>
                                 )
                               })}
