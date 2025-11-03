@@ -9,7 +9,6 @@ import {
   fillTemplate
 } from '../services/stakeholderService'
 import { loadConfig } from '../services/storageService'
-import IterationFilterDropdown from './IterationFilterDropdown'
 
 /**
  * Stakeholder Communication Hub
@@ -83,16 +82,13 @@ export default function StakeholderHubView({ stats, healthScore }) {
   return (
     <div className="container-fluid">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-        <div>
-          <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
-            Stakeholder Communication Hub
-          </h2>
-          <p style={{ fontSize: '14px', color: '#6B7280' }}>
-            Manage stakeholders and communication templates
-          </p>
-        </div>
-        <IterationFilterDropdown />
+      <div style={{ marginBottom: '20px' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
+          Stakeholder Communication Hub
+        </h2>
+        <p style={{ fontSize: '14px', color: '#6B7280' }}>
+          Manage stakeholders and communication templates
+        </p>
       </div>
 
       {/* Tabs */}

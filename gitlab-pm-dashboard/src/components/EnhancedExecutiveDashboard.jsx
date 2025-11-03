@@ -4,7 +4,6 @@ import { getUpcomingMilestones, getMilestoneStatusBadge } from '../services/mile
 import { calculateCommunicationsMetrics } from '../services/communicationsMetricsService'
 import { exportExecutiveSummaryToCSV, downloadCSV } from '../utils/csvExportUtils'
 import { useIterationFilter } from '../contexts/IterationFilterContext'
-import IterationFilterDropdown from './IterationFilterDropdown'
 import HealthScoreConfigModal from './HealthScoreConfigModal'
 
 /**
@@ -113,11 +112,6 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
 
   return (
     <div className="container">
-      {/* Iteration Filter */}
-      <div style={{ marginBottom: '20px' }}>
-        <IterationFilterDropdown />
-      </div>
-
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>

@@ -26,7 +26,6 @@ import {
   exportForecastCSV
 } from '../services/forecastService'
 import { downloadCSV } from '../utils/csvExportUtils'
-import IterationFilterDropdown from './IterationFilterDropdown'
 
 /**
  * Cross-Team Coordination View
@@ -139,16 +138,13 @@ export default function CrossTeamCoordinationView({ issues, epics, milestones })
   return (
     <div className="container">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px' }}>
-        <div>
-          <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
-            Cross-Team Coordination
-          </h2>
-          <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-            Manage cross-team initiatives with team attribution, dependencies, and forecasting
-          </p>
-        </div>
-        <IterationFilterDropdown />
+      <div style={{ marginBottom: '30px' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
+          Cross-Team Coordination
+        </h2>
+        <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+          Manage cross-team initiatives with team attribution, dependencies, and forecasting
+        </p>
       </div>
 
       {/* Tabs */}

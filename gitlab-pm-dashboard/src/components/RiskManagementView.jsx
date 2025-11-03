@@ -3,7 +3,6 @@ import RiskAnalysisView from './RiskAnalysisView'
 import RiskRegisterView from './RiskRegisterView'
 import useRisks from '../hooks/useRisks'
 import { exportRisksToCSV, downloadCSV } from '../utils/csvExportUtils'
-import IterationFilterDropdown from './IterationFilterDropdown'
 
 /**
  * Unified Risk Management View
@@ -30,17 +29,14 @@ export default function RiskManagementView({ epics, issues }) {
             Comprehensive risk analysis, tracking, and mitigation
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <IterationFilterDropdown />
-          <button
-            className="btn btn-primary"
-            onClick={handleExportCSV}
-            disabled={!risks || risks.length === 0}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-          >
-            <span>Export Risks CSV</span>
-          </button>
-        </div>
+        <button
+          className="btn btn-primary"
+          onClick={handleExportCSV}
+          disabled={!risks || risks.length === 0}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+        >
+          <span>Export Risks CSV</span>
+        </button>
       </div>
 
       {/* Risk Analysis Section (Top) */}

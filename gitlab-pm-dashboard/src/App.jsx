@@ -139,10 +139,35 @@ function App() {
         )}
 
         {/* Iteration Filter - Shows on views that benefit from iteration filtering */}
+        {/* Positioned consistently in top-right across all views */}
         {isConfigured() && issues.length > 0 && (
-          ['compliance', 'cycletime', 'resources', 'velocity', 'sprintmanagement'].includes(activeView)
+          [
+            'executive',
+            'insights',
+            'compliance',
+            'cycletime',
+            'resources',
+            'velocity',
+            'sprintmanagement',
+            'epicmanagement',
+            'riskmanagement',
+            'roadmap',
+            'stakeholders',
+            'crossteam'
+          ].includes(activeView)
         ) && (
-          <IterationFilterDropdown />
+          <div style={{
+            position: 'sticky',
+            top: '0',
+            zIndex: 800,
+            background: 'white',
+            padding: '12px 20px',
+            borderBottom: '1px solid #E5E7EB',
+            display: 'flex',
+            justifyContent: 'flex-end'
+          }}>
+            <IterationFilterDropdown />
+          </div>
         )}
 
         <div style={{ flex: 1, paddingTop: '20px' }}>

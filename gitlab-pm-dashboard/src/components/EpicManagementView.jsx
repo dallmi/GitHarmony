@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import EpicDashboardView from './EpicDashboardView'
 import GanttView from './GanttView'
 import QuarterlyEpicTracker from './QuarterlyEpicTracker'
-import IterationFilterDropdown from './IterationFilterDropdown'
 
 /**
  * Unified Epic Management View with Sub-Tabs
@@ -18,16 +17,13 @@ export default function EpicManagementView({ epics, issues }) {
   return (
     <div className="container-fluid">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-        <div>
-          <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
-            Epic Management
-          </h2>
-          <p style={{ fontSize: '14px', color: '#6B7280' }}>
-            Manage epics across portfolio, timeline, and quarterly views
-          </p>
-        </div>
-        <IterationFilterDropdown />
+      <div style={{ marginBottom: '20px' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
+          Epic Management
+        </h2>
+        <p style={{ fontSize: '14px', color: '#6B7280' }}>
+          Manage epics across portfolio, timeline, and quarterly views
+        </p>
       </div>
 
       {/* Sub-Tab Navigation */}

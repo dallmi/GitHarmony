@@ -9,7 +9,6 @@ import {
 } from '../services/velocityService'
 import { exportVelocityToCSV, downloadCSV } from '../utils/csvExportUtils'
 import { useIterationFilter } from '../contexts/IterationFilterContext'
-import IterationFilterDropdown from './IterationFilterDropdown'
 
 /**
  * Velocity & Burndown Analytics View
@@ -201,16 +200,13 @@ export default function VelocityView({ issues: allIssues }) {
             Sprint velocity, trends, burndown chart, and predictive analytics
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <IterationFilterDropdown />
-          <button
-            className="btn btn-primary"
-            onClick={handleExportCSV}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-          >
-            <span>Export Velocity CSV</span>
-          </button>
-        </div>
+        <button
+          className="btn btn-primary"
+          onClick={handleExportCSV}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+        >
+          <span>Export Velocity CSV</span>
+        </button>
       </div>
 
       {/* Summary Cards */}

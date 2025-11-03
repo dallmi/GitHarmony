@@ -14,7 +14,6 @@ import { exportIssuesToCSV, downloadCSV as downloadCSVUtil } from '../utils/csvE
 import { loadTeamConfig } from '../services/teamConfigService'
 import QualityCriteriaConfigModal from './QualityCriteriaConfigModal'
 import DoDComplianceSection from './DoDComplianceSection'
-import IterationFilterDropdown from './IterationFilterDropdown'
 
 /**
  * Issue Compliance & Quality Check View
@@ -163,7 +162,6 @@ Best regards`
           </p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <IterationFilterDropdown />
           <button
             className="btn"
             onClick={() => setShowConfigModal(true)}

@@ -2,7 +2,6 @@ import React, { useMemo, useState, useEffect } from 'react'
 import { useIterationFilter } from '../contexts/IterationFilterContext'
 import TeamConfigModal from './TeamConfigModal'
 import SprintCapacityModal from './SprintCapacityModal'
-import IterationFilterDropdown from './IterationFilterDropdown'
 import {
   loadTeamConfig,
   loadCapacitySettings,
@@ -331,16 +330,13 @@ export default function ResourceCapacityView({ issues: allIssues }) {
   return (
     <div className="container-fluid">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-        <div>
-          <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
-            Resource Capacity Planning
-          </h2>
-          <p style={{ fontSize: '14px', color: '#6B7280' }}>
-            Advanced resource management with capacity allocation and forecasting
-          </p>
-        </div>
-        <IterationFilterDropdown />
+      <div style={{ marginBottom: '20px' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
+          Resource Capacity Planning
+        </h2>
+        <p style={{ fontSize: '14px', color: '#6B7280' }}>
+          Advanced resource management with capacity allocation and forecasting
+        </p>
       </div>
 
       {/* Configuration Actions */}

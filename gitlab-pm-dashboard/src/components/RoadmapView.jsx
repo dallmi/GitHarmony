@@ -1,7 +1,6 @@
 import React from 'react'
 import { isBlocked, getPriorityFromLabels } from '../utils/labelUtils'
 import { formatDateReadable } from '../utils/dateUtils'
-import IterationFilterDropdown from './IterationFilterDropdown'
 
 export default function RoadmapView({ issues, milestones }) {
   if (milestones.length === 0) {
@@ -27,9 +26,8 @@ export default function RoadmapView({ issues, milestones }) {
 
   return (
     <div className="container-fluid">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{ marginBottom: '20px' }}>
         <h2 style={{ margin: 0 }}>Milestones</h2>
-        <IterationFilterDropdown />
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
