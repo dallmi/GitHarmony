@@ -1,6 +1,7 @@
 import React from 'react'
 import { isBlocked, getPriorityFromLabels } from '../utils/labelUtils'
 import { formatDateReadable } from '../utils/dateUtils'
+import IterationFilterDropdown from './IterationFilterDropdown'
 
 export default function RoadmapView({ issues, milestones }) {
   if (milestones.length === 0) {
@@ -15,12 +16,24 @@ export default function RoadmapView({ issues, milestones }) {
     )
   }
 
+  // Sort milestones by due_date descending (most recent/upcoming first)
+  const sortedMilestones = [...milestones].sort((a, b) => {
+    // No date goes to end
+    if (!a.due_date) return 1
+    if (!b.due_date) return -1
+    // Sort descending (most recent first)
+    return new Date(b.due_date) - new Date(a.due_date)
+  })
+
   return (
     <div className="container-fluid">
-      <h2 className="mb-3">Roadmap</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2 style={{ margin: 0 }}>Milestones</h2>
+        <IterationFilterDropdown />
+      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {milestones.map(milestone => {
+        {sortedMilestones.map(milestone => {
           const milestoneIssues = issues.filter(i => i.milestone?.id === milestone.id)
           const completed = milestoneIssues.filter(i => i.state === 'closed').length
           const total = milestoneIssues.length
