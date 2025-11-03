@@ -31,6 +31,20 @@ export default function CycleTimeView({ issues: allIssues }) {
   const [checkingPremium, setCheckingPremium] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
 
+  // Collapsible bottleneck analysis with persistent state
+  const [isBottleneckCollapsed, setIsBottleneckCollapsed] = useState(() => {
+    const saved = localStorage.getItem('cycleTime.bottleneckCollapsed')
+    return saved === 'true'
+  })
+
+  const toggleBottleneck = () => {
+    setIsBottleneckCollapsed(prev => {
+      const newValue = !prev
+      localStorage.setItem('cycleTime.bottleneckCollapsed', String(newValue))
+      return newValue
+    })
+  }
+
   // Apply search filter on top of iteration filter
   const issues = useMemo(() => {
     if (!searchTerm) return issuesFromIteration
@@ -269,9 +283,30 @@ export default function CycleTimeView({ issues: allIssues }) {
       {/* Bottleneck Analysis */}
       {analytics.bottlenecks.length > 0 && (
         <div className="card" style={{ marginBottom: '30px', background: '#FEF3C7', borderColor: '#FCD34D' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#92400E', marginBottom: '16px' }}>
-            ⚠️ Bottleneck Analysis
-          </h3>
+          <div
+            onClick={toggleBottleneck}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              cursor: 'pointer',
+              marginBottom: isBottleneckCollapsed ? '0' : '16px'
+            }}
+          >
+            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#92400E', margin: 0 }}>
+              ⚠️ Bottleneck Analysis
+            </h3>
+            <span style={{
+              fontSize: '14px',
+              color: '#92400E',
+              transform: isBottleneckCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+              transition: 'transform 0.2s',
+              display: 'inline-block'
+            }}>
+              ▼
+            </span>
+          </div>
+          {!isBottleneckCollapsed && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {analytics.bottlenecks.map(bottleneck => (
               <div key={bottleneck.phase} style={{
@@ -338,6 +373,7 @@ export default function CycleTimeView({ issues: allIssues }) {
               </div>
             ))}
           </div>
+          )}
         </div>
       )}
 

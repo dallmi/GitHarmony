@@ -8,12 +8,15 @@ import {
   getCurrentSprint
 } from '../services/velocityService'
 import { exportVelocityToCSV, downloadCSV } from '../utils/csvExportUtils'
+import { useIterationFilter } from '../contexts/IterationFilterContext'
 
 /**
  * Velocity & Burndown Analytics View
  * Shows sprint velocity, trends, burndown chart, and predictive analytics
  */
-export default function VelocityView({ issues }) {
+export default function VelocityView({ issues: allIssues }) {
+  // Use filtered issues from iteration context
+  const { filteredIssues: issues } = useIterationFilter()
   // Get velocity root cause analysis
   const getVelocityRootCause = (velocityData, trend, avgVelocity) => {
     if (!velocityData || velocityData.length < 2) return { causes: [], actions: [] }
