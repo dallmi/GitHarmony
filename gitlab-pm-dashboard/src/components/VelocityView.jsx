@@ -427,14 +427,25 @@ export default function VelocityView({ issues: allIssues }) {
 
         {/* Burndown Chart */}
         <div className="card">
-          <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>
-            Sprint {currentSprint} Burndown
-          </h2>
-          <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '20px' }}>
-            Hover over data points to see details. Red line should stay below or match gray dashed line for on-track progress.
-          </p>
+          <div style={{ marginBottom: '16px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>
+              Sprint {currentSprint} Burndown
+            </h2>
+            <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '0' }}>
+              Track daily progress vs. ideal burndown rate
+            </p>
+          </div>
 
-          {burndown.total === 0 ? (
+          {isFiltered && selectedIterations.length > 1 ? (
+            <div style={{ textAlign: 'center', padding: '60px 20px', background: '#F9FAFB', borderRadius: '8px' }}>
+              <div style={{ fontSize: '16px', fontWeight: '600', color: '#6B7280', marginBottom: '8px' }}>
+                Multiple Iterations Selected
+              </div>
+              <p style={{ fontSize: '13px', color: '#9CA3AF' }}>
+                Burndown chart shows a single sprint. Please select one iteration to view its burndown chart.
+              </p>
+            </div>
+          ) : burndown.total === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#6B7280' }}>
               No burndown data for current sprint
             </div>
@@ -453,7 +464,7 @@ export default function VelocityView({ issues: allIssues }) {
 
                 {/* Chart area */}
                 <div style={{ position: 'absolute', left: '50px', right: 0, top: 0, bottom: 60, borderLeft: '2px solid #E5E7EB', borderBottom: '2px solid #E5E7EB' }}>
-                  <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
+                  <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
                     {/* Ideal line - Draw line connecting all points */}
                     {burndown.ideal.length > 0 && (
                       <>
@@ -462,14 +473,15 @@ export default function VelocityView({ issues: allIssues }) {
                             points={burndown.ideal.map((point, i) => {
                               const x = (i / Math.max(1, burndown.ideal.length - 1)) * 100
                               const y = 100 - (point.remaining / burndown.total) * 100
-                              return `${x}%,${y}%`
+                              return `${x},${y}`
                             }).join(' ')}
                             fill="none"
                             stroke="#9CA3AF"
-                            strokeWidth="2.5"
-                            strokeDasharray="6,4"
+                            strokeWidth="0.8"
+                            strokeDasharray="2,1.5"
                             strokeLinecap="round"
                             strokeLinejoin="round"
+                            vectorEffect="non-scaling-stroke"
                           />
                         )}
                         {/* Ideal line data points with hover */}
@@ -483,13 +495,14 @@ export default function VelocityView({ issues: allIssues }) {
                           return (
                             <g key={`ideal-${i}`}>
                               <circle
-                                cx={`${x}%`}
-                                cy={`${y}%`}
-                                r="4"
+                                cx={x}
+                                cy={y}
+                                r="1.2"
                                 fill="white"
                                 stroke="#9CA3AF"
-                                strokeWidth="2.5"
-                                style={{ cursor: 'help' }}
+                                strokeWidth="0.6"
+                                vectorEffect="non-scaling-stroke"
+                                style={{ cursor: 'default' }}
                               >
                                 <title>{`${dayName} ${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}\nIdeal: ${point.remaining} issues remaining`}</title>
                               </circle>
@@ -507,13 +520,14 @@ export default function VelocityView({ issues: allIssues }) {
                             points={burndown.actual.map((point, i) => {
                               const x = (i / Math.max(1, burndown.actual.length - 1)) * 100
                               const y = 100 - (point.remaining / burndown.total) * 100
-                              return `${x}%,${y}%`
+                              return `${x},${y}`
                             }).join(' ')}
                             fill="none"
                             stroke="#DC2626"
-                            strokeWidth="3"
+                            strokeWidth="1"
                             strokeLinecap="round"
                             strokeLinejoin="round"
+                            vectorEffect="non-scaling-stroke"
                           />
                         )}
                         {/* Actual line data points with interactive hover */}
@@ -523,42 +537,65 @@ export default function VelocityView({ issues: allIssues }) {
                             : 50
                           const y = 100 - (point.remaining / burndown.total) * 100
                           const dateObj = new Date(point.date)
-                          const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' })
+                          const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' })
                           const idealAtSameDay = burndown.ideal[i]
                           const diff = idealAtSameDay ? point.remaining - idealAtSameDay.remaining : 0
-                          const status = diff <= 0 ? 'On track' : `${diff} behind`
+                          const completed = burndown.total - point.remaining
+                          const percentComplete = ((completed / burndown.total) * 100).toFixed(0)
+                          const idealCompleted = burndown.total - (idealAtSameDay ? idealAtSameDay.remaining : 0)
+                          const idealPercentComplete = ((idealCompleted / burndown.total) * 100).toFixed(0)
+
+                          let statusText = ''
+                          if (diff > 0) {
+                            statusText = `Behind by ${diff} issue${diff > 1 ? 's' : ''}`
+                          } else if (diff < 0) {
+                            statusText = `Ahead by ${Math.abs(diff)} issue${Math.abs(diff) > 1 ? 's' : ''}`
+                          } else {
+                            statusText = 'On track'
+                          }
+
+                          const tooltip = [
+                            `${dayName}, ${dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`,
+                            ``,
+                            `Remaining: ${point.remaining} of ${burndown.total} issues (${percentComplete}% complete)`,
+                            `Ideal: ${idealAtSameDay ? idealAtSameDay.remaining : 0} remaining (${idealPercentComplete}% complete)`,
+                            ``,
+                            `Status: ${statusText}`
+                          ].join('\n')
 
                           return (
                             <g key={`actual-${i}`}>
                               {/* Larger invisible circle for better hover detection */}
                               <circle
-                                cx={`${x}%`}
-                                cy={`${y}%`}
-                                r="12"
+                                cx={x}
+                                cy={y}
+                                r="3"
                                 fill="transparent"
+                                vectorEffect="non-scaling-stroke"
                                 style={{ cursor: 'pointer' }}
                               >
-                                <title>{`${dayName} ${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}\nActual: ${point.remaining} issues remaining\nStatus: ${status}\n\nClick to see sprint issues`}</title>
+                                <title>{tooltip}</title>
                               </circle>
                               {/* Visible circle */}
                               <circle
-                                cx={`${x}%`}
-                                cy={`${y}%`}
-                                r="5"
+                                cx={x}
+                                cy={y}
+                                r="1.5"
                                 fill="#DC2626"
                                 stroke="white"
-                                strokeWidth="2.5"
+                                strokeWidth="0.6"
+                                vectorEffect="non-scaling-stroke"
                                 style={{
                                   cursor: 'pointer',
                                   transition: 'all 0.2s'
                                 }}
                                 onMouseEnter={(e) => {
-                                  e.target.setAttribute('r', '7')
-                                  e.target.setAttribute('stroke-width', '3')
+                                  e.target.setAttribute('r', '2')
+                                  e.target.setAttribute('stroke-width', '0.8')
                                 }}
                                 onMouseLeave={(e) => {
-                                  e.target.setAttribute('r', '5')
-                                  e.target.setAttribute('stroke-width', '2.5')
+                                  e.target.setAttribute('r', '1.5')
+                                  e.target.setAttribute('stroke-width', '0.6')
                                 }}
                               />
                             </g>
@@ -572,6 +609,7 @@ export default function VelocityView({ issues: allIssues }) {
                       const start = new Date(burndown.sprintStart)
                       const end = new Date(burndown.sprintEnd)
                       const today = new Date()
+                      today.setHours(0, 0, 0, 0)
                       const totalDays = Math.ceil((end - start) / (24 * 60 * 60 * 1000))
                       const markers = []
 
@@ -582,14 +620,15 @@ export default function VelocityView({ issues: allIssues }) {
                           markers.push(
                             <line
                               key={`week-${day}`}
-                              x1={`${xPos}%`}
-                              y1="0%"
-                              x2={`${xPos}%`}
-                              y2="100%"
+                              x1={xPos}
+                              y1="0"
+                              x2={xPos}
+                              y2="100"
                               stroke="#E5E7EB"
-                              strokeWidth="1"
-                              strokeDasharray="3,3"
+                              strokeWidth="0.3"
+                              strokeDasharray="1,1"
                               opacity="0.5"
+                              vectorEffect="non-scaling-stroke"
                             />
                           )
                         }
@@ -604,25 +643,26 @@ export default function VelocityView({ issues: allIssues }) {
                           <g key="today-marker">
                             {/* Today line */}
                             <line
-                              x1={`${todayXPos}%`}
-                              y1="-10%"
-                              x2={`${todayXPos}%`}
-                              y2="100%"
+                              x1={todayXPos}
+                              y1="-10"
+                              x2={todayXPos}
+                              y2="100"
                               stroke="#EF4444"
-                              strokeWidth="2"
-                              style={{ cursor: 'help' }}
+                              strokeWidth="0.6"
+                              vectorEffect="non-scaling-stroke"
+                              style={{ cursor: 'default' }}
                             >
                               <title>{`Today: ${today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}</title>
                             </line>
                             {/* Today label */}
                             <text
-                              x={`${todayXPos}%`}
-                              y="-2%"
+                              x={todayXPos}
+                              y="-2"
                               textAnchor="middle"
                               fill="#EF4444"
-                              fontSize="10"
+                              fontSize="3"
                               fontWeight="600"
-                              style={{ cursor: 'help' }}
+                              style={{ cursor: 'default' }}
                             >
                               <title>{`Today: ${today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}</title>
                               TODAY ↓
@@ -636,51 +676,76 @@ export default function VelocityView({ issues: allIssues }) {
                   </svg>
                 </div>
 
-                {/* X-axis labels with weekly markers */}
+                {/* X-axis labels with daily/regular markers */}
                 <div style={{ position: 'absolute', left: '50px', right: 0, bottom: 0, height: '60px' }}>
-                  {/* Week labels */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #E5E7EB' }}>
+                  {/* Date labels - positioned absolutely to match SVG coordinates */}
+                  <div style={{ position: 'relative', paddingTop: '8px', borderTop: '1px solid #E5E7EB', height: '100%' }}>
                     {burndown.sprintStart && burndown.sprintEnd && (() => {
                       const start = new Date(burndown.sprintStart)
                       const end = new Date(burndown.sprintEnd)
+                      const today = new Date()
+                      today.setHours(0, 0, 0, 0)
                       const totalDays = Math.ceil((end - start) / (24 * 60 * 60 * 1000))
                       const labels = []
 
+                      // Determine optimal interval based on sprint length
+                      let interval
+                      if (totalDays <= 7) {
+                        interval = 1 // Show every day for 1-week sprints
+                      } else if (totalDays <= 14) {
+                        interval = 2 // Show every 2 days for 2-week sprints
+                      } else if (totalDays <= 21) {
+                        interval = 3 // Show every 3 days for 3-week sprints
+                      } else {
+                        interval = 5 // Show every 5 days for longer sprints
+                      }
+
                       // Start date
                       labels.push(
-                        <div key="start" style={{ fontSize: '12px', color: '#6B7280', textAlign: 'left' }}>
-                          <div style={{ fontWeight: '600' }}>{start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                          <div style={{ fontSize: '10px', color: '#9CA3AF' }}>{start.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                        <div key="start" style={{ position: 'absolute', left: '0%', fontSize: '11px', color: '#1F2937', textAlign: 'left', transform: 'translateX(0)', fontWeight: '600' }}>
+                          <div>{start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                          <div style={{ fontSize: '9px', color: '#9CA3AF', fontWeight: '400' }}>{start.toLocaleDateString('en-US', { weekday: 'short' })}</div>
                         </div>
                       )
 
-                      // Weekly markers
-                      for (let day = 7; day < totalDays; day += 7) {
-                        const weekDate = new Date(start.getTime() + day * 24 * 60 * 60 * 1000)
-                        labels.push(
-                          <div key={`week-${day}`} style={{ fontSize: '11px', color: '#9CA3AF', textAlign: 'center' }}>
-                            <div>{weekDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                            <div style={{ fontSize: '9px' }}>{weekDate.toLocaleDateString('en-US', { weekday: 'short' })}</div>
-                          </div>
-                        )
+                      // Intermediate markers at regular intervals
+                      for (let day = interval; day < totalDays; day += interval) {
+                        const date = new Date(start.getTime() + day * 24 * 60 * 60 * 1000)
+                        const xPos = (day / totalDays) * 100
+
+                        // Skip if too close to "today" marker (within 3% of chart width)
+                        const todayWithinSprint = today >= start && today <= end
+                        const daysSinceStart = Math.floor((today - start) / (24 * 60 * 60 * 1000))
+                        const todayXPos = (daysSinceStart / totalDays) * 100
+                        const tooCloseToToday = todayWithinSprint && Math.abs(xPos - todayXPos) < 5
+
+                        if (!tooCloseToToday) {
+                          labels.push(
+                            <div key={`day-${day}`} style={{ position: 'absolute', left: `${xPos}%`, fontSize: '10px', color: '#6B7280', textAlign: 'center', transform: 'translateX(-50%)' }}>
+                              <div>{date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                              <div style={{ fontSize: '8px', color: '#9CA3AF' }}>{date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                            </div>
+                          )
+                        }
                       }
 
-                      // Today marker (if within sprint)
-                      const today = new Date()
+                      // Today marker (if within sprint) - prominently displayed
                       if (today >= start && today <= end) {
+                        const daysSinceStart = Math.floor((today - start) / (24 * 60 * 60 * 1000))
+                        const todayXPos = (daysSinceStart / totalDays) * 100
                         labels.push(
-                          <div key="today" style={{ fontSize: '11px', color: '#DC2626', fontWeight: '600', textAlign: 'center' }}>
+                          <div key="today" style={{ position: 'absolute', left: `${todayXPos}%`, fontSize: '11px', color: '#EF4444', fontWeight: '700', textAlign: 'center', transform: 'translateX(-50%)', zIndex: 10 }}>
                             <div>Today</div>
-                            <div style={{ fontSize: '9px' }}>{today.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                            <div style={{ fontSize: '9px', fontWeight: '600' }}>{today.toLocaleDateString('en-US', { weekday: 'short' })}</div>
                           </div>
                         )
                       }
 
                       // End date
                       labels.push(
-                        <div key="end" style={{ fontSize: '12px', color: '#6B7280', textAlign: 'right' }}>
-                          <div style={{ fontWeight: '600' }}>{end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                          <div style={{ fontSize: '10px', color: '#9CA3AF' }}>{end.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                        <div key="end" style={{ position: 'absolute', right: '0%', fontSize: '11px', color: '#1F2937', textAlign: 'right', transform: 'translateX(0)', fontWeight: '600' }}>
+                          <div>{end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                          <div style={{ fontSize: '9px', color: '#9CA3AF', fontWeight: '400' }}>{end.toLocaleDateString('en-US', { weekday: 'short' })}</div>
                         </div>
                       )
 
@@ -691,7 +756,7 @@ export default function VelocityView({ issues: allIssues }) {
               </div>
 
               {/* Legend */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '12px', background: '#F3F4F6', borderRadius: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '12px', background: '#F3F4F6', borderRadius: '8px', marginBottom: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <div style={{ width: '20px', height: '3px', background: '#DC2626' }} />
                   <span style={{ fontSize: '12px', color: '#6B7280' }}>Actual Progress</span>
@@ -702,17 +767,51 @@ export default function VelocityView({ issues: allIssues }) {
                 </div>
               </div>
 
-              {/* Status indicator */}
-              <div style={{ marginTop: '16px', padding: '12px', background: burndown.actual[burndown.actual.length - 1]?.remaining <= burndown.ideal[burndown.actual.length - 1]?.remaining ? '#D1FAE5' : '#FEE2E2', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '14px', fontWeight: '600', color: burndown.actual[burndown.actual.length - 1]?.remaining <= burndown.ideal[burndown.actual.length - 1]?.remaining ? '#059669' : '#DC2626' }}>
-                  {burndown.actual[burndown.actual.length - 1]?.remaining <= burndown.ideal[burndown.actual.length - 1]?.remaining
-                    ? 'On Track'
-                    : 'Behind Schedule'}
-                </div>
-                <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
-                  {burndown.actual[burndown.actual.length - 1]?.remaining || 0} issues remaining
-                </div>
-              </div>
+              {/* Current Status Summary - Replacing old status indicator */}
+              {burndown.actual.length > 0 && (() => {
+                const latestActual = burndown.actual[burndown.actual.length - 1]
+                const latestIdeal = burndown.ideal[burndown.actual.length - 1] || burndown.ideal[burndown.ideal.length - 1]
+                const remaining = latestActual.remaining
+                const idealRemaining = latestIdeal ? latestIdeal.remaining : 0
+                const diff = remaining - idealRemaining
+                const percentComplete = ((burndown.total - remaining) / burndown.total) * 100
+                const idealPercentComplete = ((burndown.total - idealRemaining) / burndown.total) * 100
+
+                return (
+                  <div style={{
+                    padding: '16px 20px',
+                    background: diff > 0 ? '#FEF2F2' : diff < 0 ? '#ECFDF5' : '#F9FAFB',
+                    borderRadius: '8px',
+                    border: `2px solid ${diff > 0 ? '#FEE2E2' : diff < 0 ? '#D1FAE5' : '#E5E7EB'}`,
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', marginBottom: '8px' }}>
+                      Current Sprint Status
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: '8px', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '32px', fontWeight: '700', color: '#1F2937' }}>{remaining}</span>
+                      <span style={{ fontSize: '16px', color: '#6B7280' }}>/ {burndown.total} issues remaining</span>
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
+                      {percentComplete.toFixed(0)}% complete · Ideal: {idealPercentComplete.toFixed(0)}%
+                    </div>
+                    {diff !== 0 && (
+                      <div style={{
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        color: diff > 0 ? '#DC2626' : '#059669'
+                      }}>
+                        {diff > 0 ? `${diff} issue${diff !== 1 ? 's' : ''} behind schedule` : `${Math.abs(diff)} issue${Math.abs(diff) !== 1 ? 's' : ''} ahead of schedule`}
+                      </div>
+                    )}
+                    {diff === 0 && (
+                      <div style={{ fontSize: '16px', fontWeight: '600', color: '#059669' }}>
+                        On track
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
             </div>
           )}
         </div>
