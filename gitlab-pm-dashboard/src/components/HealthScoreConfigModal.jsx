@@ -110,7 +110,7 @@ export default function HealthScoreConfigModal({ isOpen, onClose, onSave }) {
 
           <div style={{ display: 'grid', gap: '12px' }}>
             {Object.entries(config.weights).map(([key, value]) => (
-              <div key={key} style={{ display: 'grid', gridTemplateColumns: '150px 1fr 80px', gap: '12px', alignItems: 'center' }}>
+              <div key={key} style={{ display: 'grid', gridTemplateColumns: '150px 1fr 100px', gap: '12px', alignItems: 'center' }}>
                 <label style={{ fontSize: '14px', fontWeight: '500', textTransform: 'capitalize' }}>
                   {key}
                 </label>
@@ -126,9 +126,33 @@ export default function HealthScoreConfigModal({ isOpen, onClose, onSave }) {
                   })}
                   style={{ width: '100%' }}
                 />
-                <span style={{ fontSize: '14px', fontWeight: '600' }}>
-                  {(value * 100).toFixed(0)}%
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value={(value * 100).toFixed(0)}
+                    onChange={(e) => {
+                      const percent = parseFloat(e.target.value) || 0
+                      const clamped = Math.max(0, Math.min(100, percent))
+                      setConfig({
+                        ...config,
+                        weights: { ...config.weights, [key]: clamped / 100 }
+                      })
+                    }}
+                    style={{
+                      width: '60px',
+                      padding: '4px 8px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      border: '1px solid var(--border-medium)',
+                      borderRadius: '4px',
+                      textAlign: 'right'
+                    }}
+                  />
+                  <span style={{ fontSize: '14px', fontWeight: '600' }}>%</span>
+                </div>
               </div>
             ))}
           </div>
@@ -157,7 +181,7 @@ export default function HealthScoreConfigModal({ isOpen, onClose, onSave }) {
 
           <div style={{ display: 'grid', gap: '12px' }}>
             {Object.entries(config.amplifiers).map(([key, value]) => (
-              <div key={key} style={{ display: 'grid', gridTemplateColumns: '150px 1fr 80px', gap: '12px', alignItems: 'center' }}>
+              <div key={key} style={{ display: 'grid', gridTemplateColumns: '150px 1fr 100px', gap: '12px', alignItems: 'center' }}>
                 <label style={{ fontSize: '14px', fontWeight: '500', textTransform: 'capitalize' }}>
                   {key}
                 </label>
@@ -173,9 +197,33 @@ export default function HealthScoreConfigModal({ isOpen, onClose, onSave }) {
                   })}
                   style={{ width: '100%' }}
                 />
-                <span style={{ fontSize: '14px', fontWeight: '600' }}>
-                  ×{value}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: '600' }}>×</span>
+                  <input
+                    type="number"
+                    min="100"
+                    max="500"
+                    step="10"
+                    value={value}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 100
+                      const clamped = Math.max(100, Math.min(500, val))
+                      setConfig({
+                        ...config,
+                        amplifiers: { ...config.amplifiers, [key]: clamped }
+                      })
+                    }}
+                    style={{
+                      width: '60px',
+                      padding: '4px 8px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      border: '1px solid var(--border-medium)',
+                      borderRadius: '4px',
+                      textAlign: 'right'
+                    }}
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -255,7 +303,7 @@ export default function HealthScoreConfigModal({ isOpen, onClose, onSave }) {
           </p>
 
           <div style={{ display: 'grid', gap: '12px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr 80px', gap: '12px', alignItems: 'center' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr 100px', gap: '12px', alignItems: 'center' }}>
               <label style={{ fontSize: '14px', fontWeight: '500' }}>
                 Green (Good)
               </label>
@@ -271,12 +319,37 @@ export default function HealthScoreConfigModal({ isOpen, onClose, onSave }) {
                 })}
                 style={{ width: '100%' }}
               />
-              <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--success)' }}>
-                ≥{config.thresholds.good}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--success)' }}>≥</span>
+                <input
+                  type="number"
+                  min="60"
+                  max="100"
+                  step="5"
+                  value={config.thresholds.good}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 60
+                    const clamped = Math.max(60, Math.min(100, val))
+                    setConfig({
+                      ...config,
+                      thresholds: { ...config.thresholds, good: clamped }
+                    })
+                  }}
+                  style={{
+                    width: '50px',
+                    padding: '4px 8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    border: '1px solid var(--border-medium)',
+                    borderRadius: '4px',
+                    textAlign: 'right',
+                    color: 'var(--success)'
+                  }}
+                />
+              </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr 80px', gap: '12px', alignItems: 'center' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr 100px', gap: '12px', alignItems: 'center' }}>
               <label style={{ fontSize: '14px', fontWeight: '500' }}>
                 Amber (Warning)
               </label>
@@ -292,9 +365,35 @@ export default function HealthScoreConfigModal({ isOpen, onClose, onSave }) {
                 })}
                 style={{ width: '100%' }}
               />
-              <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--warning)' }}>
-                ≥{config.thresholds.warning}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--warning)' }}>≥</span>
+                <input
+                  type="number"
+                  min="30"
+                  max={config.thresholds.good - 5}
+                  step="5"
+                  value={config.thresholds.warning}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 30
+                    const maxVal = config.thresholds.good - 5
+                    const clamped = Math.max(30, Math.min(maxVal, val))
+                    setConfig({
+                      ...config,
+                      thresholds: { ...config.thresholds, warning: clamped }
+                    })
+                  }}
+                  style={{
+                    width: '50px',
+                    padding: '4px 8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    border: '1px solid var(--border-medium)',
+                    borderRadius: '4px',
+                    textAlign: 'right',
+                    color: 'var(--warning)'
+                  }}
+                />
+              </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr 80px', gap: '12px', alignItems: 'center' }}>
@@ -365,7 +464,7 @@ export default function HealthScoreConfigModal({ isOpen, onClose, onSave }) {
           </div>
 
           {config.timeframe.mode === 'days' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr 80px', gap: '12px', alignItems: 'center' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr 100px', gap: '12px', alignItems: 'center' }}>
               <label style={{ fontSize: '14px', fontWeight: '500' }}>
                 Days to include
               </label>
@@ -381,9 +480,30 @@ export default function HealthScoreConfigModal({ isOpen, onClose, onSave }) {
                 })}
                 style={{ width: '100%' }}
               />
-              <span style={{ fontSize: '14px', fontWeight: '600' }}>
-                {config.timeframe.days}
-              </span>
+              <input
+                type="number"
+                min="7"
+                max="365"
+                step="7"
+                value={config.timeframe.days}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value) || 7
+                  const clamped = Math.max(7, Math.min(365, val))
+                  setConfig({
+                    ...config,
+                    timeframe: { ...config.timeframe, days: clamped }
+                  })
+                }}
+                style={{
+                  width: '60px',
+                  padding: '4px 8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  border: '1px solid var(--border-medium)',
+                  borderRadius: '4px',
+                  textAlign: 'right'
+                }}
+              />
             </div>
           )}
         </div>
