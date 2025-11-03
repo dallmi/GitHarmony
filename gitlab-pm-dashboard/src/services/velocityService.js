@@ -141,9 +141,11 @@ export function calculateBurndown(issues, currentSprint) {
   if (issueWithIteration && issueWithIteration.iteration) {
     if (issueWithIteration.iteration.start_date) {
       sprintStart = new Date(issueWithIteration.iteration.start_date)
+      sprintStart.setHours(0, 0, 0, 0) // Normalize to start of day
     }
     if (issueWithIteration.iteration.due_date) {
       sprintEnd = new Date(issueWithIteration.iteration.due_date)
+      sprintEnd.setHours(23, 59, 59, 999) // Normalize to end of day
     }
   }
 
@@ -158,12 +160,14 @@ export function calculateBurndown(issues, currentSprint) {
     }
 
     sprintStart = new Date(Math.min(...createdDates))
+    sprintStart.setHours(0, 0, 0, 0) // Normalize to start of day
   }
 
   // If no end date, assume 2-week sprint
   if (!sprintEnd) {
     const sprintDuration = 14 * 24 * 60 * 60 * 1000 // 14 days in milliseconds
     sprintEnd = new Date(sprintStart.getTime() + sprintDuration)
+    sprintEnd.setHours(23, 59, 59, 999) // Normalize to end of day
   }
 
   const today = new Date()
