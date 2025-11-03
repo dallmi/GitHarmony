@@ -16,7 +16,7 @@ import SearchableSelect from './SearchableSelect'
  * Interactive sprint planning with capacity tracking and issue assignment
  */
 export default function SprintPlanningView({ issues: allIssues }) {
-  const { filteredIssues: issues } = useIterationFilter()
+  const { filteredIssues } = useIterationFilter()
 
   // Configuration
   const [teamConfig, setTeamConfig] = useState({ teamMembers: [] })
@@ -40,6 +40,40 @@ export default function SprintPlanningView({ issues: allIssues }) {
     setCapacitySettings(loadCapacitySettings())
     setSprintCapacity(loadSprintCapacity())
   }, [])
+
+  // PERFORMANCE OPTIMIZATION: Filter issues by timeframe FIRST
+  // Only process issues from last 6 months + future (sprint planning doesn't need old history)
+  // This dramatically reduces the dataset for all subsequent calculations
+  const issues = useMemo(() => {
+    const sixMonthsAgo = new Date()
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+
+    return filteredIssues.filter(issue => {
+      // Always include open issues (regardless of date)
+      if (issue.state === 'opened') return true
+
+      // For closed issues, only include recent ones (last 6 months)
+      if (issue.closed_at) {
+        const closedDate = new Date(issue.closed_at)
+        return closedDate >= sixMonthsAgo
+      }
+
+      // For issues with updated_at but no closed_at
+      if (issue.updated_at) {
+        const updatedDate = new Date(issue.updated_at)
+        return updatedDate >= sixMonthsAgo
+      }
+
+      // Include issues with future dates
+      if (issue.due_date) {
+        const dueDate = new Date(issue.due_date)
+        return dueDate >= sixMonthsAgo
+      }
+
+      // Default: exclude very old issues without dates
+      return false
+    })
+  }, [filteredIssues])
 
   // Get all sprints
   const sprints = useMemo(() => {
