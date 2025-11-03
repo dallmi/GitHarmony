@@ -29,6 +29,7 @@ import CycleTimeView from './components/CycleTimeView'
 import EpicManagementView from './components/EpicManagementView'
 import RiskManagementView from './components/RiskManagementView'
 import SprintManagementView from './components/SprintManagementView'
+import CrossTeamCoordinationView from './components/CrossTeamCoordinationView'
 
 function App() {
   console.log('App: Component initializing...')
@@ -219,6 +220,7 @@ function App() {
             {activeView === 'velocity' && <VelocityView issues={issues} />}
             {activeView === 'resources' && <ResourceCapacityView issues={issues} />}
             {activeView === 'stakeholders' && <StakeholderHubView stats={stats} healthScore={healthScore} />}
+            {activeView === 'crossteam' && <CrossTeamCoordinationView issues={issues} epics={epics} milestones={milestones} />}
           </>
         )}
       </div>

@@ -61,7 +61,8 @@ export const VIEW_GROUPS = [
     views: [
       { id: 'portfolio', label: 'Portfolio', roles: ['executive', 'manager'] },
       { id: 'roadmap', label: 'Roadmap', roles: ['executive', 'manager', 'team'] },
-      { id: 'epicmanagement', label: 'Epics', roles: ['manager', 'team'] }
+      { id: 'epicmanagement', label: 'Epics', roles: ['manager', 'team'] },
+      { id: 'crossteam', label: 'Cross-Team Coordination', roles: ['executive', 'manager'] }
     ]
   },
   {
@@ -107,5 +108,8 @@ export const LABEL_CONVENTIONS = {
   priority: 'Priority::High|Medium|Low',
   type: 'Type::Bug|Feature|Enhancement',
   blocker: 'Blocker',
-  initiative: 'initiative::initiative-name'
+  initiative: 'initiative::initiative-name',
+  team: 'team::team-name',
+  squad: 'squad::squad-name',
+  storyPoints: 'sp::number'
 }
