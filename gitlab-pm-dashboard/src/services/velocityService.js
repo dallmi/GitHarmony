@@ -167,13 +167,13 @@ export function calculateBurndown(issues, currentSprint) {
   }
 
   const today = new Date()
+  today.setHours(0, 0, 0, 0) // Normalize to midnight for date comparison
 
   const totalIssues = sprintIssues.length
 
   // Generate ideal burndown line (linear)
   const idealData = []
-  // Use floor to match actual day calculations consistently
-  const days = Math.floor((sprintEnd - sprintStart) / (24 * 60 * 60 * 1000))
+  const days = Math.ceil((sprintEnd - sprintStart) / (24 * 60 * 60 * 1000))
 
   for (let day = 0; day <= days; day++) {
     const date = new Date(sprintStart.getTime() + day * 24 * 60 * 60 * 1000)
@@ -206,6 +206,10 @@ export function calculateBurndown(issues, currentSprint) {
   // Generate actual burndown points (start at day 0 to match ideal)
   for (let day = 0; day <= days; day++) {
     const date = new Date(sprintStart.getTime() + day * 24 * 60 * 60 * 1000)
+
+    // Stop after today (don't generate future data points)
+    if (date > today) break
+
     const dateKey = date.toISOString().split('T')[0]
 
     // For day 0, don't check closed issues (start point)
@@ -217,9 +221,6 @@ export function calculateBurndown(issues, currentSprint) {
       date: dateKey,
       remaining: Math.max(0, remainingIssues)
     })
-
-    // Stop at today (after adding today's point)
-    if (date >= today) break
   }
 
   return {

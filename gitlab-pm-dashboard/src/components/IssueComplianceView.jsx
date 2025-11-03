@@ -27,6 +27,10 @@ export default function IssueComplianceView({ issues: allIssues }) {
   const [activeFilter, setActiveFilter] = useState(null) // Track active tile filter
   const [showConfigModal, setShowConfigModal] = useState(false)
   const [activeTab, setActiveTab] = useState('quality') // 'quality', 'byauthor', or 'dod'
+  const [showOpenOnly, setShowOpenOnly] = useState(() => {
+    const saved = localStorage.getItem('quality.showOpenOnly')
+    return saved !== 'false' // Default to true (show open only)
+  })
   const [isLegendCollapsed, setIsLegendCollapsed] = useState(() => {
     const saved = localStorage.getItem('quality.legendCollapsed')
     return saved === 'true'
@@ -40,21 +44,32 @@ export default function IssueComplianceView({ issues: allIssues }) {
     })
   }
 
+  const toggleShowOpenOnly = () => {
+    setShowOpenOnly(prev => {
+      const newValue = !prev
+      localStorage.setItem('quality.showOpenOnly', String(newValue))
+      return newValue
+    })
+  }
+
   const { nonCompliantIssues, stats, staleIssues } = useMemo(() => {
     if (!issues || issues.length === 0) {
       return { nonCompliantIssues: [], stats: null, staleIssues: [] }
     }
 
-    const nonCompliant = findNonCompliantIssues(issues)
-    const complianceStats = getComplianceStats(issues)
-    const stale = findStaleIssues(issues)
+    // Filter issues by state if showOpenOnly is enabled
+    const issuesToCheck = showOpenOnly ? issues.filter(i => i.state === 'opened') : issues
+
+    const nonCompliant = findNonCompliantIssues(issuesToCheck)
+    const complianceStats = getComplianceStats(issuesToCheck)
+    const stale = findStaleIssues(issuesToCheck)
 
     return {
       nonCompliantIssues: nonCompliant,
       stats: complianceStats,
       staleIssues: stale
     }
-  }, [issues])
+  }, [issues, showOpenOnly])
 
   const criteria = getCriteriaDetails()
 
@@ -187,30 +202,32 @@ Best regards`
         </div>
       </div>
 
-      {/* Tab Navigation */}
+      {/* Tab Navigation with Filter Toggle */}
       <div style={{
         display: 'flex',
-        gap: '8px',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         borderBottom: '2px solid #E5E7EB',
         marginBottom: '24px'
       }}>
-        <button
-          onClick={() => setActiveTab('quality')}
-          style={{
-            padding: '12px 24px',
-            background: activeTab === 'quality' ? 'white' : 'transparent',
-            border: 'none',
-            borderBottom: activeTab === 'quality' ? '3px solid #E60000' : '3px solid transparent',
-            fontSize: '14px',
-            fontWeight: activeTab === 'quality' ? '600' : '500',
-            color: activeTab === 'quality' ? '#E60000' : '#6B7280',
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            marginBottom: '-2px'
-          }}
-        >
-          Quality Criteria
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => setActiveTab('quality')}
+            style={{
+              padding: '12px 24px',
+              background: activeTab === 'quality' ? 'white' : 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'quality' ? '3px solid #E60000' : '3px solid transparent',
+              fontSize: '14px',
+              fontWeight: activeTab === 'quality' ? '600' : '500',
+              color: activeTab === 'quality' ? '#E60000' : '#6B7280',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              marginBottom: '-2px'
+            }}
+          >
+            Quality Criteria
+          </button>
         <button
           onClick={() => setActiveTab('byauthor')}
           style={{
@@ -228,23 +245,69 @@ Best regards`
         >
           By Author
         </button>
-        <button
-          onClick={() => setActiveTab('dod')}
-          style={{
-            padding: '12px 24px',
-            background: activeTab === 'dod' ? 'white' : 'transparent',
-            border: 'none',
-            borderBottom: activeTab === 'dod' ? '3px solid #E60000' : '3px solid transparent',
-            fontSize: '14px',
-            fontWeight: activeTab === 'dod' ? '600' : '500',
-            color: activeTab === 'dod' ? '#E60000' : '#6B7280',
-            cursor: 'pointer',
-            transition: 'all 0.2s',
+          <button
+            onClick={() => setActiveTab('dod')}
+            style={{
+              padding: '12px 24px',
+              background: activeTab === 'dod' ? 'white' : 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'dod' ? '3px solid #E60000' : '3px solid transparent',
+              fontSize: '14px',
+              fontWeight: activeTab === 'dod' ? '600' : '500',
+              color: activeTab === 'dod' ? '#E60000' : '#6B7280',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              marginBottom: '-2px'
+            }}
+          >
+            Definition of Done
+          </button>
+        </div>
+
+        {/* Filter Toggle - Show Open Issues Only */}
+        {(activeTab === 'quality' || activeTab === 'byauthor') && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 12px',
+            background: '#F9FAFB',
+            borderRadius: '6px',
             marginBottom: '-2px'
-          }}
-        >
-          Definition of Done
-        </button>
+          }}>
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: '500',
+              color: '#374151'
+            }}>
+              <input
+                type="checkbox"
+                checked={showOpenOnly}
+                onChange={toggleShowOpenOnly}
+                style={{
+                  width: '16px',
+                  height: '16px',
+                  cursor: 'pointer'
+                }}
+              />
+              <span>Show open issues only</span>
+            </label>
+            <div style={{
+              fontSize: '11px',
+              color: '#6B7280',
+              padding: '2px 8px',
+              background: showOpenOnly ? '#DCFCE7' : '#FEF3C7',
+              borderRadius: '10px',
+              fontWeight: '600'
+            }}>
+              {showOpenOnly ? 'Open only' : 'All issues'}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Quality Criteria Config Modal */}

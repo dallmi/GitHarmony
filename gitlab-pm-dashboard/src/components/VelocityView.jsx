@@ -464,46 +464,57 @@ export default function VelocityView({ issues: allIssues }) {
 
                 {/* Chart area */}
                 <div style={{ position: 'absolute', left: '50px', right: 0, top: 0, bottom: 60, borderLeft: '2px solid #E5E7EB', borderBottom: '2px solid #E5E7EB' }}>
-                  <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
+                  <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
                     {/* Calculate date-based positioning (needed for both ideal and actual lines) */}
                     {(() => {
                       const start = new Date(burndown.sprintStart)
                       const end = new Date(burndown.sprintEnd)
-                      // Use floor to match velocityService calculation
-                      const totalDays = Math.floor((end - start) / (24 * 60 * 60 * 1000))
+                      // Use exact time difference, not ceil, for accurate proportions
+                      const sprintDuration = (end - start) / (24 * 60 * 60 * 1000)
 
-                      // Helper function: convert date to X coordinate percentage
+                      // Helper function: convert date to X coordinate as percentage string
                       const dateToXPos = (dateStr) => {
                         const date = new Date(dateStr)
-                        const daysSinceStart = Math.floor((date - start) / (24 * 60 * 60 * 1000))
-                        return (daysSinceStart / totalDays) * 100
+                        // Use exact fractional days for accurate positioning
+                        const daysSinceStart = (date - start) / (24 * 60 * 60 * 1000)
+                        return `${(daysSinceStart / sprintDuration) * 100}%`
+                      }
+
+                      // Helper function: convert remaining issues to Y coordinate as percentage string
+                      const remainingToYPos = (remaining) => {
+                        return `${100 - (remaining / burndown.total) * 100}%`
                       }
 
                       return (
                         <>
-                          {/* Ideal line - Draw line connecting all points */}
+                          {/* Ideal line - Draw line as separate segments using percentage positioning */}
                           {burndown.ideal.length > 0 && (
                             <>
-                              {burndown.ideal.length > 1 && (
-                                <polyline
-                                  points={burndown.ideal.map((point) => {
-                                    const x = dateToXPos(point.date)
-                                    const y = 100 - (point.remaining / burndown.total) * 100
-                                    return `${x},${y}`
-                                  }).join(' ')}
-                                  fill="none"
-                                  stroke="#9CA3AF"
-                                  strokeWidth="0.8"
-                                  strokeDasharray="2,1.5"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  vectorEffect="non-scaling-stroke"
-                                />
-                              )}
+                              {/* Draw lines between points */}
+                              {burndown.ideal.length > 1 && burndown.ideal.slice(0, -1).map((point, i) => {
+                                const nextPoint = burndown.ideal[i + 1]
+                                const x1 = dateToXPos(point.date)
+                                const y1 = remainingToYPos(point.remaining)
+                                const x2 = dateToXPos(nextPoint.date)
+                                const y2 = remainingToYPos(nextPoint.remaining)
+                                return (
+                                  <line
+                                    key={`ideal-line-${i}`}
+                                    x1={x1}
+                                    y1={y1}
+                                    x2={x2}
+                                    y2={y2}
+                                    stroke="#9CA3AF"
+                                    strokeWidth="2"
+                                    strokeDasharray="4,3"
+                                    strokeLinecap="round"
+                                  />
+                                )
+                              })}
                               {/* Ideal line data points with hover */}
                               {burndown.ideal.map((point, i) => {
                                 const x = dateToXPos(point.date)
-                                const y = 100 - (point.remaining / burndown.total) * 100
+                                const y = remainingToYPos(point.remaining)
                                 const dateObj = new Date(point.date)
                                 const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' })
                                 return (
@@ -511,11 +522,10 @@ export default function VelocityView({ issues: allIssues }) {
                                     <circle
                                       cx={x}
                                       cy={y}
-                                      r="1.2"
+                                      r="3"
                                       fill="white"
                                       stroke="#9CA3AF"
-                                      strokeWidth="0.6"
-                                      vectorEffect="non-scaling-stroke"
+                                      strokeWidth="1.5"
                                       style={{ cursor: 'default' }}
                                     >
                                       <title>{`${dayName} ${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}\nIdeal: ${point.remaining} issues remaining`}</title>
@@ -526,28 +536,33 @@ export default function VelocityView({ issues: allIssues }) {
                             </>
                           )}
 
-                          {/* Actual line - Draw line connecting all points */}
+                          {/* Actual line - Draw line as separate segments using percentage positioning */}
                           {burndown.actual.length > 0 && (
                             <>
-                              {burndown.actual.length > 1 && (
-                                <polyline
-                                  points={burndown.actual.map((point) => {
-                                    const x = dateToXPos(point.date)
-                                    const y = 100 - (point.remaining / burndown.total) * 100
-                                    return `${x},${y}`
-                                  }).join(' ')}
-                                  fill="none"
-                                  stroke="#DC2626"
-                                  strokeWidth="1"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  vectorEffect="non-scaling-stroke"
-                                />
-                              )}
+                              {/* Draw lines between points */}
+                              {burndown.actual.length > 1 && burndown.actual.slice(0, -1).map((point, i) => {
+                                const nextPoint = burndown.actual[i + 1]
+                                const x1 = dateToXPos(point.date)
+                                const y1 = remainingToYPos(point.remaining)
+                                const x2 = dateToXPos(nextPoint.date)
+                                const y2 = remainingToYPos(nextPoint.remaining)
+                                return (
+                                  <line
+                                    key={`actual-line-${i}`}
+                                    x1={x1}
+                                    y1={y1}
+                                    x2={x2}
+                                    y2={y2}
+                                    stroke="#DC2626"
+                                    strokeWidth="2.5"
+                                    strokeLinecap="round"
+                                  />
+                                )
+                              })}
                               {/* Actual line data points with interactive hover */}
                               {burndown.actual.map((point, i) => {
                                 const x = dateToXPos(point.date)
-                                const y = 100 - (point.remaining / burndown.total) * 100
+                                const y = remainingToYPos(point.remaining)
                                 const dateObj = new Date(point.date)
                                 const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' })
 
@@ -583,9 +598,8 @@ export default function VelocityView({ issues: allIssues }) {
                                     <circle
                                       cx={x}
                                       cy={y}
-                                      r="3"
+                                      r="6"
                                       fill="transparent"
-                                      vectorEffect="non-scaling-stroke"
                                       style={{ cursor: 'pointer' }}
                                     >
                                       <title>{tooltip}</title>
@@ -594,22 +608,21 @@ export default function VelocityView({ issues: allIssues }) {
                                     <circle
                                       cx={x}
                                       cy={y}
-                                      r="1.5"
+                                      r="4"
                                       fill="#DC2626"
                                       stroke="white"
-                                      strokeWidth="0.6"
-                                      vectorEffect="non-scaling-stroke"
+                                      strokeWidth="1"
                                       style={{
                                         cursor: 'pointer',
                                         transition: 'all 0.2s'
                                       }}
                                       onMouseEnter={(e) => {
-                                        e.target.setAttribute('r', '2')
-                                        e.target.setAttribute('stroke-width', '0.8')
+                                        e.target.setAttribute('r', '5')
+                                        e.target.setAttribute('stroke-width', '1.5')
                                       }}
                                       onMouseLeave={(e) => {
-                                        e.target.setAttribute('r', '1.5')
-                                        e.target.setAttribute('stroke-width', '0.6')
+                                        e.target.setAttribute('r', '4')
+                                        e.target.setAttribute('stroke-width', '1')
                                       }}
                                     />
                                   </g>
@@ -621,18 +634,20 @@ export default function VelocityView({ issues: allIssues }) {
                           {/* Week markers and Today line */}
                           {(() => {
                             const markers = []
+                            // Need to recalculate totalDays in this scope
+                            const totalDays = Math.ceil(sprintDuration)
 
                             // Week markers
                             for (let day = 0; day <= totalDays; day += 7) {
                               if (day > 0 && day < totalDays) {
-                                const xPos = (day / totalDays) * 100
+                                const xPos = `${(day / sprintDuration) * 100}%`
                                 markers.push(
                                   <line
                                     key={`week-${day}`}
                                     x1={xPos}
-                                    y1="0"
+                                    y1="0%"
                                     x2={xPos}
-                                    y2="100"
+                                    y2="100%"
                                     stroke="#E5E7EB"
                                     strokeWidth="0.3"
                                     strokeDasharray="1,1"
@@ -647,20 +662,19 @@ export default function VelocityView({ issues: allIssues }) {
                             const today = new Date()
                             today.setHours(0, 0, 0, 0)
                             if (today >= start && today <= end) {
-                              const daysSinceStart = Math.floor((today - start) / (24 * 60 * 60 * 1000))
-                              const todayXPos = (daysSinceStart / totalDays) * 100
+                              const daysSinceStart = (today - start) / (24 * 60 * 60 * 1000)
+                              const todayXPos = `${(daysSinceStart / sprintDuration) * 100}%`
 
                               markers.push(
                                 <g key="today-marker">
                                   {/* Today line */}
                                   <line
                                     x1={todayXPos}
-                                    y1="-10"
+                                    y1="-5%"
                                     x2={todayXPos}
-                                    y2="100"
+                                    y2="100%"
                                     stroke="#EF4444"
-                                    strokeWidth="0.6"
-                                    vectorEffect="non-scaling-stroke"
+                                    strokeWidth="2"
                                     style={{ cursor: 'default' }}
                                   >
                                     <title>{`Today: ${today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}</title>
@@ -668,15 +682,15 @@ export default function VelocityView({ issues: allIssues }) {
                                   {/* Today label */}
                                   <text
                                     x={todayXPos}
-                                    y="-2"
+                                    y="-1%"
                                     textAnchor="middle"
                                     fill="#EF4444"
-                                    fontSize="3"
+                                    fontSize="12"
                                     fontWeight="600"
                                     style={{ cursor: 'default' }}
                                   >
                                     <title>{`Today: ${today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}</title>
-                                    TODAY ↓
+                                    TODAY
                                   </text>
                                 </g>
                               )
@@ -699,8 +713,9 @@ export default function VelocityView({ issues: allIssues }) {
                       const end = new Date(burndown.sprintEnd)
                       const today = new Date()
                       today.setHours(0, 0, 0, 0)
-                      // Use floor to match velocityService and SVG calculations
-                      const totalDays = Math.floor((end - start) / (24 * 60 * 60 * 1000))
+                      // Use exact duration for accurate proportions
+                      const sprintDuration = (end - start) / (24 * 60 * 60 * 1000)
+                      const totalDays = Math.ceil(sprintDuration)
                       const labels = []
 
                       // Determine optimal interval based on sprint length
@@ -726,12 +741,14 @@ export default function VelocityView({ issues: allIssues }) {
                       // Intermediate markers at regular intervals
                       for (let day = interval; day < totalDays; day += interval) {
                         const date = new Date(start.getTime() + day * 24 * 60 * 60 * 1000)
-                        const xPos = (day / totalDays) * 100
+                        // Use exact fractional position
+                        const xPos = (day / sprintDuration) * 100
 
                         // Skip if too close to "today" marker (within 3% of chart width)
                         const todayWithinSprint = today >= start && today <= end
-                        const daysSinceStart = Math.floor((today - start) / (24 * 60 * 60 * 1000))
-                        const todayXPos = (daysSinceStart / totalDays) * 100
+                        // Use exact fractional days for today position
+                        const todayDaysSinceStart = (today - start) / (24 * 60 * 60 * 1000)
+                        const todayXPos = (todayDaysSinceStart / sprintDuration) * 100
                         const tooCloseToToday = todayWithinSprint && Math.abs(xPos - todayXPos) < 5
 
                         if (!tooCloseToToday) {
@@ -746,8 +763,9 @@ export default function VelocityView({ issues: allIssues }) {
 
                       // Today marker (if within sprint) - prominently displayed
                       if (today >= start && today <= end) {
-                        const daysSinceStart = Math.floor((today - start) / (24 * 60 * 60 * 1000))
-                        const todayXPos = (daysSinceStart / totalDays) * 100
+                        // Use exact fractional days for accurate positioning
+                        const daysSinceStart = (today - start) / (24 * 60 * 60 * 1000)
+                        const todayXPos = (daysSinceStart / sprintDuration) * 100
                         labels.push(
                           <div key="today" style={{ position: 'absolute', left: `${todayXPos}%`, fontSize: '11px', color: '#EF4444', fontWeight: '700', textAlign: 'center', transform: 'translateX(-50%)', zIndex: 10 }}>
                             <div>Today</div>
