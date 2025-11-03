@@ -26,6 +26,18 @@ export default function IssueComplianceView({ issues: allIssues }) {
   const [activeFilter, setActiveFilter] = useState(null) // Track active tile filter
   const [showConfigModal, setShowConfigModal] = useState(false)
   const [activeTab, setActiveTab] = useState('quality') // 'quality' or 'dod'
+  const [isLegendCollapsed, setIsLegendCollapsed] = useState(() => {
+    const saved = localStorage.getItem('quality.legendCollapsed')
+    return saved === 'true'
+  })
+
+  const toggleLegend = () => {
+    setIsLegendCollapsed(prev => {
+      const newValue = !prev
+      localStorage.setItem('quality.legendCollapsed', String(newValue))
+      return newValue
+    })
+  }
 
   const { nonCompliantIssues, stats, staleIssues } = useMemo(() => {
     if (!issues || issues.length === 0) {
@@ -348,6 +360,106 @@ Best regards`
           </div>
         </div>
       )}
+
+      {/* Color Coding Legend */}
+      <div className="card" style={{ marginBottom: '30px', background: '#F0F9FF', borderColor: '#3B82F6' }}>
+        <div
+          onClick={toggleLegend}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            cursor: 'pointer',
+            marginBottom: isLegendCollapsed ? '0' : '16px'
+          }}
+        >
+          <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1E40AF', margin: 0 }}>
+            ℹ️ Color Coding Guide
+          </h3>
+          <span style={{
+            fontSize: '14px',
+            color: '#1E40AF',
+            transform: isLegendCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s',
+            display: 'inline-block'
+          }}>
+            ▼
+          </span>
+        </div>
+        {!isLegendCollapsed && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#1E40AF', marginBottom: '8px' }}>Issue Card Backgrounds</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '40px', height: '24px', background: '#FEF2F2', border: '1px solid #FEE2E2', borderRadius: '4px' }}></div>
+                  <span style={{ fontSize: '13px', color: '#374151' }}>
+                    Red/pink background = Compliance score below 50% (critical)
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '40px', height: '24px', background: 'white', border: '1px solid #E5E7EB', borderRadius: '4px' }}></div>
+                  <span style={{ fontSize: '13px', color: '#374151' }}>
+                    White background = Compliance score 50% or above
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#1E40AF', marginBottom: '8px' }}>Left Border Colors</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '4px', height: '24px', background: '#DC2626', borderRadius: '2px' }}></div>
+                  <span style={{ fontSize: '13px', color: '#374151' }}>
+                    Red = Score below 50%
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '4px', height: '24px', background: '#D97706', borderRadius: '2px' }}></div>
+                  <span style={{ fontSize: '13px', color: '#374151' }}>
+                    Orange = Score 50-74%
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '4px', height: '24px', background: '#2563EB', borderRadius: '2px' }}></div>
+                  <span style={{ fontSize: '13px', color: '#374151' }}>
+                    Blue = Score 75% or above
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#1E40AF', marginBottom: '8px' }}>Violation Badges</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ padding: '4px 8px', background: '#FEE2E2', color: '#991B1B', fontSize: '11px', fontWeight: '500', borderRadius: '4px' }}>
+                    HIGH
+                  </div>
+                  <span style={{ fontSize: '13px', color: '#374151' }}>
+                    High severity violations (red background)
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ padding: '4px 8px', background: '#FEF3C7', color: '#92400E', fontSize: '11px', fontWeight: '500', borderRadius: '4px' }}>
+                    MED
+                  </div>
+                  <span style={{ fontSize: '13px', color: '#374151' }}>
+                    Medium severity violations (yellow background)
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ padding: '4px 8px', background: '#DBEAFE', color: '#1E40AF', fontSize: '11px', fontWeight: '500', borderRadius: '4px' }}>
+                    LOW
+                  </div>
+                  <span style={{ fontSize: '13px', color: '#374151' }}>
+                    Low severity violations (blue background)
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Quality Criteria Reference */}
       <div className="card" style={{ marginBottom: '30px', background: '#F9FAFB' }}>
