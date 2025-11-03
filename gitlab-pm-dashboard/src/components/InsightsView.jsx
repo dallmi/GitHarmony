@@ -3,8 +3,8 @@ import { generateInsights, getInsightStats } from '../services/insightsService'
 import DependencyAlertsSection from './DependencyAlertsSection'
 
 /**
- * AI Insights Engine View
- * 100% local analysis - no external API calls
+ * Insights View
+ * Local analysis - no external API calls
  */
 export default function InsightsView({ issues, milestones, epics, stats, healthScore, risks }) {
   const insights = useMemo(() => {
@@ -52,10 +52,10 @@ export default function InsightsView({ issues, milestones, epics, stats, healthS
       {/* Header */}
       <div style={{ marginBottom: '30px' }}>
         <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
-          AI Insights Engine
+          Insights
         </h2>
         <p style={{ fontSize: '14px', color: '#6B7280' }}>
-          Intelligent pattern detection and recommendations (100% local analysis)
+          Intelligent pattern detection and recommendations
         </p>
       </div>
 
@@ -86,22 +86,6 @@ export default function InsightsView({ issues, milestones, epics, stats, healthS
           <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>Success</div>
           <div style={{ fontSize: '32px', fontWeight: '600', color: '#059669' }}>
             {insightStats.success}
-          </div>
-        </div>
-      </div>
-
-      {/* Info Banner */}
-      <div className="card" style={{ marginBottom: '30px', background: '#EFF6FF', borderColor: '#BFDBFE' }}>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ fontSize: '24px' }}>🔒</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '14px', fontWeight: '600', color: '#1E40AF', marginBottom: '4px' }}>
-              100% Local Analysis
-            </div>
-            <div style={{ fontSize: '13px', color: '#1E40AF', lineHeight: '1.5' }}>
-              All insights are generated using statistical algorithms in your browser.
-              No data is sent to external servers. Completely private and secure.
-            </div>
           </div>
         </div>
       </div>
@@ -202,30 +186,6 @@ export default function InsightsView({ issues, milestones, epics, stats, healthS
         </div>
       )}
 
-      {/* Algorithm Info */}
-      {insights.length > 0 && (
-        <div className="card" style={{ marginTop: '30px', background: '#F9FAFB' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>
-            About the AI Insights Engine
-          </h3>
-          <div style={{ fontSize: '13px', color: '#6B7280', lineHeight: '1.6' }}>
-            <p style={{ marginBottom: '8px' }}>
-              <strong>Algorithms Used:</strong>
-            </p>
-            <ul style={{ marginLeft: '20px', marginBottom: '12px' }}>
-              <li>Statistical trend analysis for velocity patterns</li>
-              <li>Coefficient of variation for consistency metrics</li>
-              <li>Time-series analysis for forecasting</li>
-              <li>Threshold-based anomaly detection</li>
-              <li>Rule-based expert system for recommendations</li>
-            </ul>
-            <p style={{ fontSize: '12px', color: '#9CA3AF' }}>
-              All computations run locally in your browser using JavaScript. No machine learning models or external APIs are used.
-              Data never leaves your computer.
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
