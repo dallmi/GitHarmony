@@ -16,7 +16,6 @@ import ConfigModal from './components/ConfigModal'
 import StatusGeneratorModal from './components/StatusGeneratorModal'
 import ExecutiveDashboard from './components/ExecutiveDashboard'
 import EnhancedExecutiveDashboard from './components/EnhancedExecutiveDashboard'
-import CommunicationsDashboard from './components/CommunicationsDashboard'
 import PortfolioView from './components/PortfolioView'
 import RoadmapView from './components/RoadmapView'
 import VelocityView from './components/VelocityView'
@@ -197,9 +196,6 @@ function App() {
                 epics={epics}
                 risks={risks}
               />
-            )}
-            {activeView === 'communications' && (
-              <CommunicationsDashboard issues={issues} />
             )}
             {activeView === 'insights' && (
               <InsightsView

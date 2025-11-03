@@ -64,7 +64,6 @@ export const VIEW_GROUPS = [
     label: 'Overview',
     views: [
       { id: 'executive', label: 'Dashboard', roles: ['executive', 'manager', 'team'] },
-      { id: 'communications', label: 'Communications', roles: ['executive', 'manager'] },
       { id: 'insights', label: 'AI Insights', roles: ['executive', 'manager', 'team'] }
     ]
   },
