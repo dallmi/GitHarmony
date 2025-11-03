@@ -567,17 +567,19 @@ export default function VelocityView({ issues: allIssues }) {
                       </>
                     )}
 
-                    {/* Week markers */}
+                    {/* Week markers and Today line */}
                     {burndown.sprintStart && burndown.sprintEnd && (() => {
                       const start = new Date(burndown.sprintStart)
                       const end = new Date(burndown.sprintEnd)
+                      const today = new Date()
                       const totalDays = Math.ceil((end - start) / (24 * 60 * 60 * 1000))
-                      const weekMarkers = []
+                      const markers = []
 
+                      // Week markers
                       for (let day = 0; day <= totalDays; day += 7) {
                         if (day > 0 && day < totalDays) {
                           const xPos = (day / totalDays) * 100
-                          weekMarkers.push(
+                          markers.push(
                             <line
                               key={`week-${day}`}
                               x1={`${xPos}%`}
@@ -592,7 +594,44 @@ export default function VelocityView({ issues: allIssues }) {
                           )
                         }
                       }
-                      return weekMarkers
+
+                      // Today marker - only if within sprint period
+                      if (today >= start && today <= end) {
+                        const daysSinceStart = Math.floor((today - start) / (24 * 60 * 60 * 1000))
+                        const todayXPos = (daysSinceStart / totalDays) * 100
+
+                        markers.push(
+                          <g key="today-marker">
+                            {/* Today line */}
+                            <line
+                              x1={`${todayXPos}%`}
+                              y1="-10%"
+                              x2={`${todayXPos}%`}
+                              y2="100%"
+                              stroke="#EF4444"
+                              strokeWidth="2"
+                              style={{ cursor: 'help' }}
+                            >
+                              <title>{`Today: ${today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}</title>
+                            </line>
+                            {/* Today label */}
+                            <text
+                              x={`${todayXPos}%`}
+                              y="-2%"
+                              textAnchor="middle"
+                              fill="#EF4444"
+                              fontSize="10"
+                              fontWeight="600"
+                              style={{ cursor: 'help' }}
+                            >
+                              <title>{`Today: ${today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}</title>
+                              TODAY ↓
+                            </text>
+                          </g>
+                        )
+                      }
+
+                      return markers
                     })()}
                   </svg>
                 </div>
