@@ -212,7 +212,7 @@ function App() {
             {activeView === 'epicmanagement' && <EpicManagementView epics={epics} issues={issues} />}
             {activeView === 'riskmanagement' && <RiskManagementView epics={epics} issues={issues} />}
             {activeView === 'roadmap' && <RoadmapView issues={issues} milestones={milestones} />}
-            {activeView === 'sprintmanagement' && <SprintManagementView issues={issues} />}
+            {activeView === 'sprintmanagement' && <SprintManagementView issues={issues} onNavigate={setActiveView} />}
             {activeView === 'velocity' && <VelocityView issues={issues} />}
             {activeView === 'resources' && <ResourceCapacityView issues={issues} />}
             {activeView === 'stakeholders' && <StakeholderHubView stats={stats} healthScore={healthScore} />}

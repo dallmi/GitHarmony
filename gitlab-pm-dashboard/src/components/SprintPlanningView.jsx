@@ -15,7 +15,7 @@ import SearchableSelect from './SearchableSelect'
  * Sprint Planning View
  * Interactive sprint planning with capacity tracking and issue assignment
  */
-export default function SprintPlanningView({ issues: allIssues }) {
+export default function SprintPlanningView({ issues: allIssues, onNavigate }) {
   const { filteredIssues } = useIterationFilter()
 
   // Configuration
@@ -349,10 +349,42 @@ export default function SprintPlanningView({ issues: allIssues }) {
               <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '600', color: '#92400E' }}>
                 Team Configuration Required
               </h3>
-              <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#78350F', lineHeight: '1.5' }}>
+              <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#78350F', lineHeight: '1.5' }}>
                 To use Sprint Planning and capacity tracking, you need to configure your team members first.
                 Team configuration is project-specific, so each project in your portfolio needs its own team setup.
               </p>
+
+              {/* Call to Action Button */}
+              {onNavigate && (
+                <div style={{ marginBottom: '16px' }}>
+                  <button
+                    onClick={() => onNavigate('resources')}
+                    style={{
+                      padding: '12px 24px',
+                      background: '#E60000',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 2px 4px rgba(230, 0, 0, 0.2)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#B80000'
+                      e.currentTarget.style.boxShadow = '0 4px 8px rgba(230, 0, 0, 0.3)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = '#E60000'
+                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(230, 0, 0, 0.2)'
+                    }}
+                  >
+                    Go to Team Configuration →
+                  </button>
+                </div>
+              )}
+
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                 <div style={{
                   padding: '12px 16px',
@@ -365,7 +397,7 @@ export default function SprintPlanningView({ issues: allIssues }) {
                     Step 1: Configure Team
                   </div>
                   <div style={{ color: '#78350F' }}>
-                    Go to <strong>Resources → Team Configuration</strong> and add team members
+                    Add team members and assign roles
                   </div>
                 </div>
                 <div style={{

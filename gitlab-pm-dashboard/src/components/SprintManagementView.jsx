@@ -15,7 +15,7 @@ const SprintPlanningView = lazy(() => import('./SprintPlanningView'))
  * Consolidates 2 tabs into 1 view
  * Performance: Uses React.lazy() to defer loading heavy SprintPlanningView
  */
-export default function SprintManagementView({ issues }) {
+export default function SprintManagementView({ issues, onNavigate }) {
   const [showPlanning, setShowPlanning] = useState(false)
   const [showRetro, setShowRetro] = useState(false)
 
@@ -141,7 +141,7 @@ export default function SprintManagementView({ issues }) {
                 </div>
               </div>
             }>
-              <SprintPlanningView issues={issues} />
+              <SprintPlanningView issues={issues} onNavigate={onNavigate} />
             </Suspense>
           </div>
         )}
