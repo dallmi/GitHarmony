@@ -234,7 +234,7 @@ export default function VelocityView({ issues: allIssues }) {
         <div className="card">
           <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>Predicted Completion</div>
           <div style={{ fontSize: '20px', fontWeight: '600', color: '#059669' }}>
-            {prediction ? new Date(prediction.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'}
+            {prediction ? new Date(prediction.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'}
           </div>
           {prediction && (
             <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
