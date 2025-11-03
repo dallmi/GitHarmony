@@ -3,6 +3,7 @@ import SprintPlanningView from './SprintPlanningView'
 import SprintBoardView from './SprintBoardView'
 import SprintGoalSection from './SprintGoalSection'
 import RetrospectiveActionsSection from './RetrospectiveActionsSection'
+import IterationFilterDropdown from './IterationFilterDropdown'
 
 /**
  * Unified Sprint Management View
@@ -17,13 +18,16 @@ export default function SprintManagementView({ issues }) {
   return (
     <div className="container-fluid">
       {/* Header */}
-      <div style={{ marginBottom: '20px' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
-          Sprint Management
-        </h2>
-        <p style={{ fontSize: '14px', color: '#6B7280' }}>
-          Plan sprints, manage board, and track team capacity
-        </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+        <div>
+          <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
+            Sprint Management
+          </h2>
+          <p style={{ fontSize: '14px', color: '#6B7280' }}>
+            Plan sprints, manage board, and track team capacity
+          </p>
+        </div>
+        <IterationFilterDropdown />
       </div>
 
       {/* Sprint Goal Section */}

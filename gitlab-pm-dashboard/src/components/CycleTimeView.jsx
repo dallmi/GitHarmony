@@ -17,6 +17,7 @@ import { checkPremiumFeatures } from '../services/gitlabApi'
 import { loadConfig } from '../services/storageService'
 import SearchBar from './SearchBar'
 import { searchIssues } from '../utils/searchUtils'
+import IterationFilterDropdown from './IterationFilterDropdown'
 
 /**
  * Cycle Time & Issue Lifecycle Analytics View
@@ -120,7 +121,7 @@ export default function CycleTimeView({ issues: allIssues }) {
   return (
     <div className="container-fluid">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
             Cycle Time Analytics
@@ -130,6 +131,7 @@ export default function CycleTimeView({ issues: allIssues }) {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
+          <IterationFilterDropdown />
           <button
             className="btn btn-secondary"
             onClick={() => setShowLabelConfig(!showLabelConfig)}

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
 import { generateInsights, getInsightStats } from '../services/insightsService'
 import DependencyAlertsSection from './DependencyAlertsSection'
+import IterationFilterDropdown from './IterationFilterDropdown'
 
 /**
  * AI Insights Engine View
@@ -50,13 +51,16 @@ export default function InsightsView({ issues, milestones, epics, stats, healthS
   return (
     <div className="container-fluid">
       {/* Header */}
-      <div style={{ marginBottom: '30px' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
-          AI Insights Engine
-        </h2>
-        <p style={{ fontSize: '14px', color: '#6B7280' }}>
-          Intelligent pattern detection and recommendations (100% local analysis)
-        </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px' }}>
+        <div>
+          <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
+            AI Insights Engine
+          </h2>
+          <p style={{ fontSize: '14px', color: '#6B7280' }}>
+            Intelligent pattern detection and recommendations (100% local analysis)
+          </p>
+        </div>
+        <IterationFilterDropdown />
       </div>
 
       {/* Summary Cards */}

@@ -14,6 +14,7 @@ import { exportIssuesToCSV, downloadCSV as downloadCSVUtil } from '../utils/csvE
 import { loadTeamConfig } from '../services/teamConfigService'
 import QualityCriteriaConfigModal from './QualityCriteriaConfigModal'
 import DoDComplianceSection from './DoDComplianceSection'
+import IterationFilterDropdown from './IterationFilterDropdown'
 
 /**
  * Issue Compliance & Quality Check View
@@ -152,7 +153,7 @@ Best regards`
   return (
     <div className="container-fluid">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
             Issue Quality Compliance
@@ -162,6 +163,7 @@ Best regards`
           </p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
+          <IterationFilterDropdown />
           <button
             className="btn"
             onClick={() => setShowConfigModal(true)}

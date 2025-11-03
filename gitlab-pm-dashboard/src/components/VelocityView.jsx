@@ -9,6 +9,7 @@ import {
 } from '../services/velocityService'
 import { exportVelocityToCSV, downloadCSV } from '../utils/csvExportUtils'
 import { useIterationFilter } from '../contexts/IterationFilterContext'
+import IterationFilterDropdown from './IterationFilterDropdown'
 
 /**
  * Velocity & Burndown Analytics View
@@ -193,15 +194,23 @@ export default function VelocityView({ issues: allIssues }) {
   return (
     <div className="container-fluid">
       {/* Header with Export Button */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: '600' }}>Velocity & Burndown Analytics</h2>
-        <button
-          className="btn btn-primary"
-          onClick={handleExportCSV}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-        >
-          <span>Export Velocity CSV</span>
-        </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+        <div>
+          <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>Velocity & Burndown Analytics</h2>
+          <p style={{ fontSize: '14px', color: '#6B7280' }}>
+            Sprint velocity, trends, burndown chart, and predictive analytics
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <IterationFilterDropdown />
+          <button
+            className="btn btn-primary"
+            onClick={handleExportCSV}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <span>Export Velocity CSV</span>
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
