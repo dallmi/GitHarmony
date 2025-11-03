@@ -440,31 +440,65 @@ export default function VelocityView({ issues: allIssues }) {
                   <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
                     {/* Ideal line */}
                     {burndown.ideal.length > 1 && (
-                      <polyline
-                        points={burndown.ideal.map((point, i) => {
+                      <>
+                        <polyline
+                          points={burndown.ideal.map((point, i) => {
+                            const x = (i / (burndown.ideal.length - 1)) * 100
+                            const y = 100 - (point.remaining / burndown.total) * 100
+                            return `${x}%,${y}%`
+                          }).join(' ')}
+                          fill="none"
+                          stroke="#9CA3AF"
+                          strokeWidth="2"
+                          strokeDasharray="5,5"
+                        />
+                        {/* Ideal line data points */}
+                        {burndown.ideal.map((point, i) => {
                           const x = (i / (burndown.ideal.length - 1)) * 100
                           const y = 100 - (point.remaining / burndown.total) * 100
-                          return `${x}%,${y}%`
-                        }).join(' ')}
-                        fill="none"
-                        stroke="#D1D5DB"
-                        strokeWidth="2"
-                        strokeDasharray="5,5"
-                      />
+                          return (
+                            <circle
+                              key={`ideal-${i}`}
+                              cx={`${x}%`}
+                              cy={`${y}%`}
+                              r="3"
+                              fill="#9CA3AF"
+                            />
+                          )
+                        })}
+                      </>
                     )}
 
                     {/* Actual line */}
                     {burndown.actual.length > 1 && (
-                      <polyline
-                        points={burndown.actual.map((point, i) => {
-                          const x = (i / (burndown.ideal.length - 1)) * 100
+                      <>
+                        <polyline
+                          points={burndown.actual.map((point, i) => {
+                            const x = (i / (burndown.actual.length - 1)) * 100
+                            const y = 100 - (point.remaining / burndown.total) * 100
+                            return `${x}%,${y}%`
+                          }).join(' ')}
+                          fill="none"
+                          stroke="#DC2626"
+                          strokeWidth="3"
+                        />
+                        {/* Actual line data points */}
+                        {burndown.actual.map((point, i) => {
+                          const x = (i / (burndown.actual.length - 1)) * 100
                           const y = 100 - (point.remaining / burndown.total) * 100
-                          return `${x}%,${y}%`
-                        }).join(' ')}
-                        fill="none"
-                        stroke="#DC2626"
-                        strokeWidth="3"
-                      />
+                          return (
+                            <circle
+                              key={`actual-${i}`}
+                              cx={`${x}%`}
+                              cy={`${y}%`}
+                              r="4"
+                              fill="#DC2626"
+                              stroke="white"
+                              strokeWidth="2"
+                            />
+                          )
+                        })}
+                      </>
                     )}
                   </svg>
                 </div>
