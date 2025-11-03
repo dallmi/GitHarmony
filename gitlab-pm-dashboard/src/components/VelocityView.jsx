@@ -385,8 +385,8 @@ export default function VelocityView({ issues: allIssues }) {
                 {/* X-axis labels */}
                 <div style={{ position: 'absolute', left: '50px', right: 0, bottom: 0, height: '40px', display: 'flex', gap: '8px', padding: '0 10px' }}>
                   {velocityData.map((sprint) => (
-                    <div key={sprint.sprint} style={{ flex: 1, fontSize: '12px', color: '#6B7280', textAlign: 'center', paddingTop: '8px' }}>
-                      S{sprint.sprint}
+                    <div key={sprint.sprint} style={{ flex: 1, fontSize: '11px', color: '#6B7280', textAlign: 'center', paddingTop: '8px', lineHeight: '1.2' }}>
+                      {sprint.sprint}
                     </div>
                   ))}
                 </div>
