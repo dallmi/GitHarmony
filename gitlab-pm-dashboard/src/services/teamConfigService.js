@@ -1,11 +1,30 @@
 /**
  * Team Configuration Service
  * Manages team member roles, capacities, and sprint planning
+ * Now project-aware: stores separate configurations per project
  */
+
+import { getActiveProjectId } from './storageService'
 
 const TEAM_CONFIG_KEY = 'gitlab_team_config'
 const SPRINT_CAPACITY_KEY = 'gitlab_sprint_capacity'
 const CAPACITY_SETTINGS_KEY = 'gitlab_capacity_settings'
+
+/**
+ * Get project-specific key for localStorage
+ * @param {string} baseKey - Base key name
+ * @returns {string} Project-specific key
+ */
+function getProjectKey(baseKey) {
+  const projectId = getActiveProjectId()
+
+  // If no active project or cross-project view, use global key
+  if (!projectId || projectId === 'cross-project') {
+    return baseKey
+  }
+
+  return `${baseKey}_${projectId}`
+}
 
 // Default roles available
 export const DEFAULT_ROLES = [
@@ -87,11 +106,12 @@ export function getEstimatedHours(issue, capacitySettings, manualEstimates = {})
 }
 
 /**
- * Load team configuration
+ * Load team configuration (project-specific)
  */
 export function loadTeamConfig() {
   try {
-    const saved = localStorage.getItem(TEAM_CONFIG_KEY)
+    const key = getProjectKey(TEAM_CONFIG_KEY)
+    const saved = localStorage.getItem(key)
     if (saved) {
       return JSON.parse(saved)
     }
@@ -107,15 +127,16 @@ export function loadTeamConfig() {
 }
 
 /**
- * Save team configuration
+ * Save team configuration (project-specific)
  */
 export function saveTeamConfig(config) {
   try {
+    const key = getProjectKey(TEAM_CONFIG_KEY)
     const configToSave = {
       ...config,
       lastUpdated: new Date().toISOString()
     }
-    localStorage.setItem(TEAM_CONFIG_KEY, JSON.stringify(configToSave))
+    localStorage.setItem(key, JSON.stringify(configToSave))
     return true
   } catch (error) {
     console.error('Error saving team config:', error)
@@ -150,11 +171,12 @@ export function removeTeamMember(username) {
 }
 
 /**
- * Load sprint capacity configuration
+ * Load sprint capacity configuration (project-specific)
  */
 export function loadSprintCapacity() {
   try {
-    const saved = localStorage.getItem(SPRINT_CAPACITY_KEY)
+    const key = getProjectKey(SPRINT_CAPACITY_KEY)
+    const saved = localStorage.getItem(key)
     if (saved) {
       return JSON.parse(saved)
     }
@@ -168,11 +190,12 @@ export function loadSprintCapacity() {
 }
 
 /**
- * Save sprint capacity configuration
+ * Save sprint capacity configuration (project-specific)
  */
 export function saveSprintCapacity(capacity) {
   try {
-    localStorage.setItem(SPRINT_CAPACITY_KEY, JSON.stringify(capacity))
+    const key = getProjectKey(SPRINT_CAPACITY_KEY)
+    localStorage.setItem(key, JSON.stringify(capacity))
     return true
   } catch (error) {
     console.error('Error saving sprint capacity:', error)
@@ -227,11 +250,12 @@ export function getSprintMemberCapacity(sprintId, username, defaultCapacity = 40
 }
 
 /**
- * Load capacity settings (conversion rates, defaults)
+ * Load capacity settings (conversion rates, defaults) (project-specific)
  */
 export function loadCapacitySettings() {
   try {
-    const saved = localStorage.getItem(CAPACITY_SETTINGS_KEY)
+    const key = getProjectKey(CAPACITY_SETTINGS_KEY)
+    const saved = localStorage.getItem(key)
     if (saved) {
       return JSON.parse(saved)
     }
@@ -250,11 +274,12 @@ export function loadCapacitySettings() {
 }
 
 /**
- * Save capacity settings
+ * Save capacity settings (project-specific)
  */
 export function saveCapacitySettings(settings) {
   try {
-    localStorage.setItem(CAPACITY_SETTINGS_KEY, JSON.stringify(settings))
+    const key = getProjectKey(CAPACITY_SETTINGS_KEY)
+    localStorage.setItem(key, JSON.stringify(settings))
     return true
   } catch (error) {
     console.error('Error saving capacity settings:', error)
