@@ -590,16 +590,15 @@ export default function VelocityView({ issues: allIssues }) {
 
                                 return (
                                   <g key={`actual-${i}`}>
+                                    <title>{tooltip}</title>
                                     {/* Larger invisible circle for better hover detection */}
                                     <circle
                                       cx={x}
                                       cy={y}
-                                      r="6"
+                                      r="8"
                                       fill="transparent"
-                                      style={{ cursor: 'pointer' }}
-                                    >
-                                      <title>{tooltip}</title>
-                                    </circle>
+                                      style={{ cursor: 'pointer', pointerEvents: 'all' }}
+                                    />
                                     {/* Visible circle */}
                                     <circle
                                       cx={x}
@@ -610,7 +609,8 @@ export default function VelocityView({ issues: allIssues }) {
                                       strokeWidth="1"
                                       style={{
                                         cursor: 'pointer',
-                                        transition: 'all 0.2s'
+                                        transition: 'all 0.2s',
+                                        pointerEvents: 'all'
                                       }}
                                       onMouseEnter={(e) => {
                                         e.target.setAttribute('r', '5')
@@ -620,7 +620,9 @@ export default function VelocityView({ issues: allIssues }) {
                                         e.target.setAttribute('r', '4')
                                         e.target.setAttribute('stroke-width', '1')
                                       }}
-                                    />
+                                    >
+                                      <title>{tooltip}</title>
+                                    </circle>
                                   </g>
                                 )
                               })}
