@@ -438,63 +438,77 @@ export default function VelocityView({ issues: allIssues }) {
                 {/* Chart area */}
                 <div style={{ position: 'absolute', left: '50px', right: 0, top: 0, bottom: 40, borderLeft: '2px solid #E5E7EB', borderBottom: '2px solid #E5E7EB' }}>
                   <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
-                    {/* Ideal line */}
-                    {burndown.ideal.length > 1 && (
+                    {/* Ideal line - Draw line connecting all points */}
+                    {burndown.ideal.length > 0 && (
                       <>
-                        <polyline
-                          points={burndown.ideal.map((point, i) => {
-                            const x = (i / (burndown.ideal.length - 1)) * 100
-                            const y = 100 - (point.remaining / burndown.total) * 100
-                            return `${x}%,${y}%`
-                          }).join(' ')}
-                          fill="none"
-                          stroke="#9CA3AF"
-                          strokeWidth="2"
-                          strokeDasharray="5,5"
-                        />
+                        {burndown.ideal.length > 1 && (
+                          <polyline
+                            points={burndown.ideal.map((point, i) => {
+                              const x = (i / Math.max(1, burndown.ideal.length - 1)) * 100
+                              const y = 100 - (point.remaining / burndown.total) * 100
+                              return `${x}%,${y}%`
+                            }).join(' ')}
+                            fill="none"
+                            stroke="#9CA3AF"
+                            strokeWidth="2.5"
+                            strokeDasharray="6,4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        )}
                         {/* Ideal line data points */}
                         {burndown.ideal.map((point, i) => {
-                          const x = (i / (burndown.ideal.length - 1)) * 100
+                          const x = burndown.ideal.length > 1
+                            ? (i / (burndown.ideal.length - 1)) * 100
+                            : 50
                           const y = 100 - (point.remaining / burndown.total) * 100
                           return (
                             <circle
                               key={`ideal-${i}`}
                               cx={`${x}%`}
                               cy={`${y}%`}
-                              r="3"
-                              fill="#9CA3AF"
+                              r="4"
+                              fill="white"
+                              stroke="#9CA3AF"
+                              strokeWidth="2.5"
                             />
                           )
                         })}
                       </>
                     )}
 
-                    {/* Actual line */}
-                    {burndown.actual.length > 1 && (
+                    {/* Actual line - Draw line connecting all points */}
+                    {burndown.actual.length > 0 && (
                       <>
-                        <polyline
-                          points={burndown.actual.map((point, i) => {
-                            const x = (i / (burndown.actual.length - 1)) * 100
-                            const y = 100 - (point.remaining / burndown.total) * 100
-                            return `${x}%,${y}%`
-                          }).join(' ')}
-                          fill="none"
-                          stroke="#DC2626"
-                          strokeWidth="3"
-                        />
+                        {burndown.actual.length > 1 && (
+                          <polyline
+                            points={burndown.actual.map((point, i) => {
+                              const x = (i / Math.max(1, burndown.actual.length - 1)) * 100
+                              const y = 100 - (point.remaining / burndown.total) * 100
+                              return `${x}%,${y}%`
+                            }).join(' ')}
+                            fill="none"
+                            stroke="#DC2626"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        )}
                         {/* Actual line data points */}
                         {burndown.actual.map((point, i) => {
-                          const x = (i / (burndown.actual.length - 1)) * 100
+                          const x = burndown.actual.length > 1
+                            ? (i / (burndown.actual.length - 1)) * 100
+                            : 50
                           const y = 100 - (point.remaining / burndown.total) * 100
                           return (
                             <circle
                               key={`actual-${i}`}
                               cx={`${x}%`}
                               cy={`${y}%`}
-                              r="4"
+                              r="5"
                               fill="#DC2626"
                               stroke="white"
-                              strokeWidth="2"
+                              strokeWidth="2.5"
                             />
                           )
                         })}
