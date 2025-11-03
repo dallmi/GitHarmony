@@ -221,6 +221,7 @@ export default function GanttView({ issues, epics: allEpics }) {
 
   const getTodayPosition = () => {
     const today = new Date()
+    today.setHours(0, 0, 0, 0) // Normalize to midnight for accurate calculation
     if (today.getFullYear() !== selectedYear) return null
 
     const { start: yearStart, end: yearEnd } = timelineRange

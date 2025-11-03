@@ -48,7 +48,7 @@ export default function EpicManagementView({ epics, issues }) {
             marginBottom: '-2px'
           }}
         >
-          📊 Portfolio
+          Portfolio
         </button>
         <button
           onClick={() => setActiveSubView('timeline')}
@@ -65,7 +65,7 @@ export default function EpicManagementView({ epics, issues }) {
             marginBottom: '-2px'
           }}
         >
-          📅 Timeline
+          Timeline
         </button>
         <button
           onClick={() => setActiveSubView('quarterly')}
@@ -82,7 +82,7 @@ export default function EpicManagementView({ epics, issues }) {
             marginBottom: '-2px'
           }}
         >
-          📆 Quarterly
+          Quarterly
         </button>
       </div>
 
