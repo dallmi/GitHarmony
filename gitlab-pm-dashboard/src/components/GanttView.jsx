@@ -198,7 +198,9 @@ export default function GanttView({ issues, epics: allEpics }) {
   // Timeline calculations for horizontal bars
   const timelineRange = useMemo(() => {
     const yearStart = new Date(selectedYear, 0, 1)
+    yearStart.setHours(0, 0, 0, 0) // Normalize to start of day
     const yearEnd = new Date(selectedYear, 11, 31)
+    yearEnd.setHours(23, 59, 59, 999) // Normalize to end of day
     return { start: yearStart, end: yearEnd }
   }, [selectedYear])
 

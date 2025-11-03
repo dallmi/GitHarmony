@@ -5,6 +5,7 @@ import { calculateCommunicationsMetrics } from '../services/communicationsMetric
 import { exportExecutiveSummaryToCSV, downloadCSV } from '../utils/csvExportUtils'
 import { useIterationFilter } from '../contexts/IterationFilterContext'
 import HealthScoreConfigModal from './HealthScoreConfigModal'
+import { isBlocker } from '../services/metricsService'
 
 /**
  * Enhanced Executive Dashboard
@@ -354,8 +355,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
               {riskMetrics && riskMetrics.blockers > 0 && (() => {
                 const blockerIssues = issues.filter(i => {
                   if (i.state !== 'opened') return false
-                  const labels = i.labels?.map(l => l.toLowerCase()) || []
-                  return labels.some(l => l.includes('blocker'))
+                  return isBlocker(i.labels || [])
                 })
                 const isExpanded = expandedSections.blockers
                 const displayIssues = isExpanded ? blockerIssues : blockerIssues.slice(0, 3)
