@@ -340,6 +340,68 @@ export default function SprintPlanningView({ issues: allIssues }) {
         })()}
       </div>
 
+      {/* Team Configuration Required Message */}
+      {teamConfig.teamMembers.length === 0 && (
+        <div className="card" style={{ marginBottom: '24px', background: '#FEF3C7', border: '2px solid #F59E0B' }}>
+          <div style={{ display: 'flex', alignItems: 'start', gap: '16px' }}>
+            <div style={{ fontSize: '32px' }}>⚠️</div>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '600', color: '#92400E' }}>
+                Team Configuration Required
+              </h3>
+              <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#78350F', lineHeight: '1.5' }}>
+                To use Sprint Planning and capacity tracking, you need to configure your team members first.
+                Team configuration is project-specific, so each project in your portfolio needs its own team setup.
+              </p>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                <div style={{
+                  padding: '12px 16px',
+                  background: 'white',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  border: '1px solid #F59E0B'
+                }}>
+                  <div style={{ fontWeight: '600', color: '#92400E', marginBottom: '4px' }}>
+                    Step 1: Configure Team
+                  </div>
+                  <div style={{ color: '#78350F' }}>
+                    Go to <strong>Resources → Team Configuration</strong> and add team members
+                  </div>
+                </div>
+                <div style={{
+                  padding: '12px 16px',
+                  background: 'white',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  border: '1px solid #F59E0B'
+                }}>
+                  <div style={{ fontWeight: '600', color: '#92400E', marginBottom: '4px' }}>
+                    Step 2: Set Capacity
+                  </div>
+                  <div style={{ color: '#78350F' }}>
+                    Configure weekly capacity and story point conversion rates
+                  </div>
+                </div>
+                <div style={{
+                  padding: '12px 16px',
+                  background: 'white',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  border: '1px solid #F59E0B'
+                }}>
+                  <div style={{ fontWeight: '600', color: '#92400E', marginBottom: '4px' }}>
+                    Quick Start
+                  </div>
+                  <div style={{ color: '#78350F' }}>
+                    Use <strong>"Import from Issues"</strong> to automatically detect team members
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Capacity Overview Cards */}
       {sprintCapacityData && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
