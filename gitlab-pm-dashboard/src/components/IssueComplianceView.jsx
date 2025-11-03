@@ -389,6 +389,16 @@ Best regards`
         {!isLegendCollapsed && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
+              <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#1E40AF', marginBottom: '8px' }}>Compliance Score Calculation</h4>
+              <div style={{ fontSize: '13px', color: '#1E3A8A', padding: '12px', background: '#DBEAFE', borderRadius: '6px', marginBottom: '4px', border: '1px solid #93C5FD' }}>
+                <strong>Score = (Passed Criteria / Total Criteria) × 100</strong>
+                <div style={{ marginTop: '8px', lineHeight: '1.5' }}>
+                  Each issue is checked against all enabled quality criteria (assignee, weight, epic, description, labels, milestone, due date, priority, stale).
+                  The score reflects how many criteria the issue passes. For example, if 6 out of 9 criteria pass, the score is 67%.
+                </div>
+              </div>
+            </div>
+            <div>
               <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#1E40AF', marginBottom: '8px' }}>Issue Card Backgrounds</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
