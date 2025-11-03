@@ -387,7 +387,13 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                           e.currentTarget.style.transform = 'translateX(0)'
                         }}
                       >
-                        <div style={{ fontSize: '16px' }}>🚫</div>
+                        <div style={{
+                          width: '4px',
+                          height: '100%',
+                          background: 'var(--danger)',
+                          borderRadius: '2px',
+                          marginRight: '8px'
+                        }} />
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '2px' }}>
                             #{issue.iid} {issue.title}
@@ -470,7 +476,13 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                             e.currentTarget.style.transform = 'translateX(0)'
                           }}
                         >
-                          <div style={{ fontSize: '16px' }}>⏰</div>
+                          <div style={{
+                            width: '4px',
+                            height: '100%',
+                            background: 'var(--warning)',
+                            borderRadius: '2px',
+                            marginRight: '8px'
+                          }} />
                           <div style={{ flex: 1 }}>
                             <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '2px' }}>
                               #{issue.iid} {issue.title}
@@ -545,7 +557,13 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                           e.currentTarget.style.transform = 'translateX(0)'
                         }}
                       >
-                        <div style={{ fontSize: '16px' }}>⚡</div>
+                        <div style={{
+                          width: '4px',
+                          height: '100%',
+                          background: 'var(--info)',
+                          borderRadius: '2px',
+                          marginRight: '8px'
+                        }} />
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '2px' }}>
                             #{issue.iid} {issue.title}
@@ -599,61 +617,110 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
             {upcomingMilestones.map(milestone => {
               const badge = getMilestoneStatusBadge(milestone.status)
 
+              // Calculate progress and risk factors
+              const progress = milestone.stats && milestone.stats.total_issues > 0
+                ? Math.round((milestone.stats.closed_issues / milestone.stats.total_issues) * 100)
+                : 0
+              const openIssues = milestone.stats ? milestone.stats.total_issues - milestone.stats.closed_issues : 0
+
+              // Determine risk reason for at-risk milestones
+              let riskReason = null
+              if (milestone.status === 'at-risk') {
+                if (milestone.daysUntil <= 3) {
+                  riskReason = `Due in ${milestone.daysUntil} day${milestone.daysUntil !== 1 ? 's' : ''} with ${openIssues} open issue${openIssues !== 1 ? 's' : ''} (${progress}% complete)`
+                } else if (progress < 50 && milestone.daysUntil <= 7) {
+                  riskReason = `Only ${progress}% complete with ${milestone.daysUntil} days remaining`
+                } else if (openIssues > 0) {
+                  riskReason = `${openIssues} open issue${openIssues !== 1 ? 's' : ''} remaining (${progress}% complete)`
+                }
+              } else if (milestone.status === 'overdue') {
+                riskReason = `Overdue with ${openIssues} open issue${openIssues !== 1 ? 's' : ''}`
+              }
+
               return (
                 <div
                   key={milestone.id}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
                     padding: '16px',
                     background: 'var(--bg-secondary)',
                     borderRadius: '8px',
-                    gap: '20px'
+                    borderLeft: milestone.status === 'at-risk' || milestone.status === 'overdue'
+                      ? `4px solid ${badge.color}`
+                      : 'none'
                   }}
                 >
-                  {/* Date */}
-                  <div style={{
-                    width: '80px',
-                    textAlign: 'center',
-                    borderRight: '2px solid var(--border-light)',
-                    paddingRight: '20px'
-                  }}>
-                    <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--primary)' }}>
-                      {milestone.daysUntil}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    {/* Date */}
+                    <div style={{
+                      width: '80px',
+                      textAlign: 'center',
+                      borderRight: '2px solid var(--border-light)',
+                      paddingRight: '20px'
+                    }}>
+                      <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--primary)' }}>
+                        {milestone.daysUntil}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        {milestone.daysUntil === 1 ? 'day' : 'days'}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                      {milestone.daysUntil === 1 ? 'day' : 'days'}
-                    </div>
-                  </div>
 
-                  {/* Milestone Info */}
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                      {milestone.title}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      {milestone.description || 'No description'}
-                    </div>
-                  </div>
+                    {/* Milestone Info */}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                        {milestone.title}
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: riskReason ? '8px' : '0' }}>
+                        {milestone.description || 'No description'}
+                      </div>
 
-                  {/* Status */}
-                  <span
-                    style={{
-                      padding: '4px 12px',
-                      borderRadius: '12px',
-                      fontSize: '11px',
-                      fontWeight: '600',
-                      color: badge.color,
-                      background: badge.background,
-                      whiteSpace: 'nowrap',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <span>{badge.icon}</span>
-                    <span>{badge.label}</span>
-                  </span>
+                      {/* Risk Context - only for at-risk or overdue milestones */}
+                      {riskReason && (
+                        <div style={{
+                          padding: '8px 12px',
+                          background: milestone.status === 'overdue' ? '#FEE2E2' : '#FEF3C7',
+                          borderRadius: '6px',
+                          marginTop: '8px'
+                        }}>
+                          <div style={{
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            color: milestone.status === 'overdue' ? '#991B1B' : '#92400E',
+                            marginBottom: '4px'
+                          }}>
+                            Risk Factor:
+                          </div>
+                          <div style={{
+                            fontSize: '12px',
+                            color: milestone.status === 'overdue' ? '#DC2626' : '#D97706',
+                            lineHeight: '1.4'
+                          }}>
+                            {riskReason}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Status */}
+                    <span
+                      style={{
+                        padding: '4px 12px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        color: badge.color,
+                        background: badge.background,
+                        whiteSpace: 'nowrap',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        alignSelf: 'flex-start'
+                      }}
+                    >
+                      <span>{badge.icon}</span>
+                      <span>{badge.label}</span>
+                    </span>
+                  </div>
                 </div>
               )
             })}
