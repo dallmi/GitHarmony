@@ -1,15 +1,24 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { getInitiatives, getStatusBadge, formatDate } from '../services/initiativeService'
 import { getUpcomingMilestones, getMilestoneStatusBadge } from '../services/milestoneTimelineService'
 import { calculateCommunicationsMetrics } from '../services/communicationsMetricsService'
 import { exportExecutiveSummaryToCSV, downloadCSV } from '../utils/csvExportUtils'
+import { useIterationFilter } from '../contexts/IterationFilterContext'
+import IterationFilterDropdown from './IterationFilterDropdown'
+import HealthScoreConfigModal from './HealthScoreConfigModal'
 
 /**
  * Enhanced Executive Dashboard
  * Card-based layout inspired by corporate dashboards
  * Shows initiatives, KPIs, risks, and upcoming milestones
+ * Now includes iteration filter and configurable health score
  */
-export default function EnhancedExecutiveDashboard({ stats, healthScore, issues, milestones, epics, risks }) {
+export default function EnhancedExecutiveDashboard({ stats, healthScore, issues: allIssues, milestones, epics, risks }) {
+  const [showHealthConfig, setShowHealthConfig] = useState(false)
+  const [configKey, setConfigKey] = useState(0) // Force re-render on config change
+
+  // Use filtered issues from iteration context
+  const { filteredIssues: issues } = useIterationFilter()
   // Get initiatives from epics
   const initiatives = useMemo(() => {
     if (!epics || !issues) return []
@@ -48,8 +57,18 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues,
     downloadCSV(csvContent, `executive-summary-${date}.csv`)
   }
 
+  const handleConfigSave = (newConfig) => {
+    setConfigKey(prev => prev + 1) // Force re-render
+    window.location.reload() // Reload to apply new health score calculation
+  }
+
   return (
     <div className="container">
+      {/* Iteration Filter */}
+      <div style={{ marginBottom: '20px' }}>
+        <IterationFilterDropdown />
+      </div>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
@@ -59,18 +78,41 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues,
             Comprehensive view of all initiatives and key performance indicators
           </p>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={handleExportCSV}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
-        >
-          <span>Export Summary CSV</span>
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            className="btn"
+            onClick={() => setShowHealthConfig(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: 'var(--bg-secondary)'
+            }}
+            title="Configure health score calculation"
+          >
+            <span>⚙️</span>
+            <span>Health Score Settings</span>
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={handleExportCSV}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <span>Export Summary CSV</span>
+          </button>
+        </div>
       </div>
+
+      {/* Health Score Config Modal */}
+      <HealthScoreConfigModal
+        isOpen={showHealthConfig}
+        onClose={() => setShowHealthConfig(false)}
+        onSave={handleConfigSave}
+      />
 
       {/* Top KPIs */}
       <div className="grid grid-4" style={{ marginBottom: '30px' }}>

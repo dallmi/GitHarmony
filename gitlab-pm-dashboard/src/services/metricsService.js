@@ -73,27 +73,51 @@ export function calculateStats(issues) {
 }
 
 /**
+ * Load health score configuration from localStorage or use defaults
+ */
+function getHealthScoreConfig() {
+  const saved = localStorage.getItem('healthScoreConfig')
+  if (saved) {
+    try {
+      return JSON.parse(saved)
+    } catch (e) {
+      console.error('Failed to parse health score config:', e)
+    }
+  }
+
+  // Import defaults
+  const {
+    HEALTH_SCORE_WEIGHTS,
+    HEALTH_SCORE_AMPLIFIERS,
+    HEALTH_THRESHOLDS
+  } = require('../constants/config')
+
+  return {
+    weights: HEALTH_SCORE_WEIGHTS,
+    amplifiers: HEALTH_SCORE_AMPLIFIERS,
+    thresholds: HEALTH_THRESHOLDS
+  }
+}
+
+/**
  * Calculate health score based on multiple dimensions
+ * Now uses configurable weights and amplifiers from localStorage or defaults
  */
 export function calculateHealthScore(stats) {
-  const weights = {
-    completion: 0.3,
-    schedule: 0.25,
-    blockers: 0.25,
-    risk: 0.2
-  }
+  const config = getHealthScoreConfig()
+  const { weights, amplifiers, thresholds } = config
 
   const completionScore = stats.completionRate
   const scheduleScore = stats.total > 0
-    ? Math.max(0, 100 - (stats.overdue / stats.total * 200))
+    ? Math.max(0, 100 - (stats.overdue / stats.total * amplifiers.schedule))
     : 100
 
   const blockerScore = stats.total > 0
-    ? Math.max(0, 100 - (stats.blockers / stats.total * 300))
+    ? Math.max(0, 100 - (stats.blockers / stats.total * amplifiers.blockers))
     : 100
 
   const riskScore = stats.total > 0
-    ? Math.max(0, 100 - (stats.atRisk / stats.total * 200))
+    ? Math.max(0, 100 - (stats.atRisk / stats.total * amplifiers.risk))
     : 100
 
   const overall = Math.round(
@@ -104,8 +128,8 @@ export function calculateHealthScore(stats) {
   )
 
   let status = 'red'
-  if (overall >= 75) status = 'green'
-  else if (overall >= 50) status = 'amber'
+  if (overall >= thresholds.good) status = 'green'
+  else if (overall >= thresholds.warning) status = 'amber'
 
   return {
     score: overall,

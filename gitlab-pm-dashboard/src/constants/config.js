@@ -8,6 +8,7 @@ export const APP_CONFIG = {
   defaultGitLabUrl: 'https://gitlab.com',
 }
 
+// Health Score Configuration (can be overridden via UI)
 export const HEALTH_SCORE_WEIGHTS = {
   completion: 0.3,
   schedule: 0.25,
@@ -15,9 +16,21 @@ export const HEALTH_SCORE_WEIGHTS = {
   risk: 0.2
 }
 
+export const HEALTH_SCORE_AMPLIFIERS = {
+  schedule: 200,  // Multiplier for overdue issues penalty
+  blockers: 300,  // Multiplier for blocker issues penalty
+  risk: 200       // Multiplier for at-risk issues penalty
+}
+
 export const HEALTH_THRESHOLDS = {
   good: 80,
   warning: 60
+}
+
+// Timeframe for health score calculation
+export const HEALTH_SCORE_TIMEFRAME = {
+  mode: 'iteration', // 'iteration', 'days', 'all'
+  days: 90           // Used when mode = 'days'
 }
 
 export const RISK_MATRIX = {
