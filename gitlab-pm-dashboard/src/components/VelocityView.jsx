@@ -16,7 +16,7 @@ import { useIterationFilter } from '../contexts/IterationFilterContext'
  */
 export default function VelocityView({ issues: allIssues }) {
   // Use filtered issues from iteration context
-  const { filteredIssues: issues } = useIterationFilter()
+  const { filteredIssues: issues, selectedIterations, isFiltered } = useIterationFilter()
   // Get velocity root cause analysis
   const getVelocityRootCause = (velocityData, trend, avgVelocity) => {
     if (!velocityData || velocityData.length < 2) return { causes: [], actions: [] }
@@ -144,7 +144,20 @@ export default function VelocityView({ issues: allIssues }) {
     const velocityData = calculateVelocity(issues)
     const avgVelocity = calculateAverageVelocity(velocityData, 3)
     const trend = calculateVelocityTrend(velocityData)
-    const currentSprint = getCurrentSprint(issues)
+
+    // Use selected iteration for burndown, or auto-detect current sprint
+    let currentSprint
+    if (isFiltered && selectedIterations.length === 1) {
+      // Single iteration selected - use it for burndown
+      currentSprint = selectedIterations[0]
+    } else if (isFiltered && selectedIterations.length > 1) {
+      // Multiple iterations selected - use the most recent one
+      currentSprint = selectedIterations[0] // They're sorted newest first
+    } else {
+      // No filter or "All" selected - auto-detect current sprint
+      currentSprint = getCurrentSprint(issues)
+    }
+
     const burndown = calculateBurndown(issues, currentSprint)
     const prediction = predictCompletion(issues, avgVelocity)
 
@@ -156,7 +169,7 @@ export default function VelocityView({ issues: allIssues }) {
       burndown,
       prediction
     }
-  }, [issues])
+  }, [issues, selectedIterations, isFiltered])
 
   if (!analytics || analytics.velocityData.length === 0) {
     return (
