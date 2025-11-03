@@ -469,7 +469,8 @@ export default function VelocityView({ issues: allIssues }) {
                     {(() => {
                       const start = new Date(burndown.sprintStart)
                       const end = new Date(burndown.sprintEnd)
-                      const totalDays = Math.ceil((end - start) / (24 * 60 * 60 * 1000))
+                      // Use floor to match velocityService calculation
+                      const totalDays = Math.floor((end - start) / (24 * 60 * 60 * 1000))
 
                       // Helper function: convert date to X coordinate percentage
                       const dateToXPos = (dateStr) => {
@@ -698,7 +699,8 @@ export default function VelocityView({ issues: allIssues }) {
                       const end = new Date(burndown.sprintEnd)
                       const today = new Date()
                       today.setHours(0, 0, 0, 0)
-                      const totalDays = Math.ceil((end - start) / (24 * 60 * 60 * 1000))
+                      // Use floor to match velocityService and SVG calculations
+                      const totalDays = Math.floor((end - start) / (24 * 60 * 60 * 1000))
                       const labels = []
 
                       // Determine optimal interval based on sprint length

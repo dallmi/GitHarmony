@@ -172,7 +172,8 @@ export function calculateBurndown(issues, currentSprint) {
 
   // Generate ideal burndown line (linear)
   const idealData = []
-  const days = Math.ceil((sprintEnd - sprintStart) / (24 * 60 * 60 * 1000))
+  // Use floor to match actual day calculations consistently
+  const days = Math.floor((sprintEnd - sprintStart) / (24 * 60 * 60 * 1000))
 
   for (let day = 0; day <= days; day++) {
     const date = new Date(sprintStart.getTime() + day * 24 * 60 * 60 * 1000)
@@ -195,12 +196,6 @@ export function calculateBurndown(issues, currentSprint) {
   const actualData = []
   let remainingIssues = totalIssues
 
-  // Start point
-  actualData.push({
-    date: sprintStart.toISOString().split('T')[0],
-    remaining: totalIssues
-  })
-
   // Track daily progress
   const dayMap = new Map()
   closedIssues.forEach(({ date }) => {
@@ -208,12 +203,13 @@ export function calculateBurndown(issues, currentSprint) {
     dayMap.set(dateKey, (dayMap.get(dateKey) || 0) + 1)
   })
 
-  // Generate actual burndown points
-  for (let day = 1; day <= days; day++) {
+  // Generate actual burndown points (start at day 0 to match ideal)
+  for (let day = 0; day <= days; day++) {
     const date = new Date(sprintStart.getTime() + day * 24 * 60 * 60 * 1000)
     const dateKey = date.toISOString().split('T')[0]
 
-    if (dayMap.has(dateKey)) {
+    // For day 0, don't check closed issues (start point)
+    if (day > 0 && dayMap.has(dateKey)) {
       remainingIssues -= dayMap.get(dateKey)
     }
 
@@ -222,7 +218,7 @@ export function calculateBurndown(issues, currentSprint) {
       remaining: Math.max(0, remainingIssues)
     })
 
-    // Stop at today
+    // Stop at today (after adding today's point)
     if (date >= today) break
   }
 
