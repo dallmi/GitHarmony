@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { isConfigured, loadConfig } from './services/storageService'
-import { exportToPowerPoint } from './services/pptExportService'
 import useGitLabData from './hooks/useGitLabData'
 import useHealthScore from './hooks/useHealthScore'
 import useRisks from './hooks/useRisks'
@@ -13,10 +12,8 @@ import IterationFilterDropdown from './components/IterationFilterDropdown'
 import { getViewPreference } from './services/userPreferencesService'
 import PortfolioFilterDropdown from './components/PortfolioFilterDropdown'
 import ConfigModal from './components/ConfigModal'
-import StatusGeneratorModal from './components/StatusGeneratorModal'
 import ExecutiveDashboard from './components/ExecutiveDashboard'
 import EnhancedExecutiveDashboard from './components/EnhancedExecutiveDashboard'
-import PortfolioView from './components/PortfolioView'
 import RoadmapView from './components/RoadmapView'
 import VelocityView from './components/VelocityView'
 import ResourceCapacityView from './components/ResourceCapacityView'
@@ -40,7 +37,6 @@ function App() {
   console.log('App: Configuration check:', configured)
 
   const [showConfigModal, setShowConfigModal] = useState(!configured)
-  const [showStatusModal, setShowStatusModal] = useState(false)
   const [showRoleModal, setShowRoleModal] = useState(false)
   const [useGroupedNav, setUseGroupedNav] = useState(getViewPreference() === 'grouped')
   console.log('App: showConfigModal:', !configured)
@@ -71,33 +67,6 @@ function App() {
     setActiveView('executive')
   }
 
-  const handleExportPPT = async () => {
-    console.log('App: handleExportPPT called')
-
-    if (!stats || !healthScore) {
-      alert('Please wait for data to load before exporting')
-      return
-    }
-
-    try {
-      const config = loadConfig()
-      const filename = await exportToPowerPoint({
-        projectId: config.projectId || 'Unknown Project',
-        stats,
-        healthScore,
-        issues,
-        milestones,
-        risks
-      })
-
-      console.log('App: PowerPoint export successful:', filename)
-      alert(`PowerPoint exported successfully: ${filename}`)
-    } catch (error) {
-      console.error('App: PowerPoint export failed:', error)
-      alert(`Export failed: ${error.message}`)
-    }
-  }
-
   console.log('App: About to render, current state:', { activeView, showConfigModal, configured, issuesCount: issues?.length, loading })
 
   return (
@@ -108,8 +77,6 @@ function App() {
           healthScore={healthScore}
           onRefresh={refresh}
           onConfigure={() => setShowConfigModal(true)}
-          onExportPPT={handleExportPPT}
-          onGenerateStatus={() => setShowStatusModal(true)}
           onChangeRole={() => setShowRoleModal(true)}
           loading={loading}
         />
@@ -119,9 +86,7 @@ function App() {
             activeView={activeView}
             onViewChange={setActiveView}
             onProjectChange={isConfigured() ? (projectId) => {
-              if (projectId === 'portfolio-manage') {
-                setActiveView('portfolio')
-              } else if (projectId === 'cross-project') {
+              if (projectId === 'cross-project') {
                 // Cross-project mode: trigger data refresh to aggregate all projects
                 console.log('Cross-project view activated - refreshing data')
                 refresh()
@@ -204,9 +169,6 @@ function App() {
           </div>
         )}
 
-        {/* Portfolio view is always available */}
-        {activeView === 'portfolio' && <PortfolioView onProjectSwitch={handleProjectSwitch} />}
-
         {isConfigured() && issues.length > 0 && (
           <>
             {activeView === 'executive' && (
@@ -247,17 +209,7 @@ function App() {
         show={showConfigModal}
         onClose={() => setShowConfigModal(false)}
         onSave={handleConfigSave}
-      />
-
-      <StatusGeneratorModal
-        show={showStatusModal}
-        onClose={() => setShowStatusModal(false)}
-        projectId={loadConfig()?.projectId || 'Unknown Project'}
-        stats={stats}
-        healthScore={healthScore}
-        issues={issues}
-        milestones={milestones}
-        risks={risks}
+        onProjectSwitch={handleProjectSwitch}
       />
 
       <RoleSelectorModal

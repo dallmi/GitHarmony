@@ -1,6 +1,6 @@
 import React from 'react'
 
-export default function Header({ stats, healthScore, onRefresh, onConfigure, onExportPPT, onGenerateStatus, onChangeRole, loading }) {
+export default function Header({ stats, healthScore, onRefresh, onConfigure, onChangeRole, loading }) {
   return (
     <div className="header">
       <div style={{
@@ -75,22 +75,6 @@ export default function Header({ stats, healthScore, onRefresh, onConfigure, onE
           </button>
 
           <button
-            className="btn btn-primary"
-            onClick={onExportPPT}
-            disabled={loading || !stats}
-          >
-            Export PPT
-          </button>
-
-          <button
-            className="btn btn-secondary"
-            onClick={onGenerateStatus}
-            disabled={loading || !stats}
-          >
-            Generate Status
-          </button>
-
-          <button
             className="btn btn-secondary"
             onClick={onChangeRole}
             title="Change your role to customize navigation"
@@ -99,7 +83,7 @@ export default function Header({ stats, healthScore, onRefresh, onConfigure, onE
           </button>
 
           <button
-            className="btn"
+            className="btn btn-primary"
             onClick={onConfigure}
           >
             Configure
