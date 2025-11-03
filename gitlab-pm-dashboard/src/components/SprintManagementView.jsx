@@ -1,15 +1,19 @@
-import React, { useState } from 'react'
-import SprintPlanningView from './SprintPlanningView'
+import React, { useState, lazy, Suspense } from 'react'
 import SprintBoardView from './SprintBoardView'
 import SprintGoalSection from './SprintGoalSection'
 import RetrospectiveActionsSection from './RetrospectiveActionsSection'
 import IterationFilterDropdown from './IterationFilterDropdown'
+
+// Lazy load heavy components to improve initial render performance
+// Only loads when user expands the section
+const SprintPlanningView = lazy(() => import('./SprintPlanningView'))
 
 /**
  * Unified Sprint Management View
  * Combines Sprint Planning + Sprint Board into one cohesive workflow
  * Planning section is collapsible, Board is always visible
  * Consolidates 2 tabs into 1 view
+ * Performance: Uses React.lazy() to defer loading heavy SprintPlanningView
  */
 export default function SprintManagementView({ issues }) {
   const [showPlanning, setShowPlanning] = useState(false)
@@ -116,7 +120,29 @@ export default function SprintManagementView({ issues }) {
 
         {showPlanning && (
           <div style={{ padding: '20px', borderTop: '1px solid #E5E7EB' }}>
-            <SprintPlanningView issues={issues} />
+            <Suspense fallback={
+              <div style={{
+                padding: '40px',
+                textAlign: 'center',
+                color: '#6B7280'
+              }}>
+                <div style={{
+                  display: 'inline-block',
+                  width: '32px',
+                  height: '32px',
+                  border: '3px solid #E5E7EB',
+                  borderTop: '3px solid #E60000',
+                  borderRadius: '50%',
+                  animation: 'spin 0.8s linear infinite',
+                  marginBottom: '12px'
+                }}></div>
+                <div style={{ fontSize: '14px', fontWeight: '500' }}>
+                  Loading Sprint Planning...
+                </div>
+              </div>
+            }>
+              <SprintPlanningView issues={issues} />
+            </Suspense>
           </div>
         )}
       </div>

@@ -325,3 +325,9 @@ tr:hover {
 
 .text-muted { color: var(--text-secondary); }
 .text-small { font-size: 12px; }
+
+/* Animations */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
