@@ -54,7 +54,7 @@ export default function IterationFilterDropdown() {
   }
 
   return (
-    <div ref={dropdownRef} style={{ position: 'relative', minWidth: '280px' }}>
+    <div ref={dropdownRef} style={{ position: 'relative', width: '100%', maxWidth: '500px' }}>
         <button
           onClick={() => setIsOpen(!isOpen)}
           style={{
@@ -86,6 +86,7 @@ export default function IterationFilterDropdown() {
           <div style={{
             position: 'absolute',
             top: '100%',
+            left: 0,
             right: 0,
             marginTop: '4px',
             background: 'white',
@@ -93,7 +94,6 @@ export default function IterationFilterDropdown() {
             borderRadius: '6px',
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
             maxHeight: '400px',
-            minWidth: '350px',
             overflowY: 'auto',
             zIndex: 1000
           }}>
