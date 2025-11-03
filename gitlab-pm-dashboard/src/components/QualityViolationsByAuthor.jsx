@@ -83,23 +83,11 @@ export default function QualityViolationsByAuthor({ nonCompliantIssues }) {
             authorData.byCriterion.set(violation.criterion, {
               criterion: violation.criterion,
               count: 0,
-              issues: [],
-              highestSeverity: 'low', // Track highest severity
-              severityCounts: { high: 0, medium: 0, low: 0 }
+              issues: []
             })
           }
           const criterionData = authorData.byCriterion.get(violation.criterion)
           criterionData.count++
-
-          // Update severity tracking
-          if (violation.severity) {
-            criterionData.severityCounts[violation.severity]++
-            // Update highest severity
-            if (violation.severity === 'high' ||
-               (violation.severity === 'medium' && criterionData.highestSeverity === 'low')) {
-              criterionData.highestSeverity = violation.severity
-            }
-          }
 
           if (!criterionData.issues.find(i => i.id === issue.id)) {
             criterionData.issues.push(issue)
@@ -400,8 +388,9 @@ export default function QualityViolationsByAuthor({ nonCompliantIssues }) {
               {criteriaArray.map(item => {
                 const percentage = ((item.count / authorData.totalViolations) * 100).toFixed(0)
                 const isSelected = selectedCriterion === item.criterion
-                // Use actual violation severity, not criterion definition
-                const actualSeverity = item.highestSeverity || 'low'
+                // Look up criterion definition to get severity
+                const criterionDef = criteria.find(c => c.key === item.criterion)
+                const severity = criterionDef?.severity || 'low'
 
                 return (
                   <div
@@ -425,13 +414,13 @@ export default function QualityViolationsByAuthor({ nonCompliantIssues }) {
                           <span style={{
                             fontSize: '11px',
                             padding: '2px 6px',
-                            background: getSeverityColor(actualSeverity) + '20',
-                            color: getSeverityColor(actualSeverity),
+                            background: getSeverityColor(severity) + '20',
+                            color: getSeverityColor(severity),
                             borderRadius: '4px',
                             fontWeight: '600',
                             textTransform: 'uppercase'
                           }}>
-                            {actualSeverity}
+                            {severity}
                           </span>
                         </div>
                         <div style={{ fontSize: '12px', color: '#6B7280' }}>
@@ -441,7 +430,7 @@ export default function QualityViolationsByAuthor({ nonCompliantIssues }) {
                       <div style={{
                         fontSize: '20px',
                         fontWeight: '700',
-                        color: getSeverityColor(actualSeverity)
+                        color: getSeverityColor(severity)
                       }}>
                         {item.count}
                       </div>
