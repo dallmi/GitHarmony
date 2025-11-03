@@ -83,11 +83,24 @@ export default function QualityViolationsByAuthor({ nonCompliantIssues }) {
             authorData.byCriterion.set(violation.criterion, {
               criterion: violation.criterion,
               count: 0,
-              issues: []
+              issues: [],
+              highestSeverity: 'low', // Track highest severity
+              severityCounts: { high: 0, medium: 0, low: 0 }
             })
           }
           const criterionData = authorData.byCriterion.get(violation.criterion)
           criterionData.count++
+
+          // Update severity tracking
+          if (violation.severity) {
+            criterionData.severityCounts[violation.severity]++
+            // Update highest severity
+            if (violation.severity === 'high' ||
+               (violation.severity === 'medium' && criterionData.highestSeverity === 'low')) {
+              criterionData.highestSeverity = violation.severity
+            }
+          }
+
           if (!criterionData.issues.find(i => i.id === issue.id)) {
             criterionData.issues.push(issue)
           }
@@ -386,8 +399,9 @@ export default function QualityViolationsByAuthor({ nonCompliantIssues }) {
             <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
               {criteriaArray.map(item => {
                 const percentage = ((item.count / authorData.totalViolations) * 100).toFixed(0)
-                const criterionInfo = criteria.find(c => c.id === item.criterion)
                 const isSelected = selectedCriterion === item.criterion
+                // Use actual violation severity, not criterion definition
+                const actualSeverity = item.highestSeverity || 'low'
 
                 return (
                   <div
@@ -411,12 +425,13 @@ export default function QualityViolationsByAuthor({ nonCompliantIssues }) {
                           <span style={{
                             fontSize: '11px',
                             padding: '2px 6px',
-                            background: getSeverityColor(criterionInfo?.severity) + '20',
-                            color: getSeverityColor(criterionInfo?.severity),
+                            background: getSeverityColor(actualSeverity) + '20',
+                            color: getSeverityColor(actualSeverity),
                             borderRadius: '4px',
-                            fontWeight: '600'
+                            fontWeight: '600',
+                            textTransform: 'uppercase'
                           }}>
-                            {criterionInfo?.severity || 'low'}
+                            {actualSeverity}
                           </span>
                         </div>
                         <div style={{ fontSize: '12px', color: '#6B7280' }}>
@@ -426,7 +441,7 @@ export default function QualityViolationsByAuthor({ nonCompliantIssues }) {
                       <div style={{
                         fontSize: '20px',
                         fontWeight: '700',
-                        color: getSeverityColor(criterionInfo?.severity)
+                        color: getSeverityColor(actualSeverity)
                       }}>
                         {item.count}
                       </div>
@@ -445,40 +460,69 @@ export default function QualityViolationsByAuthor({ nonCompliantIssues }) {
                 borderRadius: '8px',
                 border: '1px solid #E5E7EB'
               }}>
-                <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: '#1F2937' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#1F2937' }}>
                   Issues with {getCriterionLabel(selectedCriterion)} violations
                 </h4>
+                <p style={{ fontSize: '12px', color: '#6B7280', marginBottom: '12px' }}>
+                  {filteredDetailIssues.length} issue{filteredDetailIssues.length !== 1 ? 's' : ''} found. Click to open in GitLab.
+                </p>
                 <div style={{ display: 'grid', gap: '8px' }}>
-                  {filteredDetailIssues.map(issue => (
-                    <a
-                      key={issue.id}
-                      href={issue.web_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: 'block',
-                        padding: '8px 12px',
-                        background: 'white',
-                        border: '1px solid #E5E7EB',
-                        borderRadius: '4px',
-                        textDecoration: 'none',
-                        color: '#1F2937',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#9CA3AF'
-                        e.currentTarget.style.background = '#F9FAFB'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = '#E5E7EB'
-                        e.currentTarget.style.background = 'white'
-                      }}
-                    >
-                      <div style={{ fontSize: '13px', fontWeight: '500' }}>
-                        #{issue.iid} {issue.title}
-                      </div>
-                    </a>
-                  ))}
+                  {filteredDetailIssues.map(issue => {
+                    // Count how many violations of this criterion exist in this issue
+                    const violationCount = issue.violations.filter(v => v.criterion === selectedCriterion).length
+
+                    return (
+                      <a
+                        key={issue.id}
+                        href={issue.web_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '10px 12px',
+                          background: 'white',
+                          border: '1px solid #E5E7EB',
+                          borderRadius: '4px',
+                          textDecoration: 'none',
+                          color: '#1F2937',
+                          transition: 'all 0.2s',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = '#3B82F6'
+                          e.currentTarget.style.background = '#EFF6FF'
+                          e.currentTarget.style.transform = 'translateX(4px)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = '#E5E7EB'
+                          e.currentTarget.style.background = 'white'
+                          e.currentTarget.style.transform = 'translateX(0)'
+                        }}
+                      >
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '2px' }}>
+                            #{issue.iid} {issue.title}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
+                            {violationCount} violation{violationCount !== 1 ? 's' : ''} of this type
+                          </div>
+                        </div>
+                        <div style={{
+                          padding: '4px 8px',
+                          background: '#3B82F6',
+                          color: 'white',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          marginLeft: '12px'
+                        }}>
+                          Open →
+                        </div>
+                      </a>
+                    )
+                  })}
                 </div>
               </div>
             )}
