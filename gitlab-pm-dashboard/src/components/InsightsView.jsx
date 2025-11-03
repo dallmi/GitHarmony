@@ -142,13 +142,6 @@ export default function InsightsView({ issues, milestones, epics, stats, healthS
                     }}>
                       {getCategoryLabel(insight.category)}
                     </span>
-                    <span style={{
-                      fontSize: '11px',
-                      color: '#9CA3AF',
-                      marginLeft: 'auto'
-                    }}>
-                      Confidence: {insight.confidence}
-                    </span>
                   </div>
 
                   <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1F2937', marginBottom: '8px' }}>
