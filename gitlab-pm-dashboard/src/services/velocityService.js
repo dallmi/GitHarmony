@@ -212,6 +212,9 @@ export function calculateBurndown(issues, currentSprint) {
     const date = new Date(sprintStart.getTime() + day * 24 * 60 * 60 * 1000)
     date.setHours(0, 0, 0, 0) // Normalize to midnight for comparison
 
+    // Stop if we're past today (don't generate future data points)
+    if (date > today) break
+
     const dateKey = date.toISOString().split('T')[0]
 
     // For day 0, don't check closed issues (start point)
@@ -223,10 +226,6 @@ export function calculateBurndown(issues, currentSprint) {
       date: dateKey,
       remaining: Math.max(0, remainingIssues)
     })
-
-    // Stop after today (don't generate future data points)
-    // Check AFTER adding today's data point
-    if (date >= today) break
   }
 
   return {
