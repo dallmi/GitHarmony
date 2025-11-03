@@ -54,23 +54,7 @@ export default function IterationFilterDropdown() {
   }
 
   return (
-    <div style={{
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-      background: '#F9FAFB',
-      borderBottom: '1px solid #E5E7EB',
-      padding: '12px 24px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#6B7280', fontWeight: '600' }}>
-        <span>🔍</span>
-        <span>Filter by Iteration:</span>
-      </div>
-
-      <div ref={dropdownRef} style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
+    <div ref={dropdownRef} style={{ position: 'relative', minWidth: '280px' }}>
         <button
           onClick={() => setIsOpen(!isOpen)}
           style={{
@@ -102,7 +86,6 @@ export default function IterationFilterDropdown() {
           <div style={{
             position: 'absolute',
             top: '100%',
-            left: 0,
             right: 0,
             marginTop: '4px',
             background: 'white',
@@ -110,6 +93,7 @@ export default function IterationFilterDropdown() {
             borderRadius: '6px',
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
             maxHeight: '400px',
+            minWidth: '350px',
             overflowY: 'auto',
             zIndex: 1000
           }}>
@@ -205,51 +189,6 @@ export default function IterationFilterDropdown() {
             })}
           </div>
         )}
-      </div>
-
-      {/* Clear Button */}
-      {isFiltered && (
-        <button
-          onClick={clearSelection}
-          style={{
-            padding: '8px 16px',
-            background: 'white',
-            border: '1px solid #D1D5DB',
-            borderRadius: '6px',
-            fontSize: '13px',
-            cursor: 'pointer',
-            color: '#6B7280',
-            fontWeight: '500'
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.background = '#F9FAFB'
-            e.target.style.borderColor = '#9CA3AF'
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.background = 'white'
-            e.target.style.borderColor = '#D1D5DB'
-          }}
-        >
-          Clear
-        </button>
-      )}
-
-      {/* Active Filter Badge */}
-      {isFiltered && (
-        <div style={{
-          padding: '6px 12px',
-          background: '#DBEAFE',
-          color: '#1E40AF',
-          borderRadius: '6px',
-          fontSize: '12px',
-          fontWeight: '600',
-          whiteSpace: 'nowrap'
-        }}>
-          Filtered: {selectedIterations.length === 1
-            ? '1 iteration'
-            : `${selectedIterations.length} iterations`}
-        </div>
-      )}
     </div>
   )
 }
