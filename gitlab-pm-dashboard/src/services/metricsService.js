@@ -3,6 +3,12 @@
  * Handles all health scores, progress calculations, and aggregations
  */
 
+import {
+  HEALTH_SCORE_WEIGHTS,
+  HEALTH_SCORE_AMPLIFIERS,
+  HEALTH_THRESHOLDS
+} from '../constants/config.js'
+
 /**
  * Get progress percentage for an issue based on labels and state
  */
@@ -85,13 +91,7 @@ function getHealthScoreConfig() {
     }
   }
 
-  // Import defaults
-  const {
-    HEALTH_SCORE_WEIGHTS,
-    HEALTH_SCORE_AMPLIFIERS,
-    HEALTH_THRESHOLDS
-  } = require('../constants/config')
-
+  // Use imported defaults
   return {
     weights: HEALTH_SCORE_WEIGHTS,
     amplifiers: HEALTH_SCORE_AMPLIFIERS,
