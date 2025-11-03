@@ -27,7 +27,21 @@ export default function QuarterlyEpicTracker({ epics, issues }) {
       }
     })
 
-    return Array.from(quarterSet).sort().reverse()
+    // Sort by date (descending) instead of alphabetical string
+    return Array.from(quarterSet).sort((a, b) => {
+      // Parse "Q1 2024" format
+      const [qA, yearA] = a.split(' ')
+      const [qB, yearB] = b.split(' ')
+      const quarterNumA = parseInt(qA.substring(1))
+      const quarterNumB = parseInt(qB.substring(1))
+
+      // Compare years first (descending)
+      if (yearB !== yearA) {
+        return parseInt(yearB) - parseInt(yearA)
+      }
+      // Then compare quarters (descending)
+      return quarterNumB - quarterNumA
+    })
   }, [epics])
 
   // Calculate epic progress and RAG status
