@@ -16,6 +16,20 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
   const [showHealthConfig, setShowHealthConfig] = useState(false)
   const [configKey, setConfigKey] = useState(0) // Force re-render on config change
 
+  // State for expandable sections in Items Requiring Attention
+  const [expandedSections, setExpandedSections] = useState({
+    blockers: false,
+    overdue: false,
+    highPriority: false
+  })
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }))
+  }
+
   // Use filtered issues from iteration context
   const { filteredIssues: issues } = useIterationFilter()
   // Get initiatives from epics
@@ -337,119 +351,36 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {/* Blockers Section */}
-              {riskMetrics && riskMetrics.blockers > 0 && (
-                <div>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '12px 16px',
-                    background: '#FEE2E2',
-                    borderRadius: '8px 8px 0 0',
-                    borderLeft: '4px solid var(--danger)'
-                  }}>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--danger)' }}>
-                      {riskMetrics.blockers} Blocker{riskMetrics.blockers !== 1 ? 's' : ''}
-                    </div>
-                    <div style={{ marginLeft: 'auto', fontSize: '11px', color: '#991B1B', fontWeight: '600' }}>
-                      CRITICAL
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: '#FEF2F2', borderRadius: '0 0 8px 8px' }}>
-                    {issues.filter(i => {
-                      if (i.state !== 'opened') return false
-                      const labels = i.labels?.map(l => l.toLowerCase()) || []
-                      return labels.some(l => l.includes('blocker'))
-                    }).slice(0, 3).map(issue => (
-                      <a
-                        key={issue.id}
-                        href={issue.web_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          padding: '8px 12px',
-                          background: 'white',
-                          borderRadius: '6px',
-                          textDecoration: 'none',
-                          color: 'var(--text-primary)',
-                          border: '1px solid #FECACA',
-                          transition: 'all 0.2s'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = 'var(--danger)'
-                          e.currentTarget.style.transform = 'translateX(4px)'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor = '#FECACA'
-                          e.currentTarget.style.transform = 'translateX(0)'
-                        }}
-                      >
-                        <div style={{
-                          width: '4px',
-                          height: '100%',
-                          background: 'var(--danger)',
-                          borderRadius: '2px',
-                          marginRight: '8px'
-                        }} />
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '2px' }}>
-                            #{issue.iid} {issue.title}
-                          </div>
-                          {issue.assignees && issue.assignees.length > 0 && (
-                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                              Assigned to: {issue.assignees[0].name}
-                            </div>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '11px', color: 'var(--danger)', fontWeight: '600' }}>
-                          View →
-                        </div>
-                      </a>
-                    ))}
-                    {riskMetrics.blockers > 3 && (
-                      <div style={{ fontSize: '11px', color: '#991B1B', textAlign: 'center', marginTop: '4px', fontWeight: '600' }}>
-                        +{riskMetrics.blockers - 3} more blocker{riskMetrics.blockers - 3 !== 1 ? 's' : ''}
+              {riskMetrics && riskMetrics.blockers > 0 && (() => {
+                const blockerIssues = issues.filter(i => {
+                  if (i.state !== 'opened') return false
+                  const labels = i.labels?.map(l => l.toLowerCase()) || []
+                  return labels.some(l => l.includes('blocker'))
+                })
+                const isExpanded = expandedSections.blockers
+                const displayIssues = isExpanded ? blockerIssues : blockerIssues.slice(0, 3)
+                const hasMore = blockerIssues.length > 3
+
+                return (
+                  <div>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '12px 16px',
+                      background: '#FEE2E2',
+                      borderRadius: '8px 8px 0 0',
+                      borderLeft: '4px solid var(--danger)'
+                    }}>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--danger)' }}>
+                        {riskMetrics.blockers} Blocker{riskMetrics.blockers !== 1 ? 's' : ''}
                       </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Overdue Issues Section */}
-              {riskMetrics && riskMetrics.overdue > 0 && (
-                <div>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '12px 16px',
-                    background: '#FEF3C7',
-                    borderRadius: '8px 8px 0 0',
-                    borderLeft: '4px solid var(--warning)'
-                  }}>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#92400E' }}>
-                      {riskMetrics.overdue} Overdue Issue{riskMetrics.overdue !== 1 ? 's' : ''}
+                      <div style={{ marginLeft: 'auto', fontSize: '11px', color: '#991B1B', fontWeight: '600' }}>
+                        CRITICAL
+                      </div>
                     </div>
-                    <div style={{ marginLeft: 'auto', fontSize: '11px', color: '#92400E', fontWeight: '600' }}>
-                      OVERDUE
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: '#FFFBEB', borderRadius: '0 0 8px 8px' }}>
-                    {issues.filter(i => {
-                      if (i.state !== 'opened' || !i.due_date) return false
-                      const dueDate = new Date(i.due_date)
-                      const today = new Date()
-                      today.setHours(0, 0, 0, 0)
-                      return dueDate < today
-                    }).slice(0, 3).map(issue => {
-                      const dueDate = new Date(issue.due_date)
-                      const today = new Date()
-                      const daysOverdue = Math.floor((today - dueDate) / (24 * 60 * 60 * 1000))
-
-                      return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: '#FEF2F2', borderRadius: '0 0 8px 8px' }}>
+                      {displayIssues.map(issue => (
                         <a
                           key={issue.id}
                           href={issue.web_url}
@@ -464,22 +395,22 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                             borderRadius: '6px',
                             textDecoration: 'none',
                             color: 'var(--text-primary)',
-                            border: '1px solid #FDE68A',
+                            border: '1px solid #FECACA',
                             transition: 'all 0.2s'
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = 'var(--warning)'
+                            e.currentTarget.style.borderColor = 'var(--danger)'
                             e.currentTarget.style.transform = 'translateX(4px)'
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = '#FDE68A'
+                            e.currentTarget.style.borderColor = '#FECACA'
                             e.currentTarget.style.transform = 'translateX(0)'
                           }}
                         >
                           <div style={{
                             width: '4px',
                             height: '100%',
-                            background: 'var(--warning)',
+                            background: 'var(--danger)',
                             borderRadius: '2px',
                             marginRight: '8px'
                           }} />
@@ -487,106 +418,270 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                             <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '2px' }}>
                               #{issue.iid} {issue.title}
                             </div>
-                            <div style={{ fontSize: '11px', color: '#92400E' }}>
-                              {daysOverdue} day{daysOverdue !== 1 ? 's' : ''} overdue
-                            </div>
+                            {issue.assignees && issue.assignees.length > 0 && (
+                              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                Assigned to: {issue.assignees[0].name}
+                              </div>
+                            )}
                           </div>
-                          <div style={{ fontSize: '11px', color: 'var(--warning)', fontWeight: '600' }}>
+                          <div style={{ fontSize: '11px', color: 'var(--danger)', fontWeight: '600' }}>
                             View →
                           </div>
                         </a>
-                      )
-                    })}
-                    {riskMetrics.overdue > 3 && (
-                      <div style={{ fontSize: '11px', color: '#92400E', textAlign: 'center', marginTop: '4px', fontWeight: '600' }}>
-                        +{riskMetrics.overdue - 3} more overdue issue{riskMetrics.overdue - 3 !== 1 ? 's' : ''}
-                      </div>
-                    )}
+                      ))}
+                      {hasMore && (
+                        <button
+                          onClick={() => toggleSection('blockers')}
+                          style={{
+                            padding: '8px 12px',
+                            background: 'white',
+                            border: '1px solid #FCA5A5',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color: '#DC2626',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            marginTop: '4px'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#FEE2E2'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'white'
+                          }}
+                        >
+                          {isExpanded ? '▲ Show less' : `▼ Show all ${riskMetrics.blockers} blockers`}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )
+              })()}
+
+              {/* Overdue Issues Section */}
+              {riskMetrics && riskMetrics.overdue > 0 && (() => {
+                const overdueIssues = issues.filter(i => {
+                  if (i.state !== 'opened' || !i.due_date) return false
+                  const dueDate = new Date(i.due_date)
+                  const today = new Date()
+                  today.setHours(0, 0, 0, 0)
+                  return dueDate < today
+                })
+                const isExpanded = expandedSections.overdue
+                const displayIssues = isExpanded ? overdueIssues : overdueIssues.slice(0, 3)
+                const hasMore = overdueIssues.length > 3
+
+                return (
+                  <div>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '12px 16px',
+                      background: '#FEF3C7',
+                      borderRadius: '8px 8px 0 0',
+                      borderLeft: '4px solid var(--warning)'
+                    }}>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#92400E' }}>
+                        {riskMetrics.overdue} Overdue Issue{riskMetrics.overdue !== 1 ? 's' : ''}
+                      </div>
+                      <div style={{ marginLeft: 'auto', fontSize: '11px', color: '#92400E', fontWeight: '600' }}>
+                        OVERDUE
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: '#FFFBEB', borderRadius: '0 0 8px 8px' }}>
+                      {displayIssues.map(issue => {
+                        const dueDate = new Date(issue.due_date)
+                        const today = new Date()
+                        const daysOverdue = Math.floor((today - dueDate) / (24 * 60 * 60 * 1000))
+
+                        return (
+                          <a
+                            key={issue.id}
+                            href={issue.web_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '12px',
+                              padding: '8px 12px',
+                              background: 'white',
+                              borderRadius: '6px',
+                              textDecoration: 'none',
+                              color: 'var(--text-primary)',
+                              border: '1px solid #FDE68A',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = 'var(--warning)'
+                              e.currentTarget.style.transform = 'translateX(4px)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = '#FDE68A'
+                              e.currentTarget.style.transform = 'translateX(0)'
+                            }}
+                          >
+                            <div style={{
+                              width: '4px',
+                              height: '100%',
+                              background: 'var(--warning)',
+                              borderRadius: '2px',
+                              marginRight: '8px'
+                            }} />
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '2px' }}>
+                                #{issue.iid} {issue.title}
+                              </div>
+                              <div style={{ fontSize: '11px', color: '#92400E' }}>
+                                {daysOverdue} day{daysOverdue !== 1 ? 's' : ''} overdue
+                              </div>
+                            </div>
+                            <div style={{ fontSize: '11px', color: 'var(--warning)', fontWeight: '600' }}>
+                              View →
+                            </div>
+                          </a>
+                        )
+                      })}
+                      {hasMore && (
+                        <button
+                          onClick={() => toggleSection('overdue')}
+                          style={{
+                            padding: '8px 12px',
+                            background: 'white',
+                            border: '1px solid #FCD34D',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color: '#D97706',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            marginTop: '4px'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#FEF3C7'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'white'
+                          }}
+                        >
+                          {isExpanded ? '▲ Show less' : `▼ Show all ${riskMetrics.overdue} overdue issues`}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* High Priority Issues Section */}
-              {riskMetrics && riskMetrics.highPriority > 0 && (
-                <div>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '12px 16px',
-                    background: '#DBEAFE',
-                    borderRadius: '8px 8px 0 0',
-                    borderLeft: '4px solid var(--info)'
-                  }}>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#1E40AF' }}>
-                      {riskMetrics.highPriority} High Priority Issue{riskMetrics.highPriority !== 1 ? 's' : ''}
-                    </div>
-                    <div style={{ marginLeft: 'auto', fontSize: '11px', color: '#1E40AF', fontWeight: '600' }}>
-                      HIGH PRIORITY
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: '#EFF6FF', borderRadius: '0 0 8px 8px' }}>
-                    {issues.filter(i => {
-                      if (i.state !== 'opened') return false
-                      const labels = i.labels?.map(l => l.toLowerCase()) || []
-                      return labels.some(l => l.includes('priority::high') || l.includes('critical') || l.includes('urgent'))
-                    }).slice(0, 3).map(issue => (
-                      <a
-                        key={issue.id}
-                        href={issue.web_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          padding: '8px 12px',
-                          background: 'white',
-                          borderRadius: '6px',
-                          textDecoration: 'none',
-                          color: 'var(--text-primary)',
-                          border: '1px solid #BFDBFE',
-                          transition: 'all 0.2s'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = 'var(--info)'
-                          e.currentTarget.style.transform = 'translateX(4px)'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor = '#BFDBFE'
-                          e.currentTarget.style.transform = 'translateX(0)'
-                        }}
-                      >
-                        <div style={{
-                          width: '4px',
-                          height: '100%',
-                          background: 'var(--info)',
-                          borderRadius: '2px',
-                          marginRight: '8px'
-                        }} />
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '2px' }}>
-                            #{issue.iid} {issue.title}
-                          </div>
-                          {issue.assignees && issue.assignees.length > 0 && (
-                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                              Assigned to: {issue.assignees[0].name}
-                            </div>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '11px', color: 'var(--info)', fontWeight: '600' }}>
-                          View →
-                        </div>
-                      </a>
-                    ))}
-                    {riskMetrics.highPriority > 3 && (
-                      <div style={{ fontSize: '11px', color: '#1E40AF', textAlign: 'center', marginTop: '4px', fontWeight: '600' }}>
-                        +{riskMetrics.highPriority - 3} more high priority issue{riskMetrics.highPriority - 3 !== 1 ? 's' : ''}
+              {riskMetrics && riskMetrics.highPriority > 0 && (() => {
+                const highPriorityIssues = issues.filter(i => {
+                  if (i.state !== 'opened') return false
+                  const labels = i.labels?.map(l => l.toLowerCase()) || []
+                  return labels.some(l => l.includes('priority::high') || l.includes('critical') || l.includes('urgent'))
+                })
+                const isExpanded = expandedSections.highPriority
+                const displayIssues = isExpanded ? highPriorityIssues : highPriorityIssues.slice(0, 3)
+                const hasMore = highPriorityIssues.length > 3
+
+                return (
+                  <div>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '12px 16px',
+                      background: '#DBEAFE',
+                      borderRadius: '8px 8px 0 0',
+                      borderLeft: '4px solid var(--info)'
+                    }}>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#1E40AF' }}>
+                        {riskMetrics.highPriority} High Priority Issue{riskMetrics.highPriority !== 1 ? 's' : ''}
                       </div>
-                    )}
+                      <div style={{ marginLeft: 'auto', fontSize: '11px', color: '#1E40AF', fontWeight: '600' }}>
+                        HIGH PRIORITY
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: '#EFF6FF', borderRadius: '0 0 8px 8px' }}>
+                      {displayIssues.map(issue => (
+                        <a
+                          key={issue.id}
+                          href={issue.web_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '8px 12px',
+                            background: 'white',
+                            borderRadius: '6px',
+                            textDecoration: 'none',
+                            color: 'var(--text-primary)',
+                            border: '1px solid #BFDBFE',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = 'var(--info)'
+                            e.currentTarget.style.transform = 'translateX(4px)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = '#BFDBFE'
+                            e.currentTarget.style.transform = 'translateX(0)'
+                          }}
+                        >
+                          <div style={{
+                            width: '4px',
+                            height: '100%',
+                            background: 'var(--info)',
+                            borderRadius: '2px',
+                            marginRight: '8px'
+                          }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '2px' }}>
+                              #{issue.iid} {issue.title}
+                            </div>
+                            {issue.assignees && issue.assignees.length > 0 && (
+                              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                Assigned to: {issue.assignees[0].name}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '11px', color: 'var(--info)', fontWeight: '600' }}>
+                            View →
+                          </div>
+                        </a>
+                      ))}
+                      {hasMore && (
+                        <button
+                          onClick={() => toggleSection('highPriority')}
+                          style={{
+                            padding: '8px 12px',
+                            background: 'white',
+                            border: '1px solid #93C5FD',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color: '#2563EB',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            marginTop: '4px'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#DBEAFE'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'white'
+                          }}
+                        >
+                          {isExpanded ? '▲ Show less' : `▼ Show all ${riskMetrics.highPriority} high priority issues`}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )
+              })()}
             </div>
           )}
         </div>
