@@ -115,15 +115,10 @@ function App() {
         />
 
         {useGroupedNav ? (
-          <GroupedTabs activeView={activeView} onViewChange={setActiveView} />
-        ) : (
-          <Tabs activeView={activeView} onViewChange={setActiveView} />
-        )}
-
-        {/* Portfolio Filter - Shows on all views when multiple projects configured */}
-        {isConfigured() && (
-          <PortfolioFilterDropdown
-            onProjectChange={(projectId) => {
+          <GroupedTabs
+            activeView={activeView}
+            onViewChange={setActiveView}
+            onProjectChange={isConfigured() ? (projectId) => {
               if (projectId === 'portfolio-manage') {
                 setActiveView('portfolio')
               } else if (projectId === 'cross-project') {
@@ -134,8 +129,10 @@ function App() {
                 // Project switched, data will reload
                 handleProjectSwitch(projectId)
               }
-            }}
+            } : null}
           />
+        ) : (
+          <Tabs activeView={activeView} onViewChange={setActiveView} />
         )}
 
         {/* Iteration Filter - Shows on views that benefit from iteration filtering */}

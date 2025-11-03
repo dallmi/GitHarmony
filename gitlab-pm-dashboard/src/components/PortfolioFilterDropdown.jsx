@@ -59,36 +59,28 @@ export default function PortfolioFilterDropdown({ onProjectChange }) {
 
   return (
     <div style={{
-      position: 'sticky',
-      top: '0',
-      zIndex: 900,
-      background: 'white',
-      borderBottom: '1px solid #E5E7EB',
-      padding: '12px 20px',
       display: 'flex',
       alignItems: 'center',
-      gap: '12px',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+      gap: '8px'
     }}>
       <label style={{
-        fontSize: '14px',
+        fontSize: '13px',
         fontWeight: '600',
-        color: '#1F2937',
-        minWidth: '100px'
+        color: '#6B7280'
       }}>
-        📁 Portfolio:
+        Project:
       </label>
 
-      <div style={{ position: 'relative', minWidth: '300px' }}>
+      <div style={{ position: 'relative', minWidth: '200px' }}>
         <button
           onClick={() => setIsOpen(!isOpen)}
           style={{
             width: '100%',
-            padding: '8px 36px 8px 12px',
+            padding: '6px 28px 6px 10px',
             background: 'white',
-            border: '2px solid #E60000',
+            border: '1px solid #D1D5DB',
             borderRadius: '6px',
-            fontSize: '14px',
+            fontSize: '13px',
             fontWeight: '500',
             color: '#1F2937',
             cursor: 'pointer',
@@ -98,8 +90,14 @@ export default function PortfolioFilterDropdown({ onProjectChange }) {
             justifyContent: 'space-between',
             transition: 'all 0.2s'
           }}
-          onMouseEnter={(e) => e.currentTarget.style.background = '#FEF2F2'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#F9FAFB'
+            e.currentTarget.style.borderColor = '#9CA3AF'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'white'
+            e.currentTarget.style.borderColor = '#D1D5DB'
+          }}
         >
           <span style={{
             overflow: 'hidden',
@@ -290,18 +288,6 @@ export default function PortfolioFilterDropdown({ onProjectChange }) {
             </div>
           </>
         )}
-      </div>
-
-      {/* Project Count Badge */}
-      <div style={{
-        padding: '4px 10px',
-        background: '#EFF6FF',
-        color: '#1E40AF',
-        borderRadius: '12px',
-        fontSize: '12px',
-        fontWeight: '600'
-      }}>
-        {projects.length} project{projects.length > 1 ? 's' : ''}
       </div>
     </div>
   )

@@ -1,13 +1,15 @@
 import React, { useState } from 'react'
 import { VIEW_GROUPS } from '../constants/config'
 import { getUserRole, isViewAccessible } from '../services/userPreferencesService'
+import PortfolioFilterDropdown from './PortfolioFilterDropdown'
 
 /**
  * Grouped Navigation Tabs
  * Organizes views into logical groups with role-based filtering
  * Includes keyboard navigation and ARIA labels for accessibility
+ * Now includes Project filter on the right side
  */
-export default function GroupedTabs({ activeView, onViewChange }) {
+export default function GroupedTabs({ activeView, onViewChange, onProjectChange }) {
   const [expandedGroup, setExpandedGroup] = useState(null)
   const userRole = getUserRole()
 
@@ -196,25 +198,37 @@ export default function GroupedTabs({ activeView, onViewChange }) {
         )
       })}
 
-      {/* Role Indicator */}
+      {/* Right Side: Project Filter and Role Indicator */}
       <div style={{
         marginLeft: 'auto',
         display: 'flex',
         alignItems: 'center',
-        padding: '12px 0',
-        fontSize: '12px',
-        color: 'var(--text-secondary)'
+        gap: '16px',
+        padding: '12px 0'
       }}>
-        <span style={{
-          background: 'var(--bg-tertiary)',
-          padding: '4px 12px',
-          borderRadius: '12px',
-          fontWeight: '600'
+        {/* Project Filter */}
+        {onProjectChange && (
+          <div style={{ marginRight: '8px' }}>
+            <PortfolioFilterDropdown onProjectChange={onProjectChange} />
+          </div>
+        )}
+
+        {/* Role Indicator */}
+        <div style={{
+          fontSize: '12px',
+          color: 'var(--text-secondary)'
         }}>
-          {userRole === 'executive' && 'Executive'}
-          {userRole === 'manager' && 'Manager'}
-          {userRole === 'team' && 'Team'}
-        </span>
+          <span style={{
+            background: 'var(--bg-tertiary)',
+            padding: '4px 12px',
+            borderRadius: '12px',
+            fontWeight: '600'
+          }}>
+            {userRole === 'executive' && 'Executive'}
+            {userRole === 'manager' && 'Manager'}
+            {userRole === 'team' && 'Team'}
+          </span>
+        </div>
       </div>
     </div>
   )
