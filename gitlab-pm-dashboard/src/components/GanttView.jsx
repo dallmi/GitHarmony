@@ -47,19 +47,75 @@ function generateRAGTooltip(analysis) {
  */
 export default function GanttView({ issues, epics: allEpics, crossProjectData }) {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
-  const [selectedQuarter, setSelectedQuarter] = useState('all')
+  const [selectedQuarters, setSelectedQuarters] = useState([1, 2, 3, 4]) // Array of selected quarters (1-4)
   const [expandedEpics, setExpandedEpics] = useState(new Set())
   const [expandedDiagnostics, setExpandedDiagnostics] = useState(new Set())
   const [showExecutiveSummary, setShowExecutiveSummary] = useState(true)
 
-  // Get epics with issues, filtered by year
+  // Quarter selection handler - consecutive quarters only
+  const handleQuarterToggle = (quarter) => {
+    if (selectedQuarters.includes(quarter)) {
+      // Clicking an already selected quarter: shrink selection
+      if (selectedQuarters.length === 1) return // Don't deselect the last one
+
+      // Remove from start or end to maintain consecutiveness
+      if (quarter === Math.min(...selectedQuarters)) {
+        setSelectedQuarters(selectedQuarters.filter(q => q !== quarter))
+      } else if (quarter === Math.max(...selectedQuarters)) {
+        setSelectedQuarters(selectedQuarters.filter(q => q !== quarter))
+      }
+    } else {
+      // Add to selection maintaining consecutiveness
+      const newQuarters = [...selectedQuarters, quarter].sort((a, b) => a - b)
+      // Fill gaps to ensure consecutive quarters
+      const min = Math.min(...newQuarters)
+      const max = Math.max(...newQuarters)
+      const consecutive = []
+      for (let q = min; q <= max; q++) {
+        consecutive.push(q)
+      }
+      setSelectedQuarters(consecutive)
+    }
+  }
+
+  const handleFullYearToggle = () => {
+    setSelectedQuarters([1, 2, 3, 4])
+  }
+
+  // Calculate date range based on selected quarters
+  const timelineRange = useMemo(() => {
+    const minQuarter = Math.min(...selectedQuarters)
+    const maxQuarter = Math.max(...selectedQuarters)
+
+    // Quarter to month mapping: Q1=0-2, Q2=3-5, Q3=6-8, Q4=9-11
+    const startMonth = (minQuarter - 1) * 3
+    const endMonth = maxQuarter * 3 - 1
+
+    const start = new Date(selectedYear, startMonth, 1)
+    start.setHours(0, 0, 0, 0)
+
+    const end = new Date(selectedYear, endMonth + 1, 0) // Last day of end month
+    end.setHours(23, 59, 59, 999)
+
+    return { start, end }
+  }, [selectedYear, selectedQuarters])
+
+  // Determine granularity based on quarter selection
+  const granularity = useMemo(() => {
+    const quarterCount = selectedQuarters.length
+    if (quarterCount === 4) return 'year' // Full year: show quarters + months
+    if (quarterCount >= 2) return 'quarter' // 2-3 quarters: show months + weeks
+    return 'month' // 1 quarter: show weeks + days
+  }, [selectedQuarters])
+
+  // Get epics with issues, filtered by date range
   const { epics, epicIssuesMap } = useMemo(() => {
     if (!allEpics || !issues) {
       return { epics: [], epicIssuesMap: new Map() }
     }
 
-    const yearStart = new Date(selectedYear, 0, 1)
-    const yearEnd = new Date(selectedYear, 11, 31, 23, 59, 59)
+    const rangeStart = timelineRange.start
+    const rangeEnd = timelineRange.end
 
     const issuesMap = new Map()
 
@@ -69,16 +125,16 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
 
       if (!epicId) return
 
-      // Check if issue falls within selected year (by creation, due date, or milestone)
+      // Check if issue falls within selected date range (by creation, due date, or milestone)
       const created = new Date(issue.created_at)
       const dueDate = issue.due_date ? new Date(issue.due_date) : null
       const milestoneDate = issue.milestone?.due_date ? new Date(issue.milestone.due_date) : null
 
-      const inYear = (created >= yearStart && created <= yearEnd) ||
-                     (dueDate && dueDate >= yearStart && dueDate <= yearEnd) ||
-                     (milestoneDate && milestoneDate >= yearStart && milestoneDate <= yearEnd)
+      const inRange = (created >= rangeStart && created <= rangeEnd) ||
+                      (dueDate && dueDate >= rangeStart && dueDate <= rangeEnd) ||
+                      (milestoneDate && milestoneDate >= rangeStart && milestoneDate <= rangeEnd)
 
-      if (!inYear) return
+      if (!inRange) return
 
       if (!issuesMap.has(epicId)) {
         issuesMap.set(epicId, [])
@@ -86,26 +142,26 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
       issuesMap.get(epicId).push(issue)
     })
 
-    // Filter epics that have issues in this year
+    // Filter epics that have issues in this date range
     const filteredEpics = allEpics
       .filter(epic => issuesMap.has(epic.id))
       .filter(epic => {
-        // Additional epic-level year filtering
+        // Additional epic-level date range filtering
         if (epic.start_date || epic.end_date) {
           const epicStart = epic.start_date ? new Date(epic.start_date) : null
           const epicEnd = epic.end_date ? new Date(epic.end_date) : null
 
-          const epicInYear = (epicStart && epicStart >= yearStart && epicStart <= yearEnd) ||
-                            (epicEnd && epicEnd >= yearStart && epicEnd <= yearEnd) ||
-                            (epicStart && epicEnd && epicStart <= yearEnd && epicEnd >= yearStart)
+          const epicInRange = (epicStart && epicStart >= rangeStart && epicStart <= rangeEnd) ||
+                              (epicEnd && epicEnd >= rangeStart && epicEnd <= rangeEnd) ||
+                              (epicStart && epicEnd && epicStart <= rangeEnd && epicEnd >= rangeStart)
 
-          return epicInYear
+          return epicInRange
         }
         return true // Include if no dates
       })
 
     return { epics: filteredEpics, epicIssuesMap: issuesMap }
-  }, [allEpics, issues, selectedYear])
+  }, [allEpics, issues, timelineRange])
 
   // Calculate RAG status for each epic
   const epicAnalysis = useMemo(() => {
@@ -230,24 +286,16 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
     return 'On Track'
   }
 
-  // Timeline calculations for horizontal bars
-  const timelineRange = useMemo(() => {
-    const yearStart = new Date(selectedYear, 0, 1)
-    yearStart.setHours(0, 0, 0, 0) // Normalize to start of day
-    const yearEnd = new Date(selectedYear, 11, 31)
-    yearEnd.setHours(23, 59, 59, 999) // Normalize to end of day
-    return { start: yearStart, end: yearEnd }
-  }, [selectedYear])
-
+  // Timeline position calculations for horizontal bars
   const getTimelinePosition = (startDate, endDate) => {
     if (!startDate || !endDate) return null
 
     const start = new Date(startDate)
     const end = new Date(endDate)
-    const { start: yearStart, end: yearEnd } = timelineRange
+    const { start: rangeStart, end: rangeEnd } = timelineRange
 
-    const totalDays = (yearEnd - yearStart) / (1000 * 60 * 60 * 24)
-    const startDays = Math.max(0, (start - yearStart) / (1000 * 60 * 60 * 24))
+    const totalDays = (rangeEnd - rangeStart) / (1000 * 60 * 60 * 24)
+    const startDays = Math.max(0, (start - rangeStart) / (1000 * 60 * 60 * 24))
     const duration = (end - start) / (1000 * 60 * 60 * 24)
 
     return {
@@ -259,7 +307,9 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
   const getTodayPosition = () => {
     const today = new Date()
     today.setHours(0, 0, 0, 0) // Normalize to midnight for accurate calculation
-    if (today.getFullYear() !== selectedYear) return null
+
+    // Check if today falls within the selected range
+    if (today < timelineRange.start || today > timelineRange.end) return null
 
     const { start: yearStart, end: yearEnd } = timelineRange
     const totalDays = (yearEnd - yearStart) / (1000 * 60 * 60 * 24)
@@ -291,7 +341,8 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
+            {/* Year Selector */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <label style={{ fontSize: '12px', color: '#6B7280', fontWeight: '600' }}>Year</label>
               <select
@@ -311,6 +362,52 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
                 ))}
               </select>
             </div>
+
+            {/* Quarter Tiles Selector */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '12px', color: '#6B7280', fontWeight: '600' }}>Time Range</label>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {[1, 2, 3, 4].map(quarter => {
+                  const isSelected = selectedQuarters.includes(quarter)
+                  return (
+                    <button
+                      key={quarter}
+                      onClick={() => handleQuarterToggle(quarter)}
+                      style={{
+                        padding: '8px 16px',
+                        background: isSelected ? '#3B82F6' : 'white',
+                        color: isSelected ? 'white' : '#374151',
+                        border: isSelected ? 'none' : '1px solid #D1D5DB',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        fontWeight: isSelected ? '600' : '500',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                        minWidth: '48px'
+                      }}
+                    >
+                      Q{quarter}
+                    </button>
+                  )
+                })}
+                <button
+                  onClick={handleFullYearToggle}
+                  style={{
+                    padding: '8px 16px',
+                    background: selectedQuarters.length === 4 ? '#10B981' : 'white',
+                    color: selectedQuarters.length === 4 ? 'white' : '#374151',
+                    border: selectedQuarters.length === 4 ? 'none' : '1px solid #D1D5DB',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: selectedQuarters.length === 4 ? '600' : '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  Full Year
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -319,9 +416,9 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
           <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>📅</div>
           <h3 className="mb-2">No Epics Found</h3>
           <p className="text-muted">
-            {selectedYear !== new Date().getFullYear()
-              ? `No epics with work in ${selectedYear}. Try selecting a different year.`
-              : 'Add epics with start/end dates to see the executive Gantt chart.'}
+            {selectedQuarters.length === 4
+              ? `No epics with work in ${selectedYear}. Try selecting a different year or time range.`
+              : `No epics with work in ${selectedYear} Q${Math.min(...selectedQuarters)}${selectedQuarters.length > 1 ? `-Q${Math.max(...selectedQuarters)}` : ''}. Try selecting a different time range.`}
           </p>
         </div>
       </div>
@@ -348,7 +445,8 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          {/* Year Selector */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <label style={{ fontSize: '12px', color: '#6B7280', fontWeight: '600' }}>Year</label>
             <select
@@ -367,6 +465,57 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
                 <option key={year} value={year}>{year}</option>
               ))}
             </select>
+          </div>
+
+          {/* Quarter Tiles Selector */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <label style={{ fontSize: '12px', color: '#6B7280', fontWeight: '600' }}>Time Range</label>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {[1, 2, 3, 4].map(quarter => {
+                const isSelected = selectedQuarters.includes(quarter)
+                const isEdge = quarter === Math.min(...selectedQuarters) || quarter === Math.max(...selectedQuarters)
+                const isFullYear = selectedQuarters.length === 4
+
+                return (
+                  <button
+                    key={quarter}
+                    onClick={() => handleQuarterToggle(quarter)}
+                    style={{
+                      padding: '8px 16px',
+                      background: isSelected ? '#3B82F6' : 'white',
+                      color: isSelected ? 'white' : '#374151',
+                      border: isSelected ? 'none' : '1px solid #D1D5DB',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: isSelected ? '600' : '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      minWidth: '48px'
+                    }}
+                    title={`Quarter ${quarter}`}
+                  >
+                    Q{quarter}
+                  </button>
+                )
+              })}
+              <button
+                onClick={handleFullYearToggle}
+                style={{
+                  padding: '8px 16px',
+                  background: selectedQuarters.length === 4 ? '#10B981' : 'white',
+                  color: selectedQuarters.length === 4 ? 'white' : '#374151',
+                  border: selectedQuarters.length === 4 ? 'none' : '1px solid #D1D5DB',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: selectedQuarters.length === 4 ? '600' : '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+                title="View full year"
+              >
+                Full Year
+              </button>
+            </div>
           </div>
 
           <button
@@ -391,7 +540,9 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
       {showExecutiveSummary && (
         <div className="card" style={{ marginBottom: '30px', background: '#F9FAFB', borderColor: '#E5E7EB' }}>
           <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
-            {selectedYear} Portfolio Health
+            {selectedYear} {selectedQuarters.length === 4 ? 'Portfolio Health' :
+              selectedQuarters.length === 1 ? `Q${selectedQuarters[0]} Portfolio Health` :
+              `Q${Math.min(...selectedQuarters)}-Q${Math.max(...selectedQuarters)} Portfolio Health`}
           </h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
@@ -476,30 +627,124 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
             Epic
           </div>
           <div style={{ flex: 1, position: 'relative', minHeight: '48px' }}>
-            {/* Quarter Headers */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#6B7280', fontWeight: '600', marginBottom: '4px' }}>
-              {['Q1', 'Q2', 'Q3', 'Q4'].map((q, idx) => (
-                <div key={q} style={{ flex: 1, textAlign: 'center', borderRight: idx < 3 ? '1px dashed #D1D5DB' : 'none' }}>
-                  {q} {selectedYear}
+            {/* Adaptive Timeline Headers based on granularity */}
+            {granularity === 'year' && (
+              <>
+                {/* Full Year View: Quarter Headers */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#6B7280', fontWeight: '600', marginBottom: '4px' }}>
+                  {['Q1', 'Q2', 'Q3', 'Q4'].map((q, idx) => (
+                    <div key={q} style={{ flex: 1, textAlign: 'center', borderRight: idx < 3 ? '1px dashed #D1D5DB' : 'none' }}>
+                      {q} {selectedYear}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            {/* Month Subdivisions */}
-            <div style={{ display: 'flex', fontSize: '10px', color: '#9CA3AF', borderTop: '1px solid #E5E7EB', paddingTop: '4px' }}>
-              {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, idx) => (
-                <div
-                  key={month}
-                  style={{
-                    flex: 1,
-                    textAlign: 'center',
-                    borderRight: idx < 11 ? '1px dotted #E5E7EB' : 'none',
-                    padding: '2px 0'
-                  }}
-                >
-                  {month}
+                {/* Month Subdivisions */}
+                <div style={{ display: 'flex', fontSize: '10px', color: '#9CA3AF', borderTop: '1px solid #E5E7EB', paddingTop: '4px' }}>
+                  {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, idx) => (
+                    <div
+                      key={month}
+                      style={{
+                        flex: 1,
+                        textAlign: 'center',
+                        borderRight: idx < 11 ? '1px dotted #E5E7EB' : 'none',
+                        padding: '2px 0'
+                      }}
+                    >
+                      {month}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
+
+            {granularity === 'quarter' && (() => {
+              // 2-3 Quarters View: Month Headers + Week Subdivisions
+              const startMonth = (Math.min(...selectedQuarters) - 1) * 3
+              const endMonth = Math.max(...selectedQuarters) * 3 - 1
+              const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+              const months = []
+              for (let m = startMonth; m <= endMonth; m++) {
+                months.push({ name: monthNames[m], index: m })
+              }
+
+              // Calculate weeks for the entire range
+              const weeks = []
+              let currentDate = new Date(timelineRange.start)
+              while (currentDate <= timelineRange.end) {
+                weeks.push(new Date(currentDate))
+                currentDate.setDate(currentDate.getDate() + 7)
+              }
+
+              return (
+                <>
+                  {/* Month Headers */}
+                  <div style={{ display: 'flex', fontSize: '12px', color: '#6B7280', fontWeight: '600', marginBottom: '4px' }}>
+                    {months.map((month, idx) => (
+                      <div key={month.index} style={{ flex: 1, textAlign: 'center', borderRight: idx < months.length - 1 ? '1px dashed #D1D5DB' : 'none' }}>
+                        {month.name}
+                      </div>
+                    ))}
+                  </div>
+                  {/* Week Subdivisions */}
+                  <div style={{ display: 'flex', fontSize: '9px', color: '#9CA3AF', borderTop: '1px solid #E5E7EB', paddingTop: '4px' }}>
+                    {weeks.map((week, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          flex: 1,
+                          textAlign: 'center',
+                          borderRight: idx < weeks.length - 1 ? '1px dotted #E5E7EB' : 'none',
+                          padding: '2px 0',
+                          fontSize: '9px'
+                        }}
+                        title={week.toLocaleDateString()}
+                      >
+                        {week.getDate()}/{week.getMonth() + 1}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )
+            })()}
+
+            {granularity === 'month' && (() => {
+              // 1 Quarter View: Week Headers + Day subdivisions
+              const weeks = []
+              let currentDate = new Date(timelineRange.start)
+              while (currentDate <= timelineRange.end) {
+                weeks.push(new Date(currentDate))
+                currentDate.setDate(currentDate.getDate() + 7)
+              }
+
+              return (
+                <>
+                  {/* Week Headers */}
+                  <div style={{ display: 'flex', fontSize: '11px', color: '#6B7280', fontWeight: '600', marginBottom: '4px' }}>
+                    {weeks.map((week, idx) => (
+                      <div key={idx} style={{ flex: 1, textAlign: 'center', borderRight: idx < weeks.length - 1 ? '1px dashed #D1D5DB' : 'none' }}>
+                        Week {idx + 1}
+                      </div>
+                    ))}
+                  </div>
+                  {/* Date Labels (start of each week) */}
+                  <div style={{ display: 'flex', fontSize: '9px', color: '#9CA3AF', borderTop: '1px solid #E5E7EB', paddingTop: '4px' }}>
+                    {weeks.map((week, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          flex: 1,
+                          textAlign: 'center',
+                          borderRight: idx < weeks.length - 1 ? '1px dotted #E5E7EB' : 'none',
+                          padding: '2px 0'
+                        }}
+                      >
+                        {week.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )
+            })()}
           </div>
         </div>
 

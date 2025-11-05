@@ -179,7 +179,17 @@ export function calculateEpicRAG(epic, issues, historicalData = null) {
   const daysUntilDue = epic.end_date
     ? (new Date(epic.end_date) - new Date()) / (1000 * 60 * 60 * 24)
     : null
-  const isOverdue = daysUntilDue !== null && daysUntilDue < 0
+
+  // Check if epic is truly overdue:
+  // 1. If there are open issues AND today > due date = overdue
+  // 2. If all issues closed, check if ANY were closed after due date = completed late
+  const isOverdue = daysUntilDue !== null && daysUntilDue < 0 && openIssues.length > 0
+
+  const isCompletedLate = openIssues.length === 0 && epic.end_date && closedIssues.some(issue => {
+    if (!issue.closed_at) return false
+    const closedDate = new Date(issue.closed_at)
+    return closedDate > new Date(epic.end_date)
+  })
 
   // Team capacity
   const teamMembers = getTeamCapacityIssues(issues)
@@ -196,8 +206,8 @@ export function calculateEpicRAG(epic, issues, historicalData = null) {
   // Collect all factors with severity
 
   // RED CONDITIONS
-  if (isOverdue && openIssues.length > 0) {
-    // Only mark as overdue if there are still open issues
+  if (isOverdue) {
+    // Epic has open issues and due date has passed
     factors.push({
       severity: 'critical',
       category: 'timeline',
@@ -212,32 +222,30 @@ export function calculateEpicRAG(epic, issues, historicalData = null) {
       estimatedEffort: '1 day',
       impact: 'Align expectations with reality'
     })
-  } else if (isOverdue && openIssues.length === 0) {
-    // Epic completed but check if it was late
-    const allClosedBeforeDue = closedIssues.every(issue => {
+  }
+
+  if (isCompletedLate) {
+    // Epic completed but some issues finished after due date - warning level
+    const lateIssues = closedIssues.filter(issue => {
       if (!issue.closed_at) return false
       const closedDate = new Date(issue.closed_at)
-      return closedDate <= new Date(epic.end_date)
+      return closedDate > new Date(epic.end_date)
     })
 
-    if (!allClosedBeforeDue) {
-      // Completed after the due date - warning level
-      factors.push({
-        severity: 'warning',
-        category: 'timeline',
-        title: 'Epic completed late',
-        description: `All issues closed but some finished after due date ${new Date(epic.end_date).toLocaleDateString()}`,
-        impact: 'Delivered late but complete'
-      })
-      actions.push({
-        priority: 'medium',
-        title: 'Review timeline planning',
-        description: 'Analyze why epic took longer than expected to improve future estimates',
-        estimatedEffort: '1 day',
-        impact: 'Better planning for future epics'
-      })
-    }
-    // If all completed before due date, don't add any overdue factor - it's GREEN
+    factors.push({
+      severity: 'warning',
+      category: 'timeline',
+      title: 'Epic completed late',
+      description: `All issues closed but ${lateIssues.length} issue${lateIssues.length > 1 ? 's' : ''} finished after due date ${new Date(epic.end_date).toLocaleDateString()}`,
+      impact: 'Delivered late but complete'
+    })
+    actions.push({
+      priority: 'medium',
+      title: 'Review timeline planning',
+      description: 'Analyze why epic took longer than expected to improve future estimates',
+      estimatedEffort: '1 day',
+      impact: 'Better planning for future epics'
+    })
   }
 
   if (velocityRatio < 0.7 && requiredVelocity > 0) {

@@ -6,7 +6,9 @@
 const STORAGE_KEYS = {
   STAKEHOLDERS: 'stakeholders',
   COMMUNICATION_HISTORY: 'communication_history',
-  TEMPLATES: 'communication_templates'
+  TEMPLATES: 'communication_templates',
+  DECISIONS: 'decisions',
+  DOCUMENTS: 'documents'
 }
 
 /**
@@ -78,6 +80,16 @@ export function logCommunication(communication) {
   const trimmed = history.slice(0, 100)
   localStorage.setItem(STORAGE_KEYS.COMMUNICATION_HISTORY, JSON.stringify(trimmed))
   return trimmed
+}
+
+/**
+ * Delete communication from history
+ */
+export function deleteCommunication(id) {
+  const history = getCommunicationHistory()
+  const filtered = history.filter(c => c.id !== id)
+  localStorage.setItem(STORAGE_KEYS.COMMUNICATION_HISTORY, JSON.stringify(filtered))
+  return filtered
 }
 
 /**
@@ -231,4 +243,237 @@ export function fillTemplate(template, data) {
   })
 
   return filled
+}
+
+/**
+ * ===== DECISIONS MANAGEMENT =====
+ */
+
+/**
+ * Get all decisions
+ */
+export function getDecisions() {
+  const stored = localStorage.getItem(STORAGE_KEYS.DECISIONS)
+  return stored ? JSON.parse(stored) : []
+}
+
+/**
+ * Save decision
+ */
+export function saveDecision(decision) {
+  const decisions = getDecisions()
+
+  const newDecision = {
+    id: decision.id || Date.now().toString(),
+    title: decision.title,
+    description: decision.description,
+    decisionDate: decision.decisionDate || new Date().toISOString(),
+    stakeholderIds: decision.stakeholderIds || [],
+    linkedEpics: decision.linkedEpics || [],
+    linkedIssues: decision.linkedIssues || [],
+    status: decision.status || 'active', // active, reversed, superseded
+    reversedBy: decision.reversedBy || null,
+    reversedDate: decision.reversedDate || null,
+    reversedReason: decision.reversedReason || null,
+    tags: decision.tags || [],
+    approvedBy: decision.approvedBy || [],
+    communicationId: decision.communicationId || null, // Link to email/communication
+    createdAt: decision.createdAt || new Date().toISOString()
+  }
+
+  const existing = decisions.findIndex(d => d.id === newDecision.id)
+  if (existing >= 0) {
+    decisions[existing] = newDecision
+  } else {
+    decisions.unshift(newDecision)
+  }
+
+  localStorage.setItem(STORAGE_KEYS.DECISIONS, JSON.stringify(decisions))
+  return decisions
+}
+
+/**
+ * Delete decision
+ */
+export function deleteDecision(id) {
+  const decisions = getDecisions()
+  const filtered = decisions.filter(d => d.id !== id)
+  localStorage.setItem(STORAGE_KEYS.DECISIONS, JSON.stringify(filtered))
+  return filtered
+}
+
+/**
+ * Reverse/supersede a decision
+ */
+export function reverseDecision(id, reason, newDecisionId = null) {
+  const decisions = getDecisions()
+  const decision = decisions.find(d => d.id === id)
+
+  if (decision) {
+    decision.status = newDecisionId ? 'superseded' : 'reversed'
+    decision.reversedDate = new Date().toISOString()
+    decision.reversedReason = reason
+    decision.reversedBy = newDecisionId
+
+    localStorage.setItem(STORAGE_KEYS.DECISIONS, JSON.stringify(decisions))
+  }
+
+  return decisions
+}
+
+/**
+ * ===== DOCUMENTS MANAGEMENT =====
+ */
+
+/**
+ * Get all documents
+ */
+export function getDocuments() {
+  const stored = localStorage.getItem(STORAGE_KEYS.DOCUMENTS)
+  return stored ? JSON.parse(stored) : []
+}
+
+/**
+ * Save document metadata (with optional base64 content for small files)
+ */
+export function saveDocument(document) {
+  const documents = getDocuments()
+
+  const newDocument = {
+    id: document.id || Date.now().toString(),
+    filename: document.filename,
+    fileType: document.fileType,
+    fileSize: document.fileSize,
+    uploadDate: document.uploadDate || new Date().toISOString(),
+    description: document.description || '',
+    stakeholderIds: document.stakeholderIds || [],
+    linkedEpics: document.linkedEpics || [],
+    linkedIssues: document.linkedIssues || [],
+    tags: document.tags || [],
+    version: document.version || '1.0',
+    status: document.status || 'current', // current, superseded, archived
+    supersededBy: document.supersededBy || null,
+    // Storage options
+    storageType: document.storageType || 'metadata', // metadata, base64, external
+    base64Content: document.base64Content || null, // For small files
+    externalUrl: document.externalUrl || null, // GitLab, Google Drive, etc.
+    textContent: document.textContent || '', // Extracted text for search
+    communicationId: document.communicationId || null, // Link to email that included this doc
+    createdAt: document.createdAt || new Date().toISOString()
+  }
+
+  const existing = documents.findIndex(d => d.id === newDocument.id)
+  if (existing >= 0) {
+    documents[existing] = newDocument
+  } else {
+    documents.unshift(newDocument)
+  }
+
+  localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(documents))
+  return documents
+}
+
+/**
+ * Delete document
+ */
+export function deleteDocument(id) {
+  const documents = getDocuments()
+  const filtered = documents.filter(d => d.id !== id)
+  localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(filtered))
+  return filtered
+}
+
+/**
+ * Supersede document with new version
+ */
+export function supersedeDocument(oldId, newDocumentId) {
+  const documents = getDocuments()
+  const oldDoc = documents.find(d => d.id === oldId)
+
+  if (oldDoc) {
+    oldDoc.status = 'superseded'
+    oldDoc.supersededBy = newDocumentId
+    localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(documents))
+  }
+
+  return documents
+}
+
+/**
+ * Import email as communication with auto-tagging and matching
+ */
+export function importEmail(emailData, stakeholders) {
+  // Match email addresses to stakeholders
+  const matchedStakeholders = []
+  const allEmails = [...emailData.to, ...emailData.cc].map(e => e.email.toLowerCase())
+
+  stakeholders.forEach(stakeholder => {
+    if (allEmails.includes(stakeholder.email.toLowerCase())) {
+      matchedStakeholders.push(stakeholder.id)
+    }
+  })
+
+  // Create communication record
+  const communication = {
+    id: Date.now().toString(),
+    type: 'email',
+    source: 'imported',
+    from: emailData.from,
+    to: emailData.to,
+    cc: emailData.cc,
+    stakeholderIds: matchedStakeholders,
+    subject: emailData.subject,
+    content: emailData.body,
+    sentAt: emailData.date.toISOString(),
+    messageId: emailData.messageId,
+    tags: emailData.tags || [],
+    references: emailData.references || [],
+    linkedEpics: [],
+    linkedIssues: [],
+    attachments: emailData.attachments || []
+  }
+
+  // Save to communication history
+  const history = getCommunicationHistory()
+  history.unshift(communication)
+  const trimmed = history.slice(0, 100)
+  localStorage.setItem(STORAGE_KEYS.COMMUNICATION_HISTORY, JSON.stringify(trimmed))
+
+  return communication
+}
+
+/**
+ * Search across all communications, decisions, and documents
+ */
+export function searchAll(query) {
+  const lowerQuery = query.toLowerCase()
+  const results = {
+    communications: [],
+    decisions: [],
+    documents: []
+  }
+
+  // Search communications
+  const comms = getCommunicationHistory()
+  results.communications = comms.filter(c =>
+    c.subject?.toLowerCase().includes(lowerQuery) ||
+    c.content?.toLowerCase().includes(lowerQuery)
+  )
+
+  // Search decisions
+  const decisions = getDecisions()
+  results.decisions = decisions.filter(d =>
+    d.title?.toLowerCase().includes(lowerQuery) ||
+    d.description?.toLowerCase().includes(lowerQuery)
+  )
+
+  // Search documents
+  const docs = getDocuments()
+  results.documents = docs.filter(d =>
+    d.filename?.toLowerCase().includes(lowerQuery) ||
+    d.description?.toLowerCase().includes(lowerQuery) ||
+    d.textContent?.toLowerCase().includes(lowerQuery)
+  )
+
+  return results
 }
