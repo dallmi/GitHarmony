@@ -26,6 +26,7 @@ import EpicManagementView from './components/EpicManagementView'
 import RiskManagementView from './components/RiskManagementView'
 import SprintManagementView from './components/SprintManagementView'
 import CrossTeamCoordinationView from './components/CrossTeamCoordinationView'
+import ResourcePlanningView from './components/ResourcePlanningView'
 
 function App() {
   console.log('App: Component initializing...')
@@ -42,8 +43,11 @@ function App() {
   console.log('App: showConfigModal:', !configured)
 
   console.log('App: Calling useGitLabData hook...')
-  const { issues, milestones, epics, loading, error, refresh } = useGitLabData()
+  const { issues, milestones, epics, crossProjectData, loading, error, refresh } = useGitLabData()
   console.log('App: GitLab data:', { issuesCount: issues?.length, milestonesCount: milestones?.length, epicsCount: epics?.length, loading, error })
+  if (crossProjectData) {
+    console.log('App: Cross-project data available:', crossProjectData.statistics)
+  }
 
   console.log('App: Calling useHealthScore hook...')
   const { stats, healthScore } = useHealthScore(issues, milestones)
@@ -193,12 +197,13 @@ function App() {
             )}
             {activeView === 'compliance' && <IssueComplianceView issues={issues} />}
             {activeView === 'cycletime' && <CycleTimeView issues={issues} />}
-            {activeView === 'epicmanagement' && <EpicManagementView epics={epics} issues={issues} />}
+            {activeView === 'epicmanagement' && <EpicManagementView epics={epics} issues={issues} crossProjectData={crossProjectData} />}
             {activeView === 'riskmanagement' && <RiskManagementView epics={epics} issues={issues} />}
             {activeView === 'roadmap' && <RoadmapView issues={issues} milestones={milestones} />}
             {activeView === 'sprintmanagement' && <SprintManagementView issues={issues} onNavigate={setActiveView} />}
             {activeView === 'velocity' && <VelocityView issues={issues} />}
             {activeView === 'resources' && <ResourceCapacityView issues={issues} />}
+            {activeView === 'resourceplanning' && <ResourcePlanningView issues={issues} />}
             {activeView === 'stakeholders' && <StakeholderHubView stats={stats} healthScore={healthScore} />}
             {activeView === 'crossteam' && <CrossTeamCoordinationView issues={issues} epics={epics} milestones={milestones} />}
           </>

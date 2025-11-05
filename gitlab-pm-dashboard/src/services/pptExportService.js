@@ -228,7 +228,7 @@ function addExecutiveSummarySlide(pptx, { projectId, stats, healthScore }) {
   const breakdownData = [
     ['Dimension', 'Score', 'Weight'],
     ['Completion', `${Math.round(healthScore.breakdown.completionScore)}%`, '30%'],
-    ['Schedule', `${Math.round(healthScore.breakdown.scheduleScore)}%`, '25%'],
+    ['Overdue', `${Math.round(healthScore.breakdown.scheduleScore)}%`, '25%'],
     ['Blockers', `${Math.round(healthScore.breakdown.blockerScore)}%`, '25%'],
     ['Risk', `${Math.round(healthScore.breakdown.riskScore)}%`, '20%']
   ]

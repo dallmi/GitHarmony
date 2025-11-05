@@ -81,7 +81,8 @@ export const VIEW_GROUPS = [
     label: 'Execution',
     views: [
       { id: 'sprintmanagement', label: 'Sprints', roles: ['manager', 'team'] },
-      { id: 'resources', label: 'Resources', roles: ['manager', 'team'] }
+      { id: 'resources', label: 'Resources', roles: ['manager', 'team'] },
+      { id: 'resourceplanning', label: 'Resource Planning', roles: ['manager', 'team'] }
     ]
   },
   {

@@ -105,7 +105,7 @@ function buildStatusPrompt({ projectId, stats, healthScore, issues, milestones, 
 
 **Health Breakdown:**
 - Completion Health: ${healthScore.breakdown.completion}%
-- Schedule Health: ${healthScore.breakdown.schedule}%
+- Overdue Health: ${healthScore.breakdown.schedule}%
 - Blocker Health: ${healthScore.breakdown.blockers}%
 - Risk Health: ${healthScore.breakdown.risk}%
 

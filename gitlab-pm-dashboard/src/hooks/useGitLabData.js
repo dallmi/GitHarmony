@@ -12,7 +12,8 @@ export default function useGitLabData() {
   const [data, setData] = useState({
     issues: [],
     milestones: [],
-    epics: []
+    epics: [],
+    crossProjectData: null
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -84,11 +85,31 @@ export default function useGitLabData() {
 
         const projectsData = await Promise.all(projectDataPromises)
 
+        // Import cross-project linking functions
+        const { linkCrossProjectIssues, buildEpicHierarchy } = await import('../services/crossProjectLinkingService.js')
+
         // Aggregate all data
+        const allIssues = projectsData.flatMap(p => p.issues)
+        const allEpics = projectsData.flatMap(p => p.epics)
+        const allMilestones = projectsData.flatMap(p => p.milestones)
+
+        // Build cross-project relationships
+        const crossProjectData = linkCrossProjectIssues(allIssues, allEpics)
+        const epicHierarchy = buildEpicHierarchy(allEpics)
+
+        // Mark as full cross-project mode (all projects loaded)
+        crossProjectData.singleProjectMode = false
+        crossProjectData.limitedView = false
+        crossProjectData.projectCount = allProjects.length
+
         const aggregatedData = {
-          issues: projectsData.flatMap(p => p.issues),
-          milestones: projectsData.flatMap(p => p.milestones),
-          epics: projectsData.flatMap(p => p.epics)
+          issues: allIssues,
+          milestones: allMilestones,
+          epics: allEpics,
+          crossProjectData: {
+            ...crossProjectData,
+            epicHierarchy
+          }
         }
 
         console.log(`useGitLabData: Cross-project aggregation complete:`)
@@ -154,6 +175,7 @@ export default function useGitLabData() {
     issues: data.issues,
     milestones: data.milestones,
     epics: data.epics,
+    crossProjectData: data.crossProjectData,
     loading,
     error,
     refresh,

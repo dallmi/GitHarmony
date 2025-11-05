@@ -37,7 +37,7 @@ export default function ExecutiveDashboard({ stats, healthScore, issues = [] }) 
                 weight="30%"
               />
               <HealthBreakdownBar
-                label="Schedule"
+                label="Overdue"
                 score={healthScore.breakdown.scheduleScore}
                 weight="25%"
               />

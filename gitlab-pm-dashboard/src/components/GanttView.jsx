@@ -43,8 +43,9 @@ function generateRAGTooltip(analysis) {
 /**
  * Executive-Ready Gantt Chart
  * Epic-first view with RAG status, root cause analysis, and actionable insights
+ * Now includes cross-project child issues inline when expanding epics
  */
-export default function GanttView({ issues, epics: allEpics }) {
+export default function GanttView({ issues, epics: allEpics, crossProjectData }) {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [selectedQuarter, setSelectedQuarter] = useState('all')
   const [expandedEpics, setExpandedEpics] = useState(new Set())
@@ -167,6 +168,40 @@ export default function GanttView({ issues, epics: allEpics }) {
     setExpandedEpics(newExpanded)
   }
 
+  /**
+   * Get all issues for an epic, including cross-project children
+   * @param {string} epicId - Epic ID
+   * @returns {Array} Array of issues with metadata about cross-project status
+   */
+  const getAllIssuesForEpic = (epicId) => {
+    // Get issues from current project
+    const localIssues = (epicIssuesMap.get(epicId) || []).map(issue => ({
+      ...issue,
+      _isCrossProject: false,
+      _sourceProject: null
+    }))
+
+    // Get cross-project issues if available
+    let crossProjectIssues = []
+    if (crossProjectData && crossProjectData.epicToIssuesMap) {
+      const allIssuesForEpic = crossProjectData.epicToIssuesMap.get(epicId) || []
+
+      // Filter out issues we already have locally and mark others as cross-project
+      crossProjectIssues = allIssuesForEpic
+        .filter(issue => !localIssues.some(local => local.id === issue.id))
+        .map(issue => ({
+          ...issue,
+          _isCrossProject: true,
+          _sourceProject: issue._projectName || issue._projectId || 'Other Project'
+        }))
+    }
+
+    // Combine and sort by created date
+    return [...localIssues, ...crossProjectIssues].sort((a, b) =>
+      new Date(a.created_at) - new Date(b.created_at)
+    )
+  }
+
   const toggleDiagnostics = (epicId) => {
     const newExpanded = new Set(expandedDiagnostics)
     if (newExpanded.has(epicId)) {
@@ -237,7 +272,49 @@ export default function GanttView({ issues, epics: allEpics }) {
 
   if (epics.length === 0) {
     return (
-      <div className="container">
+      <div className="container-fluid" style={{ padding: '20px' }}>
+        {/* Header Controls - Always visible even when no epics */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '20px',
+          flexWrap: 'wrap',
+          gap: '16px'
+        }}>
+          <div>
+            <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '4px' }}>
+              Executive Gantt Chart
+            </h2>
+            <p style={{ fontSize: '14px', color: '#6B7280', margin: 0 }}>
+              Epic-level timeline with RAG status and risk analysis
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '12px', color: '#6B7280', fontWeight: '600' }}>Year</label>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                style={{
+                  padding: '8px 12px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  background: 'white',
+                  cursor: 'pointer'
+                }}
+              >
+                {availableYears.map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* No Epics Message */}
         <div className="card text-center" style={{ padding: '60px 20px' }}>
           <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>📅</div>
           <h3 className="mb-2">No Epics Found</h3>
@@ -564,15 +641,38 @@ export default function GanttView({ issues, epics: allEpics }) {
                 </div>
               </div>
 
-              {/* Expanded: Issues List */}
-              {isExpanded && (
-                <div style={{
-                  marginTop: '12px',
-                  marginLeft: '32px',
-                  paddingLeft: '16px',
-                  borderLeft: '2px solid #E5E7EB'
-                }}>
-                  {epicIssues.slice(0, 10).map(issue => {
+              {/* Expanded: Issues List (including cross-project children) */}
+              {isExpanded && (() => {
+                const allIssues = getAllIssuesForEpic(epic.id)
+                const localCount = allIssues.filter(i => !i._isCrossProject).length
+                const crossProjectCount = allIssues.filter(i => i._isCrossProject).length
+
+                return (
+                  <div style={{
+                    marginTop: '12px',
+                    marginLeft: '32px',
+                    paddingLeft: '16px',
+                    borderLeft: '2px solid #E5E7EB'
+                  }}>
+                    {/* Info header if there are cross-project issues */}
+                    {crossProjectCount > 0 && (
+                      <div style={{
+                        padding: '8px 12px',
+                        background: '#EFF6FF',
+                        border: '1px solid #BFDBFE',
+                        borderRadius: '6px',
+                        marginBottom: '12px',
+                        fontSize: '12px',
+                        color: '#1E40AF'
+                      }}>
+                        <strong>📊 Showing {localCount} local + {crossProjectCount} cross-project issues</strong>
+                        <div style={{ fontSize: '11px', color: '#3B82F6', marginTop: '2px' }}>
+                          Cross-project issues are highlighted with a blue left border
+                        </div>
+                      </div>
+                    )}
+
+                    {allIssues.slice(0, 20).map(issue => {
                     const issueProgress = getIssueProgressPercent(issue)
                     const issueTimelinePos = getTimelinePosition(
                       issue.created_at,
@@ -588,30 +688,49 @@ export default function GanttView({ issues, epics: allEpics }) {
                           display: 'flex',
                           alignItems: 'center',
                           padding: '8px 0',
-                          borderBottom: '1px solid #F3F4F6'
+                          paddingLeft: issue._isCrossProject ? '12px' : '0',
+                          borderBottom: '1px solid #F3F4F6',
+                          borderLeft: issue._isCrossProject ? '4px solid #3B82F6' : 'none',
+                          background: issue._isCrossProject ? '#F0F9FF' : 'transparent',
+                          marginLeft: issue._isCrossProject ? '-12px' : '0',
+                          borderRadius: issue._isCrossProject ? '4px' : '0'
                         }}
                       >
                         {/* Issue Info */}
                         <div style={{ width: '318px', paddingRight: '16px' }}>
-                          <a
-                            href={issue.web_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              fontSize: '12px',
-                              color: issue.state === 'closed' ? '#6B7280' : '#1F2937',
-                              textDecoration: 'none',
-                              display: 'block',
-                              marginBottom: '4px',
-                              textOverflow: 'ellipsis',
-                              overflow: 'hidden',
-                              whiteSpace: 'nowrap'
-                            }}
-                            onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
-                            onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
-                          >
-                            #{issue.iid} {issue.title}
-                          </a>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                            <a
+                              href={issue.web_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                fontSize: '12px',
+                                color: issue.state === 'closed' ? '#6B7280' : '#1F2937',
+                                textDecoration: 'none',
+                                textOverflow: 'ellipsis',
+                                overflow: 'hidden',
+                                whiteSpace: 'nowrap',
+                                flex: 1
+                              }}
+                              onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                              onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                            >
+                              #{issue.iid} {issue.title}
+                            </a>
+                            {issue._isCrossProject && (
+                              <span style={{
+                                fontSize: '9px',
+                                padding: '2px 5px',
+                                background: '#3B82F6',
+                                color: 'white',
+                                borderRadius: '3px',
+                                fontWeight: '600',
+                                whiteSpace: 'nowrap'
+                              }} title={`From: ${issue._sourceProject}`}>
+                                {issue._sourceProject}
+                              </span>
+                            )}
+                          </div>
                           <div style={{ fontSize: '10px', color: '#6B7280' }}>
                             {issue.assignees?.[0]?.name || 'Unassigned'}
                             {' • '}
@@ -675,18 +794,19 @@ export default function GanttView({ issues, epics: allEpics }) {
                       </div>
                     )
                   })}
-                  {epicIssues.length > 10 && (
+                  {allIssues.length > 20 && (
                     <div style={{
                       padding: '8px 0',
                       fontSize: '11px',
                       color: '#6B7280',
                       fontStyle: 'italic'
                     }}>
-                      + {epicIssues.length - 10} more issues
+                      + {allIssues.length - 20} more issues (showing first 20)
                     </div>
                   )}
                 </div>
-              )}
+                )
+              })()}
 
               {/* Expanded: Diagnostics Panel (Collapsible) */}
               {isExpanded && analysis.factors.length > 0 && (

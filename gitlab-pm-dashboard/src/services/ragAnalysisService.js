@@ -196,12 +196,13 @@ export function calculateEpicRAG(epic, issues, historicalData = null) {
   // Collect all factors with severity
 
   // RED CONDITIONS
-  if (isOverdue) {
+  if (isOverdue && openIssues.length > 0) {
+    // Only mark as overdue if there are still open issues
     factors.push({
       severity: 'critical',
       category: 'timeline',
       title: 'Epic is overdue',
-      description: `Due date ${new Date(epic.end_date).toLocaleDateString()} has passed`,
+      description: `Due date ${new Date(epic.end_date).toLocaleDateString()} has passed with ${openIssues.length} issue${openIssues.length > 1 ? 's' : ''} still open`,
       impact: 'Cannot deliver on committed timeline'
     })
     actions.push({
@@ -211,6 +212,32 @@ export function calculateEpicRAG(epic, issues, historicalData = null) {
       estimatedEffort: '1 day',
       impact: 'Align expectations with reality'
     })
+  } else if (isOverdue && openIssues.length === 0) {
+    // Epic completed but check if it was late
+    const allClosedBeforeDue = closedIssues.every(issue => {
+      if (!issue.closed_at) return false
+      const closedDate = new Date(issue.closed_at)
+      return closedDate <= new Date(epic.end_date)
+    })
+
+    if (!allClosedBeforeDue) {
+      // Completed after the due date - warning level
+      factors.push({
+        severity: 'warning',
+        category: 'timeline',
+        title: 'Epic completed late',
+        description: `All issues closed but some finished after due date ${new Date(epic.end_date).toLocaleDateString()}`,
+        impact: 'Delivered late but complete'
+      })
+      actions.push({
+        priority: 'medium',
+        title: 'Review timeline planning',
+        description: 'Analyze why epic took longer than expected to improve future estimates',
+        estimatedEffort: '1 day',
+        impact: 'Better planning for future epics'
+      })
+    }
+    // If all completed before due date, don't add any overdue factor - it's GREEN
   }
 
   if (velocityRatio < 0.7 && requiredVelocity > 0) {

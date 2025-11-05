@@ -170,20 +170,29 @@ export function calculateBurndown(issues, currentSprint) {
     sprintEnd.setHours(23, 59, 59, 999) // Normalize to end of day
   }
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0) // Normalize to midnight for date comparison
+  // Create today using local date components to avoid timezone issues
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
   const totalIssues = sprintIssues.length
 
   // Generate ideal burndown line (linear)
   const idealData = []
-  const days = Math.ceil((sprintEnd - sprintStart) / (24 * 60 * 60 * 1000))
+  // Calculate days more accurately - use floor since we're working with normalized dates
+  const daysDiff = (sprintEnd - sprintStart) / (24 * 60 * 60 * 1000)
+  const days = Math.round(daysDiff)  // Round to nearest whole day
 
   for (let day = 0; day <= days; day++) {
     const date = new Date(sprintStart.getTime() + day * 24 * 60 * 60 * 1000)
+    // Use local date string to avoid timezone issues
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const dayStr = String(date.getDate()).padStart(2, '0')
+    const dateKey = `${year}-${month}-${dayStr}`
+
     const remaining = totalIssues - (totalIssues / days) * day
     idealData.push({
-      date: date.toISOString().split('T')[0],
+      date: dateKey,
       remaining: Math.max(0, Math.round(remaining))
     })
   }
@@ -203,19 +212,40 @@ export function calculateBurndown(issues, currentSprint) {
   // Track daily progress
   const dayMap = new Map()
   closedIssues.forEach(({ date }) => {
-    const dateKey = date.toISOString().split('T')[0]
+    // Normalize the date and use local date string
+    const normalizedDate = new Date(date)
+    normalizedDate.setHours(0, 0, 0, 0)
+    const year = normalizedDate.getFullYear()
+    const month = String(normalizedDate.getMonth() + 1).padStart(2, '0')
+    const day = String(normalizedDate.getDate()).padStart(2, '0')
+    const dateKey = `${year}-${month}-${day}`
     dayMap.set(dateKey, (dayMap.get(dateKey) || 0) + 1)
   })
 
   // Generate actual burndown points (start at day 0 to match ideal)
+  console.log('Burndown generation:', {
+    sprintStart: sprintStart.toISOString(),
+    sprintEnd: sprintEnd.toISOString(),
+    today: today.toISOString(),
+    days,
+    totalIssues
+  })
+
   for (let day = 0; day <= days; day++) {
     const date = new Date(sprintStart.getTime() + day * 24 * 60 * 60 * 1000)
-    date.setHours(0, 0, 0, 0) // Normalize to midnight for comparison
+    // Create clean date using local components to avoid timezone shift
+    const cleanDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
 
     // Stop if we're past today (don't generate future data points)
-    if (date > today) break
+    if (cleanDate > today) break
 
-    const dateKey = date.toISOString().split('T')[0]
+    // Use local date string to avoid timezone issues
+    const year = cleanDate.getFullYear()
+    const month = String(cleanDate.getMonth() + 1).padStart(2, '0')
+    const dayStr = String(cleanDate.getDate()).padStart(2, '0')
+    const dateKey = `${year}-${month}-${dayStr}`
+
+    console.log(`Day ${day}: ${dateKey}, cleanDate > today: ${cleanDate > today}, cleanDate: ${cleanDate.toISOString()}, today: ${today.toISOString()}`)
 
     // For day 0, don't check closed issues (start point)
     if (day > 0 && dayMap.has(dateKey)) {
@@ -228,12 +258,25 @@ export function calculateBurndown(issues, currentSprint) {
     })
   }
 
+  console.log('Actual data points generated:', actualData.length, 'Last date:', actualData[actualData.length - 1]?.date)
+
+  // Use local date format for return values
+  const startYear = sprintStart.getFullYear()
+  const startMonth = String(sprintStart.getMonth() + 1).padStart(2, '0')
+  const startDay = String(sprintStart.getDate()).padStart(2, '0')
+  const startDateKey = `${startYear}-${startMonth}-${startDay}`
+
+  const endYear = sprintEnd.getFullYear()
+  const endMonth = String(sprintEnd.getMonth() + 1).padStart(2, '0')
+  const endDay = String(sprintEnd.getDate()).padStart(2, '0')
+  const endDateKey = `${endYear}-${endMonth}-${endDay}`
+
   return {
     actual: actualData,
     ideal: idealData,
     total: totalIssues,
-    sprintStart: sprintStart.toISOString().split('T')[0],
-    sprintEnd: sprintEnd.toISOString().split('T')[0]
+    sprintStart: startDateKey,
+    sprintEnd: endDateKey
   }
 }
 

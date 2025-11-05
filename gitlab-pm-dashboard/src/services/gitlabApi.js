@@ -396,8 +396,38 @@ export async function fetchAllData(config) {
 
   console.log(`Filtered data: ${allIssues.length} → ${issues.length} issues, ${allMilestones.length} → ${milestones.length} milestones, ${allEpics.length} → ${epics.length} epics ${shouldFilter ? '(>= 2025)' : '(no filter)'}`)
 
+  // Import cross-project linking functions
+  const {
+    linkCrossProjectIssues,
+    enhanceEpicsWithCrossProjectData,
+    buildEpicHierarchy,
+    findOrphanedIssues
+  } = await import('./crossProjectLinkingService.js')
+
+  // IMPORTANT: In single-project mode, we only have issues from the selected project
+  // But epics come from the entire group and may reference issues in other projects
+  // To show complete cross-project relationships, we need to note this limitation
+  const isSingleProjectMode = true // This is single project mode
+
+  // Build cross-project relationships with available data
+  const linkingData = linkCrossProjectIssues(issues, epics)
+
+  // Add metadata about single-project limitation
+  linkingData.singleProjectMode = isSingleProjectMode
+  linkingData.selectedProjectId = projectId
+  linkingData.limitedView = true // Only showing issues from selected project
+
+  // Build epic hierarchy
+  const { rootEpics, epicMap } = buildEpicHierarchy(epics)
+
+  // Enhance epics with cross-project metadata
+  const enhancedEpics = enhanceEpicsWithCrossProjectData(epics, linkingData)
+
+  // Find orphaned issues that might need epic assignment
+  const orphanedIssues = findOrphanedIssues(issues)
+
   // Enrich epics with their issues from issue data (workaround for 403 on Epic Issues API)
-  const epicsWithIssues = epics.map((epic) => {
+  const epicsWithIssues = enhancedEpics.map((epic) => {
     // Find all issues that belong to this epic
     const epicIssues = issues.filter(issue =>
       issue.epic && issue.epic.id === epic.id
@@ -407,10 +437,19 @@ export async function fetchAllData(config) {
   })
 
   console.log(`Loaded ${epics.length} epics with ${epicsWithIssues.reduce((sum, e) => sum + e.issues.length, 0)} total issues`)
+  console.log(`Cross-project statistics:`, linkingData.statistics)
+  if (orphanedIssues.length > 0) {
+    console.log(`Found ${orphanedIssues.length} orphaned issues that might need epic assignment`)
+  }
 
   return {
     issues,
     milestones,
-    epics: epicsWithIssues
+    epics: epicsWithIssues,
+    crossProjectData: {
+      ...linkingData,
+      epicHierarchy: { rootEpics, epicMap },
+      orphanedIssues
+    }
   }
 }

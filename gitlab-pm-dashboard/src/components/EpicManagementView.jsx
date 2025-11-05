@@ -11,7 +11,7 @@ import QuarterlyEpicTracker from './QuarterlyEpicTracker'
  * - Quarterly Tracker (quarterly planning grid)
  * Consolidates 3 tabs into 1 view with sub-navigation
  */
-export default function EpicManagementView({ epics, issues }) {
+export default function EpicManagementView({ epics, issues, crossProjectData }) {
   const [activeSubView, setActiveSubView] = useState('portfolio')
 
   return (
@@ -89,13 +89,13 @@ export default function EpicManagementView({ epics, issues }) {
       {/* Sub-View Content */}
       <div>
         {activeSubView === 'portfolio' && (
-          <EpicDashboardView epics={epics} issues={issues} />
+          <EpicDashboardView epics={epics} issues={issues} crossProjectData={crossProjectData} />
         )}
         {activeSubView === 'timeline' && (
-          <GanttView epics={epics} issues={issues} />
+          <GanttView epics={epics} issues={issues} crossProjectData={crossProjectData} />
         )}
         {activeSubView === 'quarterly' && (
-          <QuarterlyEpicTracker epics={epics} issues={issues} />
+          <QuarterlyEpicTracker epics={epics} issues={issues} crossProjectData={crossProjectData} />
         )}
       </div>
     </div>

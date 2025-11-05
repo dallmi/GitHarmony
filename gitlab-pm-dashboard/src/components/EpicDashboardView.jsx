@@ -324,7 +324,7 @@ function calculateEpicHealth({ completionRate, openIssues, totalIssues, startDat
     }
   }
 
-  // Factor 3: Schedule Health (30% weight)
+  // Factor 3: Overdue Health (30% weight)
   if (dueDate) {
     const today = new Date()
     const due = new Date(dueDate)
