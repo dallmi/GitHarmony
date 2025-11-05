@@ -33,7 +33,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
   const [templates, setTemplates] = useState(getTemplates())
   const [decisions, setDecisions] = useState(getDecisions())
   const [documents, setDocuments] = useState(getDocuments())
-  const [activeTab, setActiveTab] = useState('stakeholders') // stakeholders, templates, history, decisions, documents, timeline
+  const [activeTab, setActiveTab] = useState('email-upload') // email-upload, timeline, decisions, documents, stakeholders, templates
   const [showAddStakeholder, setShowAddStakeholder] = useState(false)
   const [showComposeModal, setShowComposeModal] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState(null)
@@ -250,6 +250,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
   const handleImportEmail = () => {
     const communication = importEmail(parsedEmail, stakeholders)
     setHistory(getCommunicationHistory())
+    setDocuments(getDocuments())  // Refresh documents state to show new attachments
     setShowEmailPreview(false)
     setParsedEmail(null)
     alert('Email imported successfully!')
@@ -299,11 +300,22 @@ export default function StakeholderHubView({ stats, healthScore }) {
 
     // Add communications
     history.forEach(comm => {
+      // Handle comm.from being either a string or an object
+      let creatorName = 'Unknown'
+      if (comm.from) {
+        if (typeof comm.from === 'object') {
+          creatorName = comm.from.name || comm.from.email || 'Unknown'
+        } else {
+          creatorName = comm.from
+        }
+      }
+
       items.push({
         type: 'communication',
         date: new Date(comm.sentAt),
         title: comm.subject,
         description: comm.content?.substring(0, 150),
+        creator: creatorName,
         data: comm
       })
     })
@@ -349,23 +361,29 @@ export default function StakeholderHubView({ stats, healthScore }) {
       {/* Tabs */}
       <div style={{ borderBottom: '2px solid #E5E7EB', marginBottom: '30px' }}>
         <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-          {['stakeholders', 'templates', 'history', 'decisions', 'documents', 'timeline'].map((tab) => (
+          {[
+            { id: 'email-upload', label: '📧 Email Upload' },
+            { id: 'timeline', label: '📅 Timeline' },
+            { id: 'decisions', label: '✅ Decisions' },
+            { id: 'documents', label: '📄 Documents' },
+            { id: 'stakeholders', label: '👥 Stakeholders' },
+            { id: 'templates', label: '📝 Templates' }
+          ].map((tab) => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
               style={{
                 padding: '12px 0',
                 background: 'none',
                 border: 'none',
-                borderBottom: activeTab === tab ? '2px solid #E60000' : '2px solid transparent',
+                borderBottom: activeTab === tab.id ? '2px solid #E60000' : '2px solid transparent',
                 fontSize: '14px',
                 fontWeight: '600',
-                color: activeTab === tab ? '#E60000' : '#6B7280',
-                cursor: 'pointer',
-                textTransform: 'capitalize'
+                color: activeTab === tab.id ? '#E60000' : '#6B7280',
+                cursor: 'pointer'
               }}
             >
-              {tab}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -563,11 +581,11 @@ export default function StakeholderHubView({ stats, healthScore }) {
         </>
       )}
 
-      {/* History Tab */}
-      {activeTab === 'history' && (
+      {/* Email Upload Tab */}
+      {activeTab === 'email-upload' && (
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: '600' }}>Communication History</h2>
+            <h2 style={{ fontSize: '20px', fontWeight: '600' }}>Email Communication Upload</h2>
             <label
               style={{
                 padding: '8px 16px',
