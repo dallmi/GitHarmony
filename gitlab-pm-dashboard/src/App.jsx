@@ -21,6 +21,7 @@ import StakeholderHubView from './components/StakeholderHubView'
 import InsightsView from './components/InsightsView'
 import IssueComplianceView from './components/IssueComplianceView'
 import CycleTimeView from './components/CycleTimeView'
+import BackupRestoreView from './components/BackupRestoreView'
 // Consolidated views
 import EpicManagementView from './components/EpicManagementView'
 import RiskManagementView from './components/RiskManagementView'
@@ -120,6 +121,7 @@ function App() {
             'roadmap',
             'stakeholders',
             'crossteam'
+            // Note: 'backup' view doesn't need iteration filter
           ].includes(activeView)
         ) && (
           <div style={{
@@ -172,6 +174,9 @@ function App() {
             </div>
           </div>
         )}
+
+        {/* Backup view is always accessible, even without configuration */}
+        {activeView === 'backup' && <BackupRestoreView />}
 
         {isConfigured() && issues.length > 0 && (
           <>
