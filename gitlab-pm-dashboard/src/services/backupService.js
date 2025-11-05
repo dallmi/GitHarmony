@@ -11,26 +11,58 @@ const BACKUP_VERSION = '1.0.0'
  */
 function getAllStorageKeys() {
   return {
-    projectConfig: 'gitlab_projects',
-    teamMembers: 'team_members',
+    // Core GitLab configuration
+    gitlabUrl: 'gitlab_url',
+    gitlabToken: 'gitlab_token',
+    projectId: 'gitlab_project',
+    groupPath: 'gitlab_group_path',
+    filter2025: 'gitlab_filter_2025',
+
+    // Portfolio/Multi-project
+    portfolioProjects: 'portfolio_projects',
+    activeProject: 'active_project_id',
+
+    // Risk management
+    risks: 'project_risks',
+
+    // Team configuration (per-project keys handled separately)
+    teamConfig: 'team_config',
+    teamCapacity: 'team_capacity',
+    velocitySettings: 'velocity_settings',
+
+    // Absences (per-project keys handled separately)
     absences: 'absences',
+
+    // Stakeholder Hub
     stakeholders: 'stakeholders',
     communicationHistory: 'communication_history',
     communicationTemplates: 'communication_templates',
     decisions: 'decisions',
     documents: 'documents',
-    healthConfig: 'health_config',
-    dataQualityRules: 'data_quality_rules',
-    ragSettings: 'rag_settings',
-    velocitySettings: 'velocity_settings',
-    capacitySettings: 'capacity_settings',
-    customLabels: 'custom_labels',
-    savedFilters: 'saved_filters',
-    uiPreferences: 'ui_preferences',
-    cycleTimeSettings: 'cycle_time_settings',
-    complianceRules: 'compliance_rules',
-    roadmapSettings: 'roadmap_settings',
-    insightsConfig: 'insights_config'
+
+    // Health Score
+    healthScoreConfig: 'healthScoreConfig',
+
+    // Quality & Compliance
+    criteriaConfig: 'criteriaConfig',
+    dodTemplates: 'dodTemplates',
+
+    // Sprint Management
+    sprintGoals: 'sprint_goals',
+    retroActions: 'retro_actions',
+
+    // Backlog Health
+    backlogHealthHistory: 'backlogHealthHistory',
+
+    // User Preferences
+    userRole: 'user_role',
+    viewPreference: 'view_preference',
+    favoriteViews: 'favorite_views',
+
+    // UI State
+    qualityShowOpenOnly: 'quality.showOpenOnly',
+    qualityLegendCollapsed: 'quality.legendCollapsed',
+    cycleTimeBottleneckCollapsed: 'cycleTime.bottleneckCollapsed'
   }
 }
 
@@ -81,40 +113,64 @@ export function createBackup(options = {}) {
 
   const keys = getAllStorageKeys()
   const includedData = []
-
-  // Load all data categories
   const data = {}
 
-  // 1. Project Configuration
-  const projects = loadFromStorage(keys.projectConfig)
-  if (projects) {
-    if (!includeTokens && projects.length > 0) {
-      // Mask access tokens for security
-      data.projectConfig = projects.map(p => ({
+  // Helper to add data if it exists
+  const addIfExists = (category, storageKey, transform = null) => {
+    const value = loadFromStorage(storageKey)
+    if (value !== null) {
+      data[category] = transform ? transform(value) : value
+      includedData.push(category)
+    }
+  }
+
+  // 1. Core GitLab Configuration
+  const gitlabToken = loadFromStorage(keys.gitlabToken)
+  const gitlabUrl = loadFromStorage(keys.gitlabUrl)
+  const projectId = loadFromStorage(keys.projectId)
+  const groupPath = loadFromStorage(keys.groupPath)
+  const filter2025 = loadFromStorage(keys.filter2025)
+
+  if (gitlabToken || gitlabUrl || projectId || groupPath || filter2025) {
+    data.gitlabConfig = {
+      gitlabUrl,
+      gitlabToken: includeTokens ? gitlabToken : (gitlabToken ? maskToken(gitlabToken) : null),
+      projectId,
+      groupPath,
+      filter2025
+    }
+    includedData.push('gitlabConfig')
+  }
+
+  // 2. Portfolio/Multi-project Configuration
+  const portfolioProjects = loadFromStorage(keys.portfolioProjects)
+  if (portfolioProjects) {
+    if (!includeTokens && Array.isArray(portfolioProjects)) {
+      // Mask access tokens in portfolio projects
+      data.portfolioProjects = portfolioProjects.map(p => ({
         ...p,
         accessToken: p.accessToken ? maskToken(p.accessToken) : null
       }))
     } else {
-      data.projectConfig = projects
+      data.portfolioProjects = portfolioProjects
     }
-    includedData.push('projectConfig')
+    includedData.push('portfolioProjects')
   }
 
-  // 2. Team Configuration
-  const teamMembers = loadFromStorage(keys.teamMembers)
-  if (teamMembers) {
-    data.teamConfig = teamMembers
-    includedData.push('teamConfig')
-  }
+  addIfExists('activeProject', keys.activeProject)
 
-  // 3. Absence/Holiday Planning
-  const absences = loadFromStorage(keys.absences)
-  if (absences) {
-    data.absences = absences
-    includedData.push('absences')
-  }
+  // 3. Risk Management
+  addIfExists('risks', keys.risks)
 
-  // 4. Stakeholder Hub Data
+  // 4. Team Configuration
+  addIfExists('teamConfig', keys.teamConfig)
+  addIfExists('teamCapacity', keys.teamCapacity)
+  addIfExists('velocitySettings', keys.velocitySettings)
+
+  // 5. Absences
+  addIfExists('absences', keys.absences)
+
+  // 6. Stakeholder Hub Data
   const stakeholders = loadFromStorage(keys.stakeholders)
   const communicationHistory = loadFromStorage(keys.communicationHistory)
   const communicationTemplates = loadFromStorage(keys.communicationTemplates)
@@ -132,88 +188,37 @@ export function createBackup(options = {}) {
     includedData.push('stakeholderHub')
   }
 
-  // 5. Health Score Configuration
-  const healthConfig = loadFromStorage(keys.healthConfig)
-  if (healthConfig) {
-    data.healthConfig = healthConfig
-    includedData.push('healthConfig')
-  }
+  // 7. Health Score Configuration
+  addIfExists('healthScoreConfig', keys.healthScoreConfig)
 
-  // 6. Data Quality Rules
-  const dataQualityRules = loadFromStorage(keys.dataQualityRules)
-  if (dataQualityRules) {
-    data.dataQualityRules = dataQualityRules
-    includedData.push('dataQualityRules')
-  }
+  // 8. Quality & Compliance
+  addIfExists('criteriaConfig', keys.criteriaConfig)
+  addIfExists('dodTemplates', keys.dodTemplates)
 
-  // 7. RAG Analysis Settings
-  const ragSettings = loadFromStorage(keys.ragSettings)
-  if (ragSettings) {
-    data.ragSettings = ragSettings
-    includedData.push('ragSettings')
-  }
+  // 9. Sprint Management
+  addIfExists('sprintGoals', keys.sprintGoals)
+  addIfExists('retroActions', keys.retroActions)
 
-  // 8. Velocity Settings
-  const velocitySettings = loadFromStorage(keys.velocitySettings)
-  if (velocitySettings) {
-    data.velocitySettings = velocitySettings
-    includedData.push('velocitySettings')
-  }
+  // 10. Backlog Health
+  addIfExists('backlogHealthHistory', keys.backlogHealthHistory)
 
-  // 9. Capacity Settings
-  const capacitySettings = loadFromStorage(keys.capacitySettings)
-  if (capacitySettings) {
-    data.capacitySettings = capacitySettings
-    includedData.push('capacitySettings')
-  }
+  // 11. User Preferences
+  addIfExists('userRole', keys.userRole)
+  addIfExists('viewPreference', keys.viewPreference)
+  addIfExists('favoriteViews', keys.favoriteViews)
 
-  // 10. Cycle Time Settings
-  const cycleTimeSettings = loadFromStorage(keys.cycleTimeSettings)
-  if (cycleTimeSettings) {
-    data.cycleTimeSettings = cycleTimeSettings
-    includedData.push('cycleTimeSettings')
-  }
+  // 12. UI State
+  const uiState = {}
+  const qualityShowOpenOnly = loadFromStorage(keys.qualityShowOpenOnly)
+  const qualityLegendCollapsed = loadFromStorage(keys.qualityLegendCollapsed)
+  const cycleTimeBottleneckCollapsed = loadFromStorage(keys.cycleTimeBottleneckCollapsed)
 
-  // 11. Compliance Rules
-  const complianceRules = loadFromStorage(keys.complianceRules)
-  if (complianceRules) {
-    data.complianceRules = complianceRules
-    includedData.push('complianceRules')
-  }
-
-  // 12. Custom Labels
-  const customLabels = loadFromStorage(keys.customLabels)
-  if (customLabels) {
-    data.customLabels = customLabels
-    includedData.push('customLabels')
-  }
-
-  // 13. Saved Filters
-  const savedFilters = loadFromStorage(keys.savedFilters)
-  if (savedFilters) {
-    data.savedFilters = savedFilters
-    includedData.push('savedFilters')
-  }
-
-  // 14. UI Preferences
-  const uiPreferences = loadFromStorage(keys.uiPreferences)
-  if (uiPreferences) {
-    data.uiPreferences = uiPreferences
-    includedData.push('uiPreferences')
-  }
-
-  // 15. Roadmap Settings
-  const roadmapSettings = loadFromStorage(keys.roadmapSettings)
-  if (roadmapSettings) {
-    data.roadmapSettings = roadmapSettings
-    includedData.push('roadmapSettings')
-  }
-
-  // 16. Insights Configuration
-  const insightsConfig = loadFromStorage(keys.insightsConfig)
-  if (insightsConfig) {
-    data.insightsConfig = insightsConfig
-    includedData.push('insightsConfig')
+  if (qualityShowOpenOnly !== null || qualityLegendCollapsed !== null || cycleTimeBottleneckCollapsed !== null) {
+    uiState.qualityShowOpenOnly = qualityShowOpenOnly
+    uiState.qualityLegendCollapsed = qualityLegendCollapsed
+    uiState.cycleTimeBottleneckCollapsed = cycleTimeBottleneckCollapsed
+    data.uiState = uiState
+    includedData.push('uiState')
   }
 
   // Create backup object
@@ -323,10 +328,22 @@ export function validateBackup(backup) {
   }
 
   // Check if tokens are masked
-  if (!backup.metadata.tokensIncluded && backup.data.projectConfig) {
-    const hasMaskedTokens = backup.data.projectConfig.some(p =>
-      p.accessToken && p.accessToken.includes('***')
-    )
+  if (!backup.metadata.tokensIncluded) {
+    let hasMaskedTokens = false
+
+    // Check GitLab config token
+    if (backup.data.gitlabConfig && backup.data.gitlabConfig.gitlabToken &&
+        backup.data.gitlabConfig.gitlabToken.includes('***')) {
+      hasMaskedTokens = true
+    }
+
+    // Check portfolio projects tokens
+    if (backup.data.portfolioProjects && Array.isArray(backup.data.portfolioProjects)) {
+      if (backup.data.portfolioProjects.some(p => p.accessToken && p.accessToken.includes('***'))) {
+        hasMaskedTokens = true
+      }
+    }
+
     if (hasMaskedTokens) {
       result.warnings.push('Access tokens are masked - you will need to re-enter them manually')
     }
@@ -373,33 +390,72 @@ export function restoreFromBackup(backup, options = {}) {
   // Restore each data category
   dataToRestore.forEach(category => {
     const data = backup.data[category]
-    if (!data) {
+    if (!data && data !== false && data !== 0 && data !== '') {
       result.skipped.push(category)
       return
     }
 
     try {
       switch (category) {
-        case 'projectConfig':
-          if (overwrite || !loadFromStorage(keys.projectConfig)) {
-            saveToStorage(keys.projectConfig, data)
-            result.restored.push('projectConfig')
-          } else if (merge) {
-            const existing = loadFromStorage(keys.projectConfig) || []
-            const merged = [...existing, ...data]
-            saveToStorage(keys.projectConfig, merged)
-            result.restored.push('projectConfig (merged)')
+        case 'gitlabConfig':
+          if (overwrite || !loadFromStorage(keys.gitlabUrl)) {
+            if (data.gitlabUrl) saveToStorage(keys.gitlabUrl, data.gitlabUrl)
+            if (data.gitlabToken) saveToStorage(keys.gitlabToken, data.gitlabToken)
+            if (data.projectId) saveToStorage(keys.projectId, data.projectId)
+            if (data.groupPath) saveToStorage(keys.groupPath, data.groupPath)
+            if (data.filter2025 !== null) saveToStorage(keys.filter2025, data.filter2025)
+            result.restored.push('gitlabConfig')
           } else {
-            result.skipped.push('projectConfig (already exists)')
+            result.skipped.push('gitlabConfig (already exists)')
+          }
+          break
+
+        case 'portfolioProjects':
+          if (overwrite || !loadFromStorage(keys.portfolioProjects)) {
+            saveToStorage(keys.portfolioProjects, data)
+            result.restored.push('portfolioProjects')
+          } else if (merge && Array.isArray(data)) {
+            const existing = loadFromStorage(keys.portfolioProjects) || []
+            const merged = [...existing, ...data]
+            saveToStorage(keys.portfolioProjects, merged)
+            result.restored.push('portfolioProjects (merged)')
+          } else {
+            result.skipped.push('portfolioProjects (already exists)')
+          }
+          break
+
+        case 'activeProject':
+          if (overwrite || !loadFromStorage(keys.activeProject)) {
+            saveToStorage(keys.activeProject, data)
+            result.restored.push('activeProject')
+          }
+          break
+
+        case 'risks':
+          if (overwrite || !loadFromStorage(keys.risks)) {
+            saveToStorage(keys.risks, data)
+            result.restored.push('risks')
           }
           break
 
         case 'teamConfig':
-          if (overwrite || !loadFromStorage(keys.teamMembers)) {
-            saveToStorage(keys.teamMembers, data)
+          if (overwrite || !loadFromStorage(keys.teamConfig)) {
+            saveToStorage(keys.teamConfig, data)
             result.restored.push('teamConfig')
-          } else {
-            result.skipped.push('teamConfig (already exists)')
+          }
+          break
+
+        case 'teamCapacity':
+          if (overwrite || !loadFromStorage(keys.teamCapacity)) {
+            saveToStorage(keys.teamCapacity, data)
+            result.restored.push('teamCapacity')
+          }
+          break
+
+        case 'velocitySettings':
+          if (overwrite || !loadFromStorage(keys.velocitySettings)) {
+            saveToStorage(keys.velocitySettings, data)
+            result.restored.push('velocitySettings')
           }
           break
 
@@ -407,8 +463,6 @@ export function restoreFromBackup(backup, options = {}) {
           if (overwrite || !loadFromStorage(keys.absences)) {
             saveToStorage(keys.absences, data)
             result.restored.push('absences')
-          } else {
-            result.skipped.push('absences (already exists)')
           }
           break
 
@@ -445,88 +499,80 @@ export function restoreFromBackup(backup, options = {}) {
           }
           break
 
-        case 'healthConfig':
-          if (overwrite || !loadFromStorage(keys.healthConfig)) {
-            saveToStorage(keys.healthConfig, data)
-            result.restored.push('healthConfig')
+        case 'healthScoreConfig':
+          if (overwrite || !loadFromStorage(keys.healthScoreConfig)) {
+            saveToStorage(keys.healthScoreConfig, data)
+            result.restored.push('healthScoreConfig')
           }
           break
 
-        case 'dataQualityRules':
-          if (overwrite || !loadFromStorage(keys.dataQualityRules)) {
-            saveToStorage(keys.dataQualityRules, data)
-            result.restored.push('dataQualityRules')
+        case 'criteriaConfig':
+          if (overwrite || !loadFromStorage(keys.criteriaConfig)) {
+            saveToStorage(keys.criteriaConfig, data)
+            result.restored.push('criteriaConfig')
           }
           break
 
-        case 'ragSettings':
-          if (overwrite || !loadFromStorage(keys.ragSettings)) {
-            saveToStorage(keys.ragSettings, data)
-            result.restored.push('ragSettings')
+        case 'dodTemplates':
+          if (overwrite || !loadFromStorage(keys.dodTemplates)) {
+            saveToStorage(keys.dodTemplates, data)
+            result.restored.push('dodTemplates')
           }
           break
 
-        case 'velocitySettings':
-          if (overwrite || !loadFromStorage(keys.velocitySettings)) {
-            saveToStorage(keys.velocitySettings, data)
-            result.restored.push('velocitySettings')
+        case 'sprintGoals':
+          if (overwrite || !loadFromStorage(keys.sprintGoals)) {
+            saveToStorage(keys.sprintGoals, data)
+            result.restored.push('sprintGoals')
           }
           break
 
-        case 'capacitySettings':
-          if (overwrite || !loadFromStorage(keys.capacitySettings)) {
-            saveToStorage(keys.capacitySettings, data)
-            result.restored.push('capacitySettings')
+        case 'retroActions':
+          if (overwrite || !loadFromStorage(keys.retroActions)) {
+            saveToStorage(keys.retroActions, data)
+            result.restored.push('retroActions')
           }
           break
 
-        case 'cycleTimeSettings':
-          if (overwrite || !loadFromStorage(keys.cycleTimeSettings)) {
-            saveToStorage(keys.cycleTimeSettings, data)
-            result.restored.push('cycleTimeSettings')
+        case 'backlogHealthHistory':
+          if (overwrite || !loadFromStorage(keys.backlogHealthHistory)) {
+            saveToStorage(keys.backlogHealthHistory, data)
+            result.restored.push('backlogHealthHistory')
           }
           break
 
-        case 'complianceRules':
-          if (overwrite || !loadFromStorage(keys.complianceRules)) {
-            saveToStorage(keys.complianceRules, data)
-            result.restored.push('complianceRules')
+        case 'userRole':
+          if (overwrite || !loadFromStorage(keys.userRole)) {
+            saveToStorage(keys.userRole, data)
+            result.restored.push('userRole')
           }
           break
 
-        case 'customLabels':
-          if (overwrite || !loadFromStorage(keys.customLabels)) {
-            saveToStorage(keys.customLabels, data)
-            result.restored.push('customLabels')
+        case 'viewPreference':
+          if (overwrite || !loadFromStorage(keys.viewPreference)) {
+            saveToStorage(keys.viewPreference, data)
+            result.restored.push('viewPreference')
           }
           break
 
-        case 'savedFilters':
-          if (overwrite || !loadFromStorage(keys.savedFilters)) {
-            saveToStorage(keys.savedFilters, data)
-            result.restored.push('savedFilters')
+        case 'favoriteViews':
+          if (overwrite || !loadFromStorage(keys.favoriteViews)) {
+            saveToStorage(keys.favoriteViews, data)
+            result.restored.push('favoriteViews')
           }
           break
 
-        case 'uiPreferences':
-          if (overwrite || !loadFromStorage(keys.uiPreferences)) {
-            saveToStorage(keys.uiPreferences, data)
-            result.restored.push('uiPreferences')
+        case 'uiState':
+          if (data.qualityShowOpenOnly !== null && data.qualityShowOpenOnly !== undefined) {
+            saveToStorage(keys.qualityShowOpenOnly, data.qualityShowOpenOnly)
           }
-          break
-
-        case 'roadmapSettings':
-          if (overwrite || !loadFromStorage(keys.roadmapSettings)) {
-            saveToStorage(keys.roadmapSettings, data)
-            result.restored.push('roadmapSettings')
+          if (data.qualityLegendCollapsed !== null && data.qualityLegendCollapsed !== undefined) {
+            saveToStorage(keys.qualityLegendCollapsed, data.qualityLegendCollapsed)
           }
-          break
-
-        case 'insightsConfig':
-          if (overwrite || !loadFromStorage(keys.insightsConfig)) {
-            saveToStorage(keys.insightsConfig, data)
-            result.restored.push('insightsConfig')
+          if (data.cycleTimeBottleneckCollapsed !== null && data.cycleTimeBottleneckCollapsed !== undefined) {
+            saveToStorage(keys.cycleTimeBottleneckCollapsed, data.cycleTimeBottleneckCollapsed)
           }
+          result.restored.push('uiState')
           break
 
         default:
