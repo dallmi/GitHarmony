@@ -20,6 +20,7 @@ import {
   searchAll
 } from '../services/stakeholderService'
 import { parseEmlFile, detectEmailTags, extractReferences } from '../utils/emailParser'
+import { parseMsgFile, isMsgFile } from '../utils/msgParser'
 import { loadConfig } from '../services/storageService'
 
 /**
@@ -186,10 +187,10 @@ export default function StakeholderHubView({ stats, healthScore }) {
     setDragActive(false)
 
     const file = e.dataTransfer.files[0]
-    if (file && file.name.endsWith('.eml')) {
+    if (file && (file.name.endsWith('.eml') || file.name.endsWith('.msg'))) {
       handleEmailFile(file)
     } else {
-      alert('Please drop a .eml file')
+      alert('Please drop a .eml or .msg file')
     }
   }
 
@@ -201,22 +202,49 @@ export default function StakeholderHubView({ stats, healthScore }) {
   }
 
   const handleEmailFile = (file) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const emlContent = e.target.result
-      const parsed = parseEmlFile(emlContent)
-      const tags = detectEmailTags(parsed.subject, parsed.body)
-      const references = extractReferences(parsed.subject, parsed.body)
+    const isMsgFormat = file.name.endsWith('.msg')
 
-      setParsedEmail({
-        ...parsed,
-        tags,
-        references,
-        attachments: []
-      })
-      setShowEmailPreview(true)
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      try {
+        let parsed
+
+        if (isMsgFormat) {
+          // Parse .msg file (Outlook format)
+          const msgBuffer = e.target.result
+          parsed = await parseMsgFile(msgBuffer)
+        } else {
+          // Parse .eml file (standard email format)
+          const emlContent = e.target.result
+          parsed = parseEmlFile(emlContent)
+        }
+
+        const tags = detectEmailTags(parsed.subject, parsed.body)
+        const references = extractReferences(parsed.subject, parsed.body)
+
+        setParsedEmail({
+          ...parsed,
+          tags,
+          references,
+          attachments: []
+        })
+        setShowEmailPreview(true)
+      } catch (error) {
+        console.error('Error parsing email file:', error)
+        alert('Failed to parse email file: ' + error.message)
+      }
     }
-    reader.readAsText(file)
+
+    reader.onerror = () => {
+      alert('Failed to read email file')
+    }
+
+    // Read as ArrayBuffer for .msg, as text for .eml
+    if (isMsgFormat) {
+      reader.readAsArrayBuffer(file)
+    } else {
+      reader.readAsText(file)
+    }
   }
 
   const handleImportEmail = () => {
@@ -551,10 +579,10 @@ export default function StakeholderHubView({ stats, healthScore }) {
                 fontWeight: '600'
               }}
             >
-              Import .eml File
+              Import Email File
               <input
                 type="file"
-                accept=".eml"
+                accept=".eml,.msg"
                 onChange={handleFileSelect}
                 style={{ display: 'none' }}
               />
@@ -578,10 +606,10 @@ export default function StakeholderHubView({ stats, healthScore }) {
           >
             <div style={{ fontSize: '32px', marginBottom: '8px' }}>📧</div>
             <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
-              Drag & drop .eml files here
+              Drag & drop email files here
             </div>
             <div style={{ fontSize: '12px', color: '#6B7280' }}>
-              or use the "Import .eml File" button above
+              Supports .eml (standard) and .msg (Outlook) files
             </div>
           </div>
 
