@@ -214,12 +214,29 @@ export default function StakeholderHubView({ stats, healthScore }) {
     e.preventDefault()
     setDragActive(false)
 
+    // Check for HTML data first (Outlook often provides HTML)
+    const htmlData = e.dataTransfer.getData('text/html')
+    if (htmlData) {
+      console.log('Detected HTML data from drag & drop')
+      handleHtmlContent(htmlData)
+      return
+    }
+
+    // Check for plain text data
+    const textData = e.dataTransfer.getData('text/plain')
+    if (textData) {
+      console.log('Detected plain text data from drag & drop')
+      handleTextContent(textData)
+      return
+    }
+
+    // Fall back to file handling
     const file = e.dataTransfer.files[0]
-    const fileName = file?.name.toLowerCase() || ''
-    if (file && (fileName.endsWith('.eml') || fileName.endsWith('.msg') || fileName.endsWith('.html') || fileName.endsWith('.htm'))) {
+    if (file) {
+      console.log('Detected file from drag & drop:', file.name, 'Type:', file.type, 'Size:', file.size)
       handleEmailFile(file)
     } else {
-      alert('Please drop a .eml, .msg, or .html email file')
+      alert('Unable to process dropped content. Please save the email as a file (.msg, .eml, or .html) and try again.')
     }
   }
 
@@ -279,6 +296,49 @@ export default function StakeholderHubView({ stats, healthScore }) {
       reader.readAsArrayBuffer(file)
     } else {
       reader.readAsText(file)
+    }
+  }
+
+  const handleHtmlContent = (htmlContent) => {
+    try {
+      console.log('Parsing HTML content, length:', htmlContent.length)
+      const parsed = parseHtmlEmail(htmlContent)
+
+      const tags = detectEmailTags(parsed.subject, parsed.body)
+      const references = extractReferences(parsed.subject, parsed.body)
+
+      setParsedEmail({
+        ...parsed,
+        tags,
+        references,
+        attachments: []
+      })
+      setShowEmailPreview(true)
+    } catch (error) {
+      console.error('Error parsing HTML content:', error)
+      alert('Failed to parse email content: ' + error.message)
+    }
+  }
+
+  const handleTextContent = (textContent) => {
+    try {
+      console.log('Parsing text content, length:', textContent.length)
+      // Try to parse as EML format first
+      const parsed = parseEmlFile(textContent)
+
+      const tags = detectEmailTags(parsed.subject, parsed.body)
+      const references = extractReferences(parsed.subject, parsed.body)
+
+      setParsedEmail({
+        ...parsed,
+        tags,
+        references,
+        attachments: []
+      })
+      setShowEmailPreview(true)
+    } catch (error) {
+      console.error('Error parsing text content:', error)
+      alert('Failed to parse email content: ' + error.message)
     }
   }
 
