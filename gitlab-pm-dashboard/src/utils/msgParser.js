@@ -11,8 +11,15 @@
  */
 export async function parseMsgFile(msgBuffer) {
   try {
-    const textDecoder = new TextDecoder('utf-8', { fatal: false })
-    const fullText = textDecoder.decode(msgBuffer)
+    // Try both UTF-8 and UTF-16LE decoders for Unicode MSG files
+    const utf8Decoder = new TextDecoder('utf-8', { fatal: false })
+    const utf16Decoder = new TextDecoder('utf-16le', { fatal: false })
+
+    const utf8Text = utf8Decoder.decode(msgBuffer)
+    const utf16Text = utf16Decoder.decode(msgBuffer)
+
+    console.log('MSG Parser - UTF-8 text length:', utf8Text.length)
+    console.log('MSG Parser - UTF-16LE text length:', utf16Text.length)
 
     const result = {
       from: { name: '', email: '' },
@@ -27,60 +34,126 @@ export async function parseMsgFile(msgBuffer) {
       attachments: []
     }
 
-    // Extract subject
-    const subjectMatch = fullText.match(/Subject[:\s]+([^\x00\r\n]+)/i)
-    if (subjectMatch) {
-      result.subject = cleanString(subjectMatch[1])
+    // Try to extract from both encodings and use the best match
+    const extractFromText = (text, encoding) => {
+      console.log(`Trying extraction with ${encoding}...`)
+      const extracted = {
+        subject: '',
+        from: '',
+        to: '',
+        body: ''
+      }
+
+      // Extract subject
+      const subjectMatch = text.match(/Subject[:\s]+([^\x00\r\n]{3,200})/i)
+      if (subjectMatch) {
+        extracted.subject = cleanString(subjectMatch[1])
+        console.log(`${encoding} subject:`, extracted.subject.substring(0, 100))
+      }
+
+      // Extract from email
+      const fromMatch = text.match(/From[:\s]+([^\x00\r\n]{3,200})/i)
+      if (fromMatch) {
+        extracted.from = cleanString(fromMatch[1])
+        console.log(`${encoding} from:`, extracted.from.substring(0, 100))
+      }
+
+      // Extract to emails
+      let toMatch = text.match(/To[:\s]+([^\x00\r\n]{3,200})/i)
+      if (!toMatch) {
+        toMatch = text.match(/To[:\s]*([^\x00]+?(?:@[^\x00;,\s]+[;,\s]?){1,5})/i)
+      }
+      if (toMatch) {
+        extracted.to = cleanString(toMatch[1])
+        console.log(`${encoding} to:`, extracted.to.substring(0, 100))
+      }
+
+      // Extract email addresses directly from the text
+      const emailPattern = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g
+      const emails = text.match(emailPattern)
+      if (emails && emails.length > 0) {
+        const uniqueEmails = [...new Set(emails)]
+        extracted.emails = uniqueEmails.slice(0, 10)
+        console.log(`${encoding} found ${uniqueEmails.length} email addresses`)
+      }
+
+      // Extract body with multiple strategies
+      const bodyMatch1 = text.match(/[\x00-\xFF]{0,1000}([a-zA-Z0-9\sÄÖÜäöüß.,!?;:'"()\-—–]{200,})/g)
+      const bodyMatch2 = text.split(/Subject.*?\n/i).slice(1).join('\n')
+      const bodyMatch3 = text.match(/([a-zA-Z0-9\sÄÖÜäöüß.,!?;:'"()\-—–\n]{100,})/g)
+
+      let bodyText = ''
+      if (bodyMatch1 && bodyMatch1.length > 0) {
+        bodyText = bodyMatch1.reduce((a, b) => a.length > b.length ? a : b, '')
+      }
+      if (!bodyText || bodyText.length < 50) {
+        if (bodyMatch2 && bodyMatch2.length > 50) {
+          bodyText = bodyMatch2
+        }
+      }
+      if (!bodyText || bodyText.length < 50) {
+        if (bodyMatch3 && bodyMatch3.length > 0) {
+          bodyText = bodyMatch3.reduce((a, b) => a.length > b.length ? a : b, '')
+        }
+      }
+      extracted.body = bodyText
+      console.log(`${encoding} body length:`, bodyText.length)
+
+      return extracted
     }
 
-    // Extract from email
-    const fromMatch = fullText.match(/From[:\s]+([^\x00\r\n]+)/i)
-    if (fromMatch) {
-      const fromStr = cleanString(fromMatch[1])
-      result.from = parseEmailAddress(fromStr)
+    // Extract from both encodings
+    const utf8Extracted = extractFromText(utf8Text, 'UTF-8')
+    const utf16Extracted = extractFromText(utf16Text, 'UTF-16LE')
+
+    // Use whichever extraction got more data
+    const utf8Score = (utf8Extracted.subject ? 1 : 0) + (utf8Extracted.from ? 1 : 0) +
+                      (utf8Extracted.to ? 1 : 0) + (utf8Extracted.body.length > 50 ? 2 : 0)
+    const utf16Score = (utf16Extracted.subject ? 1 : 0) + (utf16Extracted.from ? 1 : 0) +
+                       (utf16Extracted.to ? 1 : 0) + (utf16Extracted.body.length > 50 ? 2 : 0)
+
+    console.log('UTF-8 score:', utf8Score, 'UTF-16LE score:', utf16Score)
+
+    const bestExtraction = utf16Score > utf8Score ? utf16Extracted : utf8Extracted
+    const bestText = utf16Score > utf8Score ? utf16Text : utf8Text
+
+    console.log('Using', utf16Score > utf8Score ? 'UTF-16LE' : 'UTF-8', 'extraction')
+
+    // Populate result with best extraction
+    result.subject = bestExtraction.subject
+
+    if (bestExtraction.from) {
+      result.from = parseEmailAddress(bestExtraction.from)
     }
 
-    // Extract to emails
-    let toMatch = fullText.match(/To[:\s]+([^\x00\r\n]+)/i)
-    if (!toMatch) {
-      toMatch = fullText.match(/To[:\s]*([^\x00]+?(?:@[^\x00;,\s]+[;,\s]?)+)/i)
-    }
-    if (toMatch) {
-      const toStr = cleanString(toMatch[1])
-      result.to = parseEmailAddresses(toStr)
+    if (bestExtraction.to) {
+      result.to = parseEmailAddresses(bestExtraction.to)
     }
 
-    // If still no recipients, extract email patterns
+    // If still no recipients, use found email addresses
+    if (result.to.length === 0 && bestExtraction.emails) {
+      result.to = bestExtraction.emails.map(email => ({ name: '', email: cleanString(email) }))
+    }
+
+    // If still no recipients, extract from best text
     if (result.to.length === 0) {
       const emailPattern = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g
-      const emails = fullText.match(emailPattern)
+      const emails = bestText.match(emailPattern)
       if (emails && emails.length > 0) {
         const uniqueEmails = [...new Set(emails)]
         result.to = uniqueEmails.slice(0, 5).map(email => ({ name: '', email: cleanString(email) }))
       }
     }
 
-    // Extract body with multiple strategies
-    const bodyMatch1 = fullText.match(/[\x00-\xFF]{0,1000}([a-zA-Z0-9\sÄÖÜäöüß.,!?;:'"()\-—–]{200,})/g)
-    const bodyMatch2 = fullText.split(/Subject.*?\n/i).slice(1).join('\n')
-    const bodyMatch3 = fullText.match(/([a-zA-Z0-9\sÄÖÜäöüß.,!?;:'"()\-—–\n]{100,})/g)
+    result.body = cleanBodyText(bestExtraction.body)
 
-    let bodyText = ''
-    if (bodyMatch1 && bodyMatch1.length > 0) {
-      bodyText = bodyMatch1.reduce((a, b) => a.length > b.length ? a : b, '')
-    }
-    if (!bodyText || bodyText.length < 50) {
-      if (bodyMatch2 && bodyMatch2.length > 50) {
-        bodyText = bodyMatch2
-      }
-    }
-    if (!bodyText || bodyText.length < 50) {
-      if (bodyMatch3 && bodyMatch3.length > 0) {
-        bodyText = bodyMatch3.reduce((a, b) => a.length > b.length ? a : b, '')
-      }
-    }
+    console.log('Final result:', {
+      subject: result.subject,
+      from: result.from,
+      toCount: result.to.length,
+      bodyLength: result.body.length
+    })
 
-    result.body = cleanBodyText(bodyText)
     return result
   } catch (error) {
     console.error('Error parsing MSG file:', error)
