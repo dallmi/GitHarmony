@@ -95,7 +95,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
     const config = loadConfig()
 
     // Get stakeholder name for personalization (use first name if single recipient)
-    let stakeholderName = 'Stakeholder'
+    let stakeholderName = 'all'
     if (selectedStakeholders.length === 1) {
       const stakeholder = stakeholders.find(s => s.id === selectedStakeholders[0])
       if (stakeholder && stakeholder.name) {
@@ -158,7 +158,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
     const config = loadConfig()
 
     // Get stakeholder name for personalization (use first name if single recipient)
-    let stakeholderName = 'Stakeholder'
+    let stakeholderName = 'all'
     if (selectedStakeholders.length === 1) {
       const stakeholder = stakeholders.find(s => s.id === selectedStakeholders[0])
       if (stakeholder && stakeholder.name) {
@@ -1277,8 +1277,8 @@ export default function StakeholderHubView({ stats, healthScore }) {
                 <textarea
                   value={fillTemplate({ ...selectedTemplate, subject: templateForm.subject, body: templateForm.body }, {
                     stakeholderName: selectedStakeholders.length === 1
-                      ? (stakeholders.find(s => s.id === selectedStakeholders[0])?.name.split(' ')[0] || 'Stakeholder')
-                      : 'Stakeholder',
+                      ? (stakeholders.find(s => s.id === selectedStakeholders[0])?.name.split(' ')[0] || 'all')
+                      : 'all',
                     projectName: loadConfig().projectId || 'Project',
                     healthScore,
                     stats,

@@ -213,7 +213,7 @@ export function fillTemplate(template, data) {
 
   // Replace all placeholders
   const replacements = {
-    '{stakeholder_name}': data.stakeholderName || 'Stakeholder',
+    '{stakeholder_name}': data.stakeholderName || 'all',
     '{project_name}': data.projectName || 'Project',
     '{date}': new Date().toLocaleDateString(),
     '{health_score}': data.healthScore?.score || 'N/A',
