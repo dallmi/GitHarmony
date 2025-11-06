@@ -323,6 +323,14 @@ export default function StakeholderHubView({ stats, healthScore }) {
   const handleTextContent = (textContent) => {
     try {
       console.log('Parsing text content, length:', textContent.length)
+      console.log('Text content preview:', textContent.substring(0, 200))
+
+      // If text is too short, it's likely just a preview/link, not the full email
+      if (textContent.length < 100) {
+        alert('Dragging directly from Outlook is not supported. Please save the email as a file (.msg, .eml, or .html) first, then drag the file here.')
+        return
+      }
+
       // Try to parse as EML format first
       const parsed = parseEmlFile(textContent)
 
@@ -338,7 +346,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
       setShowEmailPreview(true)
     } catch (error) {
       console.error('Error parsing text content:', error)
-      alert('Failed to parse email content: ' + error.message)
+      alert('Failed to parse email content. Please save the email as a file (.msg, .eml, or .html) and try again.')
     }
   }
 
@@ -701,8 +709,11 @@ export default function StakeholderHubView({ stats, healthScore }) {
               cursor: 'pointer'
             }}
           >
-            <div style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
               Drag & drop email files here
+            </div>
+            <div style={{ fontSize: '12px', color: '#9CA3AF' }}>
+              Save email as .msg, .eml, or .html file first
             </div>
             <input
               type="file"
