@@ -61,6 +61,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
   const [decisionForm, setDecisionForm] = useState({
     title: '',
     description: '',
+    decisionDate: new Date().toISOString().split('T')[0], // Default to today in YYYY-MM-DD format
     stakeholderIds: [],
     linkedEpics: [],
     linkedIssues: [],
@@ -432,6 +433,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
     setDecisionForm({
       title: '',
       description: '',
+      decisionDate: new Date().toISOString().split('T')[0],
       stakeholderIds: [],
       linkedEpics: [],
       linkedIssues: [],
@@ -884,6 +886,17 @@ export default function StakeholderHubView({ stats, healthScore }) {
                   value={decisionForm.description}
                   onChange={(e) => setDecisionForm({ ...decisionForm, description: e.target.value })}
                   rows={4}
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '6px' }}
+                />
+              </div>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '4px' }}>
+                  Decision Date:
+                </label>
+                <input
+                  type="date"
+                  value={decisionForm.decisionDate}
+                  onChange={(e) => setDecisionForm({ ...decisionForm, decisionDate: e.target.value })}
                   style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '6px' }}
                 />
               </div>

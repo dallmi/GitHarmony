@@ -73,7 +73,8 @@ export function logCommunication(communication) {
     subject: communication.subject,
     content: communication.content,
     type: communication.type || 'status_update',
-    sentAt: new Date().toISOString()
+    sentAt: communication.sentAt || new Date().toISOString(), // Use provided sentAt or default to now
+    from: communication.from || null
   })
 
   // Keep only last 100 communications
@@ -424,7 +425,7 @@ export function importEmail(emailData, stakeholders) {
     stakeholderIds: matchedStakeholders,
     subject: emailData.subject,
     content: emailData.body,
-    sentAt: emailData.date.toISOString(),
+    sentAt: emailData.sentDate ? emailData.sentDate.toISOString() : emailData.date.toISOString(), // Use sentDate for timeline, fallback to import date
     messageId: emailData.messageId,
     tags: emailData.tags || [],
     references: emailData.references || [],
