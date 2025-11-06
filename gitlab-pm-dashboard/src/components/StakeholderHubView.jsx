@@ -252,24 +252,49 @@ export default function StakeholderHubView({ stats, healthScore }) {
     const isMsgFormat = fileName.endsWith('.msg')
     const isHtmlFormat = fileName.endsWith('.html') || fileName.endsWith('.htm')
 
+    console.log('=== File Processing Debug ===')
+    console.log('File name:', file.name)
+    console.log('File size:', file.size, 'bytes')
+    console.log('File type:', file.type)
+    console.log('File last modified:', new Date(file.lastModified))
+    console.log('Detected format - MSG:', isMsgFormat, 'HTML:', isHtmlFormat)
+
     const reader = new FileReader()
     reader.onload = async (e) => {
       try {
+        console.log('File read successfully, result type:', typeof e.target.result)
+        console.log('Result size:', e.target.result?.byteLength || e.target.result?.length || 0)
+
         let parsed
 
         if (isMsgFormat) {
           // Parse .msg file (Outlook format)
           const msgBuffer = e.target.result
+          console.log('Parsing as MSG format, buffer size:', msgBuffer.byteLength)
+          const bufferPreview = new Uint8Array(msgBuffer.slice(0, 16))
+          console.log('First 16 bytes:', Array.from(bufferPreview).map(b => b.toString(16).padStart(2, '0')).join(' '))
           parsed = await parseMsgFile(msgBuffer)
         } else if (isHtmlFormat) {
           // Parse .html file (HTML email export from Outlook)
           const htmlContent = e.target.result
+          console.log('Parsing as HTML format, content length:', htmlContent.length)
+          console.log('HTML preview (first 500 chars):', htmlContent.substring(0, 500))
           parsed = parseHtmlEmail(htmlContent)
         } else {
           // Parse .eml file (standard email format)
           const emlContent = e.target.result
+          console.log('Parsing as EML format, content length:', emlContent.length)
+          console.log('EML preview (first 500 chars):', emlContent.substring(0, 500))
           parsed = parseEmlFile(emlContent)
         }
+
+        console.log('Parsed result:', {
+          from: parsed.from,
+          to: parsed.to,
+          subject: parsed.subject,
+          bodyLength: parsed.body?.length || 0,
+          bodyPreview: parsed.body?.substring(0, 200) || ''
+        })
 
         const tags = detectEmailTags(parsed.subject, parsed.body)
         const references = extractReferences(parsed.subject, parsed.body)
@@ -283,18 +308,22 @@ export default function StakeholderHubView({ stats, healthScore }) {
         setShowEmailPreview(true)
       } catch (error) {
         console.error('Error parsing email file:', error)
+        console.error('Error stack:', error.stack)
         alert('Failed to parse email file: ' + error.message)
       }
     }
 
-    reader.onerror = () => {
+    reader.onerror = (error) => {
+      console.error('FileReader error:', error)
       alert('Failed to read email file')
     }
 
     // Read as ArrayBuffer for .msg, as text for .eml and .html
     if (isMsgFormat) {
+      console.log('Reading file as ArrayBuffer...')
       reader.readAsArrayBuffer(file)
     } else {
+      console.log('Reading file as Text...')
       reader.readAsText(file)
     }
   }
