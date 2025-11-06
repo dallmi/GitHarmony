@@ -93,7 +93,19 @@ export default function StakeholderHubView({ stats, healthScore }) {
     }
 
     const config = loadConfig()
+
+    // Get stakeholder name for personalization (use first name if single recipient)
+    let stakeholderName = 'Stakeholder'
+    if (selectedStakeholders.length === 1) {
+      const stakeholder = stakeholders.find(s => s.id === selectedStakeholders[0])
+      if (stakeholder && stakeholder.name) {
+        // Extract first name (everything before the first space)
+        stakeholderName = stakeholder.name.split(' ')[0]
+      }
+    }
+
     const filledContent = fillTemplate(selectedTemplate, {
+      stakeholderName,
       projectName: config.projectId || 'Project',
       healthScore,
       stats,
@@ -144,9 +156,21 @@ export default function StakeholderHubView({ stats, healthScore }) {
     }
 
     const config = loadConfig()
+
+    // Get stakeholder name for personalization (use first name if single recipient)
+    let stakeholderName = 'Stakeholder'
+    if (selectedStakeholders.length === 1) {
+      const stakeholder = stakeholders.find(s => s.id === selectedStakeholders[0])
+      if (stakeholder && stakeholder.name) {
+        // Extract first name (everything before the first space)
+        stakeholderName = stakeholder.name.split(' ')[0]
+      }
+    }
+
     const filledContent = fillTemplate(
       { ...selectedTemplate, subject: templateForm.subject, body: templateForm.body },
       {
+        stakeholderName,
         projectName: config.projectId || 'Project',
         healthScore,
         stats,
@@ -1252,6 +1276,9 @@ export default function StakeholderHubView({ stats, healthScore }) {
                 </label>
                 <textarea
                   value={fillTemplate({ ...selectedTemplate, subject: templateForm.subject, body: templateForm.body }, {
+                    stakeholderName: selectedStakeholders.length === 1
+                      ? (stakeholders.find(s => s.id === selectedStakeholders[0])?.name.split(' ')[0] || 'Stakeholder')
+                      : 'Stakeholder',
                     projectName: loadConfig().projectId || 'Project',
                     healthScore,
                     stats,
