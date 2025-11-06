@@ -48,11 +48,28 @@ export async function parseMsgFile(msgBuffer) {
       result.from = parseEmailAddress(fromStr)
     }
 
-    // Extract to emails
-    const toMatch = fullText.match(/To[:\s]+([^\x00\r\n]+)/i)
+    // Extract to emails - try multiple patterns
+    let toMatch = fullText.match(/To[:\s]+([^\x00\r\n]+)/i)
+
+    // If not found, try alternative patterns
+    if (!toMatch) {
+      toMatch = fullText.match(/To[:\s]*([^\x00]+?(?:@[^\x00;,\s]+[;,\s]?)+)/i)
+    }
+
     if (toMatch) {
       const toStr = cleanString(toMatch[1])
       result.to = parseEmailAddresses(toStr)
+    }
+
+    // If still no recipients, try to find email patterns in the binary data
+    if (result.to.length === 0) {
+      const emailPattern = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g
+      const emails = fullText.match(emailPattern)
+      if (emails && emails.length > 0) {
+        // Skip the sender email, take the next ones as potential recipients
+        const uniqueEmails = [...new Set(emails)]
+        result.to = uniqueEmails.slice(0, 5).map(email => ({ name: '', email: cleanString(email) }))
+      }
     }
 
     // Extract CC
@@ -74,13 +91,37 @@ export async function parseMsgFile(msgBuffer) {
 
     // Extract body - look for body content
     // In MSG files, the body is usually stored in specific streams
-    // This is a simplified extraction
-    const bodyMatch = fullText.match(/[\x00-\xFF]{0,1000}([a-zA-Z0-9\s.,!?;:'"()\-—–]{200,})/g)
-    if (bodyMatch && bodyMatch.length > 0) {
+    // Try multiple patterns to find body content
+
+    // Pattern 1: Look for long text blocks with common email content
+    const bodyMatch1 = fullText.match(/[\x00-\xFF]{0,1000}([a-zA-Z0-9\sÄÖÜäöüß.,!?;:'"()\-—–]{200,})/g)
+
+    // Pattern 2: Try to find text after common email headers
+    const bodyMatch2 = fullText.split(/Subject.*?\n/i).slice(1).join('\n')
+
+    // Pattern 3: Look for readable text sections
+    const bodyMatch3 = fullText.match(/([a-zA-Z0-9\sÄÖÜäöüß.,!?;:'"()\-—–\n]{100,})/g)
+
+    let bodyText = ''
+
+    if (bodyMatch1 && bodyMatch1.length > 0) {
       // Take the longest match as it's likely the body
-      const longestMatch = bodyMatch.reduce((a, b) => a.length > b.length ? a : b, '')
-      result.body = cleanBodyText(longestMatch)
+      bodyText = bodyMatch1.reduce((a, b) => a.length > b.length ? a : b, '')
     }
+
+    if (!bodyText || bodyText.length < 50) {
+      if (bodyMatch2 && bodyMatch2.length > 50) {
+        bodyText = bodyMatch2
+      }
+    }
+
+    if (!bodyText || bodyText.length < 50) {
+      if (bodyMatch3 && bodyMatch3.length > 0) {
+        bodyText = bodyMatch3.reduce((a, b) => a.length > b.length ? a : b, '')
+      }
+    }
+
+    result.body = cleanBodyText(bodyText)
 
     return result
   } catch (error) {

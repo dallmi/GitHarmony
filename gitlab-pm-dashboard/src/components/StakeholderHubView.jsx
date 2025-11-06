@@ -46,6 +46,8 @@ export default function StakeholderHubView({ stats, healthScore }) {
   const [dragActive, setDragActive] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [timelineView, setTimelineView] = useState('list') // 'list' or 'gantt'
+  const [selectedTimelineItem, setSelectedTimelineItem] = useState(null)
+  const [showTimelineDetail, setShowTimelineDetail] = useState(false)
 
   const [stakeholderForm, setStakeholderForm] = useState({
     name: '',
@@ -677,7 +679,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                         )}
                       </div>
                       <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                        {new Date(comm.sentAt).toLocaleString()}
+                        {new Date(comm.sentAt).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </div>
                       {comm.tags && comm.tags.length > 0 && (
                         <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
@@ -810,7 +812,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                         </span>
                       </div>
                       <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '8px' }}>
-                        {new Date(decision.decisionDate).toLocaleString()}
+                        {new Date(decision.decisionDate).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </div>
                       <div style={{ fontSize: '13px', color: '#374151', marginBottom: '8px' }}>
                         {decision.description}
@@ -894,7 +896,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                         </span>
                       </div>
                       <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>
-                        Uploaded: {new Date(doc.uploadDate).toLocaleString()}
+                        Uploaded: {new Date(doc.uploadDate).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </div>
                       {doc.description && (
                         <div style={{ fontSize: '13px', color: '#374151' }}>{doc.description}</div>
@@ -1002,7 +1004,16 @@ export default function StakeholderHubView({ stats, healthScore }) {
                       }}
                     />
 
-                    <div className="card" style={{ background: '#F9FAFB' }}>
+                    <div
+                      className="card"
+                      style={{ background: '#F9FAFB', cursor: 'pointer', transition: 'all 0.2s' }}
+                      onClick={() => {
+                        setSelectedTimelineItem(item)
+                        setShowTimelineDetail(true)
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#EEF2FF'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = '#F9FAFB'}
+                    >
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
                         <span
                           style={{
@@ -1017,7 +1028,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                           {item.type}
                         </span>
                         <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                          {item.date.toLocaleString()}
+                          {item.date.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </div>
                       <h3 style={{ fontSize: '15px', fontWeight: '600', marginBottom: '4px' }}>{item.title}</h3>
@@ -1161,7 +1172,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                               {item.title}
                             </div>
                             <div style={{ fontSize: '11px', color: '#6B7280' }}>
-                              {item.date.toLocaleDateString()}
+                              {item.date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                             </div>
                           </div>
 
@@ -1183,7 +1194,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                                   top: '10px',
                                   zIndex: 10
                                 }}
-                                title={`${item.title}\n${item.date.toLocaleString()}`}
+                                title={`${item.title}\n${item.date.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`}
                               />
                             )}
                           </div>
@@ -1397,7 +1408,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                 <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '4px' }}>
                   Date:
                 </label>
-                <div style={{ fontSize: '14px' }}>{parsedEmail.date.toLocaleString()}</div>
+                <div style={{ fontSize: '14px' }}>{parsedEmail.date.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
               </div>
 
               {parsedEmail.tags && parsedEmail.tags.length > 0 && (
@@ -1496,6 +1507,201 @@ export default function StakeholderHubView({ stats, healthScore }) {
               <button className="btn btn-primary" onClick={handleImportEmail}>
                 Import Email
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Timeline Detail Modal */}
+      {showTimelineDetail && selectedTimelineItem && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}
+        onClick={() => setShowTimelineDetail(false)}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '8px',
+              maxWidth: '600px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: '24px', borderBottom: '1px solid #E5E7EB' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{
+                      fontSize: '11px',
+                      background: selectedTimelineItem.type === 'communication' ? '#DBEAFE' : selectedTimelineItem.type === 'decision' ? '#D1FAE5' : '#FEF3C7',
+                      color: selectedTimelineItem.type === 'communication' ? '#1E40AF' : selectedTimelineItem.type === 'decision' ? '#065F46' : '#92400E',
+                      padding: '3px 8px',
+                      borderRadius: '4px',
+                      textTransform: 'uppercase',
+                      fontWeight: '600'
+                    }}>
+                      {selectedTimelineItem.type}
+                    </span>
+                    <span style={{ fontSize: '13px', color: '#6B7280' }}>
+                      {selectedTimelineItem.date.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '4px' }}>
+                    {selectedTimelineItem.title}
+                  </h2>
+                </div>
+                <button
+                  onClick={() => setShowTimelineDetail(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '24px',
+                    cursor: 'pointer',
+                    color: '#6B7280',
+                    padding: '0',
+                    marginLeft: '16px'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            <div style={{ padding: '24px' }}>
+              {selectedTimelineItem.type === 'communication' && (
+                <>
+                  {selectedTimelineItem.data.from && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '4px' }}>
+                        From:
+                      </label>
+                      <div style={{ fontSize: '14px' }}>
+                        {typeof selectedTimelineItem.data.from === 'object'
+                          ? `${selectedTimelineItem.data.from.name || ''} <${selectedTimelineItem.data.from.email || ''}>`
+                          : selectedTimelineItem.data.from}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedTimelineItem.data.to && selectedTimelineItem.data.to.length > 0 && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '4px' }}>
+                        To:
+                      </label>
+                      <div style={{ fontSize: '14px' }}>
+                        {selectedTimelineItem.data.to.map((recipient, idx) => (
+                          <div key={idx}>
+                            {typeof recipient === 'object'
+                              ? `${recipient.name || ''} <${recipient.email || ''}>`
+                              : recipient}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '4px' }}>
+                      Content:
+                    </label>
+                    <div style={{ fontSize: '14px', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+                      {selectedTimelineItem.data.content}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {selectedTimelineItem.type === 'decision' && (
+                <>
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '4px' }}>
+                      Status:
+                    </label>
+                    <span style={{
+                      fontSize: '12px',
+                      background: selectedTimelineItem.data.status === 'active' ? '#D1FAE5' : '#FEE2E2',
+                      color: selectedTimelineItem.data.status === 'active' ? '#065F46' : '#991B1B',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      textTransform: 'uppercase'
+                    }}>
+                      {selectedTimelineItem.data.status}
+                    </span>
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '4px' }}>
+                      Description:
+                    </label>
+                    <div style={{ fontSize: '14px', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+                      {selectedTimelineItem.data.description}
+                    </div>
+                  </div>
+
+                  {selectedTimelineItem.data.tags && selectedTimelineItem.data.tags.length > 0 && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '4px' }}>
+                        Tags:
+                      </label>
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                        {selectedTimelineItem.data.tags.map((tag, idx) => (
+                          <span key={idx} style={{
+                            fontSize: '11px',
+                            background: '#F3F4F6',
+                            color: '#374151',
+                            padding: '3px 8px',
+                            borderRadius: '4px'
+                          }}>
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {selectedTimelineItem.type === 'document' && (
+                <>
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '4px' }}>
+                      File Type:
+                    </label>
+                    <div style={{ fontSize: '14px' }}>{selectedTimelineItem.data.fileType}</div>
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '4px' }}>
+                      File Size:
+                    </label>
+                    <div style={{ fontSize: '14px' }}>
+                      {(selectedTimelineItem.data.fileSize / 1024).toFixed(2)} KB
+                    </div>
+                  </div>
+
+                  {selectedTimelineItem.data.description && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '4px' }}>
+                        Description:
+                      </label>
+                      <div style={{ fontSize: '14px' }}>{selectedTimelineItem.data.description}</div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
