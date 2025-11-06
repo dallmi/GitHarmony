@@ -21,6 +21,7 @@ import {
 } from '../services/stakeholderService'
 import { parseEmlFile, detectEmailTags, extractReferences } from '../utils/emailParser'
 import { parseMsgFile, isMsgFile } from '../utils/msgParser'
+import { parseHtmlEmail } from '../utils/htmlEmailParser'
 import { loadConfig } from '../services/storageService'
 
 /**
@@ -214,10 +215,11 @@ export default function StakeholderHubView({ stats, healthScore }) {
     setDragActive(false)
 
     const file = e.dataTransfer.files[0]
-    if (file && (file.name.endsWith('.eml') || file.name.endsWith('.msg'))) {
+    const fileName = file?.name.toLowerCase() || ''
+    if (file && (fileName.endsWith('.eml') || fileName.endsWith('.msg') || fileName.endsWith('.html') || fileName.endsWith('.htm'))) {
       handleEmailFile(file)
     } else {
-      alert('Please drop a .eml or .msg file')
+      alert('Please drop a .eml, .msg, or .html email file')
     }
   }
 
@@ -229,7 +231,9 @@ export default function StakeholderHubView({ stats, healthScore }) {
   }
 
   const handleEmailFile = (file) => {
-    const isMsgFormat = file.name.endsWith('.msg')
+    const fileName = file.name.toLowerCase()
+    const isMsgFormat = fileName.endsWith('.msg')
+    const isHtmlFormat = fileName.endsWith('.html') || fileName.endsWith('.htm')
 
     const reader = new FileReader()
     reader.onload = async (e) => {
@@ -240,6 +244,10 @@ export default function StakeholderHubView({ stats, healthScore }) {
           // Parse .msg file (Outlook format)
           const msgBuffer = e.target.result
           parsed = await parseMsgFile(msgBuffer)
+        } else if (isHtmlFormat) {
+          // Parse .html file (HTML email export from Outlook)
+          const htmlContent = e.target.result
+          parsed = parseHtmlEmail(htmlContent)
         } else {
           // Parse .eml file (standard email format)
           const emlContent = e.target.result
@@ -266,7 +274,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
       alert('Failed to read email file')
     }
 
-    // Read as ArrayBuffer for .msg, as text for .eml
+    // Read as ArrayBuffer for .msg, as text for .eml and .html
     if (isMsgFormat) {
       reader.readAsArrayBuffer(file)
     } else {
@@ -638,7 +646,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
             </div>
             <input
               type="file"
-              accept=".eml,.msg"
+              accept=".eml,.msg,.html,.htm"
               onChange={handleFileSelect}
               style={{ display: 'none' }}
             />
