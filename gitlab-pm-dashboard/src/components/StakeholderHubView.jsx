@@ -276,9 +276,41 @@ export default function StakeholderHubView({ stats, healthScore }) {
           parsed = await parseMsgFile(msgBuffer)
         } else if (isHtmlFormat) {
           // Parse .html file (HTML email export from Outlook)
-          const htmlContent = e.target.result
+          // Try multiple encodings to handle corporate email systems
+          let htmlContent
+          const buffer = e.target.result
+
+          // Try to detect encoding from HTML meta tag or BOM
+          const encodings = ['UTF-8', 'windows-1252', 'ISO-8859-1', 'UTF-16LE']
+          let bestContent = null
+          let fewestReplacementChars = Infinity
+
+          for (const encoding of encodings) {
+            try {
+              const decoder = new TextDecoder(encoding, { fatal: false })
+              const decoded = decoder.decode(buffer)
+              // Count replacement characters (�)
+              const replacementCount = (decoded.match(/�/g) || []).length
+              console.log(`Encoding ${encoding}: ${replacementCount} replacement characters`)
+
+              if (replacementCount < fewestReplacementChars) {
+                fewestReplacementChars = replacementCount
+                bestContent = decoded
+              }
+
+              // If we found a perfect decode, use it
+              if (replacementCount === 0) {
+                break
+              }
+            } catch (err) {
+              console.log(`Encoding ${encoding} failed:`, err.message)
+            }
+          }
+
+          htmlContent = bestContent || new TextDecoder('UTF-8', { fatal: false }).decode(buffer)
           console.log('Parsing as HTML format, content length:', htmlContent.length)
           console.log('HTML preview (first 500 chars):', htmlContent.substring(0, 500))
+          console.log('Best encoding had', fewestReplacementChars, 'replacement characters')
           parsed = parseHtmlEmail(htmlContent)
         } else {
           // Parse .eml file (standard email format)
@@ -322,9 +354,14 @@ export default function StakeholderHubView({ stats, healthScore }) {
     if (isMsgFormat) {
       console.log('Reading file as ArrayBuffer...')
       reader.readAsArrayBuffer(file)
+    } else if (isHtmlFormat) {
+      // HTML files might use different encodings (Windows-1252, ISO-8859-1)
+      // Read as ArrayBuffer first so we can try different encodings
+      console.log('Reading HTML file as ArrayBuffer to detect encoding...')
+      reader.readAsArrayBuffer(file)
     } else {
       console.log('Reading file as Text...')
-      reader.readAsText(file)
+      reader.readAsText(file, 'UTF-8')
     }
   }
 
