@@ -27,7 +27,8 @@ export async function parseMsgFile(msgBuffer) {
       cc: [],
       bcc: [],
       subject: '',
-      date: new Date(),
+      date: new Date(), // When email was imported/uploaded
+      sentDate: null,   // When email was sent (from Sent: field)
       messageId: '',
       body: '',
       rawHeaders: {},
@@ -42,7 +43,7 @@ export async function parseMsgFile(msgBuffer) {
         from: '',
         to: '',
         cc: '',
-        date: '',
+        sentDate: '',
         body: ''
       }
 
@@ -80,20 +81,19 @@ export async function parseMsgFile(msgBuffer) {
         console.log(`${encoding} cc:`, extracted.cc.substring(0, 100))
       }
 
-      // Extract sent date/time
-      // Try different date patterns: "Sent:", "Date:", or timestamp patterns
-      const datePatterns = [
+      // Extract sent date/time (when the email was sent)
+      // Try different patterns: "Sent:", or timestamp patterns
+      const sentDatePatterns = [
         /Sent[:\s]+([^\x00\r\n]{10,100})/i,
-        /Date[:\s]+([^\x00\r\n]{10,100})/i,
         /(\d{1,2}[\.\/\-]\d{1,2}[\.\/\-]\d{2,4}[,\s]+\d{1,2}:\d{2})/,
         /(\d{4}[\.\/\-]\d{1,2}[\.\/\-]\d{1,2}[,\s]+\d{1,2}:\d{2})/
       ]
 
-      for (const pattern of datePatterns) {
-        const dateMatch = text.match(pattern)
-        if (dateMatch) {
-          extracted.date = cleanString(dateMatch[1])
-          console.log(`${encoding} date:`, extracted.date)
+      for (const pattern of sentDatePatterns) {
+        const sentDateMatch = text.match(pattern)
+        if (sentDateMatch) {
+          extracted.sentDate = cleanString(sentDateMatch[1])
+          console.log(`${encoding} sentDate:`, extracted.sentDate)
           break
         }
       }
@@ -139,10 +139,10 @@ export async function parseMsgFile(msgBuffer) {
     // Use whichever extraction got more data
     const utf8Score = (utf8Extracted.subject ? 1 : 0) + (utf8Extracted.from ? 1 : 0) +
                       (utf8Extracted.to ? 1 : 0) + (utf8Extracted.cc ? 1 : 0) +
-                      (utf8Extracted.date ? 1 : 0) + (utf8Extracted.body.length > 50 ? 2 : 0)
+                      (utf8Extracted.sentDate ? 1 : 0) + (utf8Extracted.body.length > 50 ? 2 : 0)
     const utf16Score = (utf16Extracted.subject ? 1 : 0) + (utf16Extracted.from ? 1 : 0) +
                        (utf16Extracted.to ? 1 : 0) + (utf16Extracted.cc ? 1 : 0) +
-                       (utf16Extracted.date ? 1 : 0) + (utf16Extracted.body.length > 50 ? 2 : 0)
+                       (utf16Extracted.sentDate ? 1 : 0) + (utf16Extracted.body.length > 50 ? 2 : 0)
 
     console.log('UTF-8 score:', utf8Score, 'UTF-16LE score:', utf16Score)
 
@@ -167,15 +167,15 @@ export async function parseMsgFile(msgBuffer) {
       result.cc = parseEmailAddresses(bestExtraction.cc)
     }
 
-    // Parse date
-    if (bestExtraction.date) {
+    // Parse sent date (when email was sent)
+    if (bestExtraction.sentDate) {
       try {
-        const parsedDate = new Date(bestExtraction.date)
-        if (!isNaN(parsedDate.getTime())) {
-          result.date = parsedDate
+        const parsedSentDate = new Date(bestExtraction.sentDate)
+        if (!isNaN(parsedSentDate.getTime())) {
+          result.sentDate = parsedSentDate
         }
       } catch (e) {
-        console.log('Could not parse date:', bestExtraction.date)
+        console.log('Could not parse sent date:', bestExtraction.sentDate)
       }
     }
 
@@ -201,7 +201,8 @@ export async function parseMsgFile(msgBuffer) {
       from: result.from,
       toCount: result.to.length,
       ccCount: result.cc.length,
-      date: result.date,
+      importDate: result.date,
+      sentDate: result.sentDate,
       bodyLength: result.body.length
     })
 

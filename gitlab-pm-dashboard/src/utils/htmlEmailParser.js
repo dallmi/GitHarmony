@@ -20,7 +20,8 @@ export function parseHtmlEmail(htmlContent) {
       cc: [],
       bcc: [],
       subject: '',
-      date: new Date(),
+      date: new Date(), // When email was imported/uploaded
+      sentDate: null,   // When email was sent (from Sent: field)
       messageId: '',
       body: '',
       rawHeaders: {},
@@ -42,7 +43,6 @@ export function parseHtmlEmail(htmlContent) {
       { pattern: /To:\s*([^\n<]+)/i, field: 'to' },
       { pattern: /Cc:\s*([^\n<]+)/i, field: 'cc' },
       { pattern: /Subject:\s*([^\n<]+)/i, field: 'subject' },
-      { pattern: /Date:\s*([^\n<]+)/i, field: 'date' },
       { pattern: /Sent:\s*([^\n<]+)/i, field: 'sent' }
     ]
 
@@ -59,17 +59,15 @@ export function parseHtmlEmail(htmlContent) {
           result.cc = parseEmailAddresses(match[1])
         } else if (field === 'subject' && !result.subject) {
           result.subject = match[1].trim()
-        } else if (field === 'date' || field === 'sent') {
-          // Only set date if not already set (prefer Date: over Sent:)
-          if (!result.date || result.date.getTime() === new Date().getTime()) {
-            try {
-              const parsedDate = new Date(match[1].trim())
-              if (!isNaN(parsedDate.getTime())) {
-                result.date = parsedDate
-              }
-            } catch (e) {
-              // Keep current date if parsing fails
+        } else if (field === 'sent') {
+          // Extract sent date (when email was sent)
+          try {
+            const parsedSentDate = new Date(match[1].trim())
+            if (!isNaN(parsedSentDate.getTime())) {
+              result.sentDate = parsedSentDate
             }
+          } catch (e) {
+            // Keep sentDate as null if parsing fails
           }
         }
       }
