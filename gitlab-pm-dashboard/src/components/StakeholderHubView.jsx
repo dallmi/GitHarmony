@@ -389,12 +389,12 @@ export default function StakeholderHubView({ stats, healthScore }) {
       <div style={{ borderBottom: '2px solid #E5E7EB', marginBottom: '30px' }}>
         <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
           {[
-            { id: 'email-upload', label: '📧 Email Upload' },
-            { id: 'timeline', label: '📅 Timeline' },
-            { id: 'decisions', label: '✅ Decisions' },
-            { id: 'documents', label: '📄 Documents' },
-            { id: 'stakeholders', label: '👥 Stakeholders' },
-            { id: 'templates', label: '📝 Templates' }
+            { id: 'email-upload', label: 'Email Upload' },
+            { id: 'timeline', label: 'Timeline' },
+            { id: 'decisions', label: 'Decisions' },
+            { id: 'documents', label: 'Documents' },
+            { id: 'stakeholders', label: 'Stakeholders' },
+            { id: 'templates', label: 'Templates' }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -640,21 +640,18 @@ export default function StakeholderHubView({ stats, healthScore }) {
             onDragLeave={() => setDragActive(false)}
             onDrop={handleFileDrop}
             style={{
-              border: dragActive ? '2px dashed #10B981' : '2px dashed #D1D5DB',
+              border: dragActive ? '3px solid #3B82F6' : '3px dashed #3B82F6',
               borderRadius: '8px',
-              padding: '24px',
+              padding: '32px',
               textAlign: 'center',
               marginBottom: '20px',
-              background: dragActive ? '#ECFDF5' : '#F9FAFB',
-              transition: 'all 0.2s'
+              background: dragActive ? '#EFF6FF' : '#F9FAFB',
+              transition: 'all 0.2s',
+              animation: dragActive ? 'none' : 'pulse 2s ease-in-out infinite'
             }}
           >
-            <div style={{ fontSize: '32px', marginBottom: '8px' }}>📧</div>
-            <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
               Drag & drop email files here
-            </div>
-            <div style={{ fontSize: '12px', color: '#6B7280' }}>
-              Supports .eml (standard) and .msg (Outlook) files
             </div>
           </div>
 
