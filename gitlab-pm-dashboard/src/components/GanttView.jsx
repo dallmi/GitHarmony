@@ -53,28 +53,37 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
   const [showExecutiveSummary, setShowExecutiveSummary] = useState(true)
 
   // Quarter selection handler - consecutive quarters only
-  const handleQuarterToggle = (quarter) => {
-    if (selectedQuarters.includes(quarter)) {
-      // Clicking an already selected quarter: shrink selection
-      if (selectedQuarters.length === 1) return // Don't deselect the last one
+  const handleQuarterToggle = (quarter, event) => {
+    // Check if Ctrl (or Cmd on Mac) is pressed
+    const isCtrlPressed = event.ctrlKey || event.metaKey
 
-      // Remove from start or end to maintain consecutiveness
-      if (quarter === Math.min(...selectedQuarters)) {
-        setSelectedQuarters(selectedQuarters.filter(q => q !== quarter))
-      } else if (quarter === Math.max(...selectedQuarters)) {
-        setSelectedQuarters(selectedQuarters.filter(q => q !== quarter))
-      }
+    if (!isCtrlPressed) {
+      // Without Ctrl: replace selection with just this quarter
+      setSelectedQuarters([quarter])
     } else {
-      // Add to selection maintaining consecutiveness
-      const newQuarters = [...selectedQuarters, quarter].sort((a, b) => a - b)
-      // Fill gaps to ensure consecutive quarters
-      const min = Math.min(...newQuarters)
-      const max = Math.max(...newQuarters)
-      const consecutive = []
-      for (let q = min; q <= max; q++) {
-        consecutive.push(q)
+      // With Ctrl: multi-select behavior
+      if (selectedQuarters.includes(quarter)) {
+        // Clicking an already selected quarter: shrink selection
+        if (selectedQuarters.length === 1) return // Don't deselect the last one
+
+        // Remove from start or end to maintain consecutiveness
+        if (quarter === Math.min(...selectedQuarters)) {
+          setSelectedQuarters(selectedQuarters.filter(q => q !== quarter))
+        } else if (quarter === Math.max(...selectedQuarters)) {
+          setSelectedQuarters(selectedQuarters.filter(q => q !== quarter))
+        }
+      } else {
+        // Add to selection maintaining consecutiveness
+        const newQuarters = [...selectedQuarters, quarter].sort((a, b) => a - b)
+        // Fill gaps to ensure consecutive quarters
+        const min = Math.min(...newQuarters)
+        const max = Math.max(...newQuarters)
+        const consecutive = []
+        for (let q = min; q <= max; q++) {
+          consecutive.push(q)
+        }
+        setSelectedQuarters(consecutive)
       }
-      setSelectedQuarters(consecutive)
     }
   }
 
@@ -372,7 +381,7 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
                   return (
                     <button
                       key={quarter}
-                      onClick={() => handleQuarterToggle(quarter)}
+                      onClick={(e) => handleQuarterToggle(quarter, e)}
                       style={{
                         padding: '8px 16px',
                         background: isSelected ? '#3B82F6' : 'white',
@@ -479,7 +488,7 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
                 return (
                   <button
                     key={quarter}
-                    onClick={() => handleQuarterToggle(quarter)}
+                    onClick={(e) => handleQuarterToggle(quarter, e)}
                     style={{
                       padding: '8px 16px',
                       background: isSelected ? '#3B82F6' : 'white',
