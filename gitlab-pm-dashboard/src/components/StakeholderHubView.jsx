@@ -24,7 +24,7 @@ import { parseMsgFile, isMsgFile } from '../utils/msgParser'
 import { loadConfig } from '../services/storageService'
 
 /**
- * Stakeholder Communication Hub
+ * Communication Hub
  * Manage stakeholders and communication templates
  */
 export default function StakeholderHubView({ stats, healthScore }) {
@@ -352,7 +352,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
       {/* Header */}
       <div style={{ marginBottom: '20px' }}>
         <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
-          Stakeholder Communication Hub
+          Communication Hub
         </h2>
         <p style={{ fontSize: '14px', color: '#6B7280' }}>
           Manage stakeholders and communication templates
