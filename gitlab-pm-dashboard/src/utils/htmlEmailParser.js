@@ -40,8 +40,10 @@ export function parseHtmlEmail(htmlContent) {
     const headerPatterns = [
       { pattern: /From:\s*([^\n<]+)/i, field: 'from' },
       { pattern: /To:\s*([^\n<]+)/i, field: 'to' },
+      { pattern: /Cc:\s*([^\n<]+)/i, field: 'cc' },
       { pattern: /Subject:\s*([^\n<]+)/i, field: 'subject' },
-      { pattern: /Date:\s*([^\n<]+)/i, field: 'date' }
+      { pattern: /Date:\s*([^\n<]+)/i, field: 'date' },
+      { pattern: /Sent:\s*([^\n<]+)/i, field: 'sent' }
     ]
 
     const plainText = doc.body ? doc.body.textContent : htmlContent
@@ -53,16 +55,21 @@ export function parseHtmlEmail(htmlContent) {
           result.from = parseEmailAddress(match[1])
         } else if (field === 'to') {
           result.to = parseEmailAddresses(match[1])
+        } else if (field === 'cc') {
+          result.cc = parseEmailAddresses(match[1])
         } else if (field === 'subject' && !result.subject) {
           result.subject = match[1].trim()
-        } else if (field === 'date') {
-          try {
-            result.date = new Date(match[1].trim())
-            if (isNaN(result.date.getTime())) {
-              result.date = new Date()
+        } else if (field === 'date' || field === 'sent') {
+          // Only set date if not already set (prefer Date: over Sent:)
+          if (!result.date || result.date.getTime() === new Date().getTime()) {
+            try {
+              const parsedDate = new Date(match[1].trim())
+              if (!isNaN(parsedDate.getTime())) {
+                result.date = parsedDate
+              }
+            } catch (e) {
+              // Keep current date if parsing fails
             }
-          } catch (e) {
-            result.date = new Date()
           }
         }
       }

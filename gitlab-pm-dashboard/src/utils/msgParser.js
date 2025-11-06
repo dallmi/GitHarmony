@@ -41,6 +41,8 @@ export async function parseMsgFile(msgBuffer) {
         subject: '',
         from: '',
         to: '',
+        cc: '',
+        date: '',
         body: ''
       }
 
@@ -66,6 +68,34 @@ export async function parseMsgFile(msgBuffer) {
       if (toMatch) {
         extracted.to = cleanString(toMatch[1])
         console.log(`${encoding} to:`, extracted.to.substring(0, 100))
+      }
+
+      // Extract CC emails
+      let ccMatch = text.match(/Cc[:\s]+([^\x00\r\n]{3,200})/i)
+      if (!ccMatch) {
+        ccMatch = text.match(/Cc[:\s]*([^\x00]+?(?:@[^\x00;,\s]+[;,\s]?){1,5})/i)
+      }
+      if (ccMatch) {
+        extracted.cc = cleanString(ccMatch[1])
+        console.log(`${encoding} cc:`, extracted.cc.substring(0, 100))
+      }
+
+      // Extract sent date/time
+      // Try different date patterns: "Sent:", "Date:", or timestamp patterns
+      const datePatterns = [
+        /Sent[:\s]+([^\x00\r\n]{10,100})/i,
+        /Date[:\s]+([^\x00\r\n]{10,100})/i,
+        /(\d{1,2}[\.\/\-]\d{1,2}[\.\/\-]\d{2,4}[,\s]+\d{1,2}:\d{2})/,
+        /(\d{4}[\.\/\-]\d{1,2}[\.\/\-]\d{1,2}[,\s]+\d{1,2}:\d{2})/
+      ]
+
+      for (const pattern of datePatterns) {
+        const dateMatch = text.match(pattern)
+        if (dateMatch) {
+          extracted.date = cleanString(dateMatch[1])
+          console.log(`${encoding} date:`, extracted.date)
+          break
+        }
       }
 
       // Extract email addresses directly from the text
@@ -108,9 +138,11 @@ export async function parseMsgFile(msgBuffer) {
 
     // Use whichever extraction got more data
     const utf8Score = (utf8Extracted.subject ? 1 : 0) + (utf8Extracted.from ? 1 : 0) +
-                      (utf8Extracted.to ? 1 : 0) + (utf8Extracted.body.length > 50 ? 2 : 0)
+                      (utf8Extracted.to ? 1 : 0) + (utf8Extracted.cc ? 1 : 0) +
+                      (utf8Extracted.date ? 1 : 0) + (utf8Extracted.body.length > 50 ? 2 : 0)
     const utf16Score = (utf16Extracted.subject ? 1 : 0) + (utf16Extracted.from ? 1 : 0) +
-                       (utf16Extracted.to ? 1 : 0) + (utf16Extracted.body.length > 50 ? 2 : 0)
+                       (utf16Extracted.to ? 1 : 0) + (utf16Extracted.cc ? 1 : 0) +
+                       (utf16Extracted.date ? 1 : 0) + (utf16Extracted.body.length > 50 ? 2 : 0)
 
     console.log('UTF-8 score:', utf8Score, 'UTF-16LE score:', utf16Score)
 
@@ -128,6 +160,23 @@ export async function parseMsgFile(msgBuffer) {
 
     if (bestExtraction.to) {
       result.to = parseEmailAddresses(bestExtraction.to)
+    }
+
+    // Parse CC recipients
+    if (bestExtraction.cc) {
+      result.cc = parseEmailAddresses(bestExtraction.cc)
+    }
+
+    // Parse date
+    if (bestExtraction.date) {
+      try {
+        const parsedDate = new Date(bestExtraction.date)
+        if (!isNaN(parsedDate.getTime())) {
+          result.date = parsedDate
+        }
+      } catch (e) {
+        console.log('Could not parse date:', bestExtraction.date)
+      }
     }
 
     // If still no recipients, use found email addresses
@@ -151,6 +200,8 @@ export async function parseMsgFile(msgBuffer) {
       subject: result.subject,
       from: result.from,
       toCount: result.to.length,
+      ccCount: result.cc.length,
+      date: result.date,
       bodyLength: result.body.length
     })
 
