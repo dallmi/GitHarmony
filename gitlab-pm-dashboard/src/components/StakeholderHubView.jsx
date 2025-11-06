@@ -45,6 +45,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
   const [showAddDecision, setShowAddDecision] = useState(false)
   const [dragActive, setDragActive] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [timelineView, setTimelineView] = useState('list') // 'list' or 'gantt'
 
   const [stakeholderForm, setStakeholderForm] = useState({
     name: '',
@@ -901,27 +902,64 @@ export default function StakeholderHubView({ stats, healthScore }) {
       {/* Timeline Tab */}
       {activeTab === 'timeline' && (
         <>
-          <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '20px' }}>Timeline</h2>
-          <div style={{ position: 'relative' }}>
-            {/* Timeline line */}
-            <div
-              style={{
-                position: 'absolute',
-                left: '20px',
-                top: '0',
-                bottom: '0',
-                width: '2px',
-                background: '#E5E7EB'
-              }}
-            />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: '600' }}>Timeline</h2>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => setTimelineView('list')}
+                style={{
+                  padding: '8px 16px',
+                  background: timelineView === 'list' ? '#3B82F6' : 'white',
+                  color: timelineView === 'list' ? 'white' : '#374151',
+                  border: timelineView === 'list' ? 'none' : '1px solid #D1D5DB',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: timelineView === 'list' ? '600' : '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                📋 List View
+              </button>
+              <button
+                onClick={() => setTimelineView('gantt')}
+                style={{
+                  padding: '8px 16px',
+                  background: timelineView === 'gantt' ? '#3B82F6' : 'white',
+                  color: timelineView === 'gantt' ? 'white' : '#374151',
+                  border: timelineView === 'gantt' ? 'none' : '1px solid #D1D5DB',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: timelineView === 'gantt' ? '600' : '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                📊 Gantt View
+              </button>
+            </div>
+          </div>
 
-            {getTimelineItems().length === 0 ? (
-              <div className="card text-center" style={{ padding: '40px' }}>
-                <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>⏱️</div>
-                <h3>No Activity Yet</h3>
-                <p className="text-muted">Timeline will show all communications, decisions, and documents</p>
-              </div>
-            ) : (
+          {getTimelineItems().length === 0 ? (
+            <div className="card text-center" style={{ padding: '40px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>⏱️</div>
+              <h3>No Activity Yet</h3>
+              <p className="text-muted">Timeline will show all communications, decisions, and documents</p>
+            </div>
+          ) : timelineView === 'list' ? (
+            <div style={{ position: 'relative' }}>
+              {/* Timeline line */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '20px',
+                  top: '0',
+                  bottom: '0',
+                  width: '2px',
+                  background: '#E5E7EB'
+                }}
+              />
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 {getTimelineItems().map((item, index) => (
                   <div key={`${item.type}-${item.data.id}`} style={{ position: 'relative', paddingLeft: '50px' }}>
@@ -966,8 +1004,173 @@ export default function StakeholderHubView({ stats, healthScore }) {
                   </div>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            /* Gantt View */
+            (() => {
+              const items = getTimelineItems()
+
+              // Calculate time range - last 90 days to next 30 days
+              const today = new Date()
+              today.setHours(0, 0, 0, 0)
+              const rangeStart = new Date(today)
+              rangeStart.setDate(rangeStart.getDate() - 90)
+              const rangeEnd = new Date(today)
+              rangeEnd.setDate(rangeEnd.getDate() + 30)
+
+              const totalDays = (rangeEnd - rangeStart) / (1000 * 60 * 60 * 24)
+
+              // Helper to calculate bar position
+              const getBarPosition = (date) => {
+                const itemDate = new Date(date)
+                itemDate.setHours(0, 0, 0, 0)
+                const daysDiff = (itemDate - rangeStart) / (1000 * 60 * 60 * 24)
+                return (daysDiff / totalDays) * 100
+              }
+
+              // Today position
+              const todayPosition = getBarPosition(today)
+
+              // Generate month markers
+              const months = []
+              let currentMonth = new Date(rangeStart)
+              currentMonth.setDate(1)
+              while (currentMonth < rangeEnd) {
+                months.push(new Date(currentMonth))
+                currentMonth.setMonth(currentMonth.getMonth() + 1)
+              }
+
+              return (
+                <div className="card" style={{ padding: '16px', position: 'relative', overflow: 'visible' }}>
+                  {/* Timeline Header */}
+                  <div style={{ display: 'flex', borderBottom: '2px solid #E5E7EB', paddingBottom: '8px', marginBottom: '16px' }}>
+                    <div style={{ width: '250px', fontWeight: '600', fontSize: '12px', color: '#6B7280', textTransform: 'uppercase' }}>
+                      Activity
+                    </div>
+                    <div style={{ flex: 1, position: 'relative', minHeight: '40px' }}>
+                      {/* Month Headers */}
+                      <div style={{ display: 'flex', fontSize: '11px', color: '#6B7280', fontWeight: '600', marginBottom: '4px', position: 'relative' }}>
+                        {months.map((month, idx) => {
+                          const monthPos = getBarPosition(month)
+                          const nextMonth = idx < months.length - 1 ? months[idx + 1] : rangeEnd
+                          const monthWidth = getBarPosition(nextMonth) - monthPos
+
+                          return (
+                            <div
+                              key={idx}
+                              style={{
+                                position: 'absolute',
+                                left: `${monthPos}%`,
+                                width: `${monthWidth}%`,
+                                textAlign: 'center',
+                                borderRight: idx < months.length - 1 ? '1px solid #E5E7EB' : 'none',
+                                paddingTop: '4px'
+                              }}
+                            >
+                              {month.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Today Marker */}
+                  {todayPosition >= 0 && todayPosition <= 100 && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: `calc(250px + (100% - 250px - 32px) * ${todayPosition / 100})`,
+                        top: '60px',
+                        bottom: '0',
+                        width: '2px',
+                        background: '#EF4444',
+                        zIndex: 5
+                      }}
+                      title={`Today: ${today.toLocaleDateString()}`}
+                    >
+                      <div style={{
+                        position: 'absolute',
+                        top: '0',
+                        left: '-18px',
+                        fontSize: '10px',
+                        color: '#EF4444',
+                        fontWeight: '600',
+                        whiteSpace: 'nowrap',
+                        background: 'white',
+                        padding: '2px 4px',
+                        borderRadius: '3px',
+                        border: '1px solid #EF4444'
+                      }}>
+                        TODAY
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Activity Rows */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {items.map((item, idx) => {
+                      const itemPosition = getBarPosition(item.date)
+                      const itemColor = item.type === 'communication' ? '#3B82F6' : item.type === 'decision' ? '#10B981' : '#F59E0B'
+                      const itemBgColor = item.type === 'communication' ? '#DBEAFE' : item.type === 'decision' ? '#D1FAE5' : '#FEF3C7'
+
+                      return (
+                        <div key={`${item.type}-${item.data.id}`} style={{ display: 'flex', alignItems: 'center', minHeight: '40px', borderBottom: idx < items.length - 1 ? '1px solid #F3F4F6' : 'none', paddingBottom: '12px' }}>
+                          {/* Item Info */}
+                          <div style={{ width: '250px', paddingRight: '16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                              <span
+                                style={{
+                                  fontSize: '9px',
+                                  background: itemBgColor,
+                                  color: item.type === 'communication' ? '#1E40AF' : item.type === 'decision' ? '#065F46' : '#92400E',
+                                  padding: '2px 6px',
+                                  borderRadius: '3px',
+                                  textTransform: 'uppercase',
+                                  fontWeight: '600'
+                                }}
+                              >
+                                {item.type}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '13px', fontWeight: '600', color: '#1F2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {item.title}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#6B7280' }}>
+                              {item.date.toLocaleDateString()}
+                            </div>
+                          </div>
+
+                          {/* Timeline Bar */}
+                          <div style={{ flex: 1, position: 'relative', height: '32px' }}>
+                            {itemPosition >= 0 && itemPosition <= 100 && (
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  left: `${itemPosition}%`,
+                                  width: '12px',
+                                  height: '12px',
+                                  borderRadius: '50%',
+                                  background: itemColor,
+                                  border: '2px solid white',
+                                  boxShadow: '0 0 0 2px ' + itemColor + '40',
+                                  cursor: 'pointer',
+                                  transform: 'translateX(-50%)',
+                                  top: '10px',
+                                  zIndex: 10
+                                }}
+                                title={`${item.title}\n${item.date.toLocaleString()}`}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })()
+          )}
         </>
       )}
 
