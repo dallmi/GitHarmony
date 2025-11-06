@@ -1,139 +1,15 @@
 /**
  * MSG Parser Utility
- * Professional .msg file parser using @kenjiuno/msgreader
- * Provides full MAPI property extraction and proper OLE/CFB parsing
+ * Corporate-friendly .msg file parser using only native JavaScript
+ * No external binary parsing libraries that might be blocked
  */
 
-import MsgReader from '@kenjiuno/msgreader'
-
 /**
- * Parse .msg file content with professional library
+ * Parse .msg file content using pattern matching
  * @param {ArrayBuffer} msgBuffer - Raw .msg file content as ArrayBuffer
  * @returns {Object} Parsed email data
  */
 export async function parseMsgFile(msgBuffer) {
-  try {
-    // Convert ArrayBuffer to Buffer (required by msgreader)
-    const buffer = Buffer.from(msgBuffer)
-
-    // Parse the MSG file
-    const msgReader = new MsgReader(buffer)
-    const fileData = msgReader.getFileData()
-
-    // Extract email data from MAPI properties
-    const result = {
-      from: { name: '', email: '' },
-      to: [],
-      cc: [],
-      bcc: [],
-      subject: fileData.subject || '',
-      date: fileData.creationTime ? new Date(fileData.creationTime) : new Date(),
-      messageId: fileData.messageId || '',
-      body: fileData.body || fileData.bodyHTML || '',
-      rawHeaders: fileData.headers || {},
-      attachments: []
-    }
-
-    // Parse sender information
-    if (fileData.senderName || fileData.senderEmail) {
-      result.from = {
-        name: fileData.senderName || '',
-        email: fileData.senderEmail || fileData.senderSmtpAddress || ''
-      }
-    }
-
-    // Parse recipients (To)
-    if (fileData.recipients && Array.isArray(fileData.recipients)) {
-      fileData.recipients.forEach(recipient => {
-        const recipientData = {
-          name: recipient.name || '',
-          email: recipient.email || recipient.smtpAddress || ''
-        }
-
-        // Categorize by recipient type
-        if (recipient.recipType === 1 || recipient.recipientType === 'to') {
-          result.to.push(recipientData)
-        } else if (recipient.recipType === 2 || recipient.recipientType === 'cc') {
-          result.cc.push(recipientData)
-        } else if (recipient.recipType === 3 || recipient.recipientType === 'bcc') {
-          result.bcc.push(recipientData)
-        } else {
-          // Default to 'to' if type is unclear
-          result.to.push(recipientData)
-        }
-      })
-    }
-
-    // Parse attachments
-    if (fileData.attachments && Array.isArray(fileData.attachments)) {
-      result.attachments = fileData.attachments.map(att => ({
-        filename: att.fileName || att.name || 'attachment',
-        contentType: att.mimeType || att.extension || 'application/octet-stream',
-        size: att.dataSize || 0,
-        data: att.content || null // Base64 or binary data
-      }))
-    }
-
-    // Prefer plain text body, fall back to HTML if needed
-    if (!result.body && fileData.bodyHTML) {
-      // Strip HTML tags for plain text preview
-      result.body = stripHtmlTags(fileData.bodyHTML)
-    }
-
-    // Clean up the body text
-    result.body = cleanBodyText(result.body)
-
-    return result
-  } catch (error) {
-    console.error('Error parsing MSG file with msgreader:', error)
-    // Fallback to basic parsing if library fails
-    return parseMsgFileFallback(msgBuffer)
-  }
-}
-
-/**
- * Strip HTML tags from text
- */
-function stripHtmlTags(html) {
-  if (!html) return ''
-
-  // Remove HTML tags
-  let text = html.replace(/<[^>]*>/g, ' ')
-
-  // Decode common HTML entities
-  text = text
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-
-  // Clean up whitespace
-  text = text.replace(/\s+/g, ' ').trim()
-
-  return text
-}
-
-/**
- * Clean body text
- */
-function cleanBodyText(text) {
-  if (!text) return ''
-
-  return text
-    .replace(/\x00/g, '')
-    .replace(/[\x01-\x08\x0B-\x0C\x0E-\x1F]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .substring(0, 50000) // Increased limit for longer emails
-}
-
-/**
- * Fallback parser if msgreader fails
- * Uses basic binary pattern matching
- */
-function parseMsgFileFallback(msgBuffer) {
   try {
     const textDecoder = new TextDecoder('utf-8', { fatal: false })
     const fullText = textDecoder.decode(msgBuffer)
@@ -207,9 +83,23 @@ function parseMsgFileFallback(msgBuffer) {
     result.body = cleanBodyText(bodyText)
     return result
   } catch (error) {
-    console.error('Error in fallback MSG parsing:', error)
+    console.error('Error parsing MSG file:', error)
     throw new Error('Failed to parse MSG file: ' + error.message)
   }
+}
+
+/**
+ * Clean body text
+ */
+function cleanBodyText(text) {
+  if (!text) return ''
+
+  return text
+    .replace(/\x00/g, '')
+    .replace(/[\x01-\x08\x0B-\x0C\x0E-\x1F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .substring(0, 50000) // Limit for longer emails
 }
 
 /**
