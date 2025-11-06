@@ -611,35 +611,17 @@ export default function StakeholderHubView({ stats, healthScore }) {
       {/* Email Upload Tab */}
       {activeTab === 'email-upload' && (
         <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <div style={{ marginBottom: '20px' }}>
             <h2 style={{ fontSize: '20px', fontWeight: '600' }}>Email Communication Upload</h2>
-            <label
-              style={{
-                padding: '8px 16px',
-                background: '#10B981',
-                color: 'white',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '600'
-              }}
-            >
-              Import Email File
-              <input
-                type="file"
-                accept=".eml,.msg"
-                onChange={handleFileSelect}
-                style={{ display: 'none' }}
-              />
-            </label>
           </div>
 
           {/* Drag & Drop Zone */}
-          <div
+          <label
             onDragOver={(e) => { e.preventDefault(); setDragActive(true) }}
             onDragLeave={() => setDragActive(false)}
             onDrop={handleFileDrop}
             style={{
+              display: 'block',
               border: dragActive ? '3px solid #3B82F6' : '3px dashed #3B82F6',
               borderRadius: '8px',
               padding: '32px',
@@ -647,13 +629,20 @@ export default function StakeholderHubView({ stats, healthScore }) {
               marginBottom: '20px',
               background: dragActive ? '#EFF6FF' : '#F9FAFB',
               transition: 'all 0.2s',
-              animation: dragActive ? 'none' : 'pulse 2s ease-in-out infinite'
+              animation: dragActive ? 'none' : 'pulse 2s ease-in-out infinite',
+              cursor: 'pointer'
             }}
           >
             <div style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
               Drag & drop email files here
             </div>
-          </div>
+            <input
+              type="file"
+              accept=".eml,.msg"
+              onChange={handleFileSelect}
+              style={{ display: 'none' }}
+            />
+          </label>
 
           {history.length === 0 ? (
             <div className="card text-center" style={{ padding: '40px' }}>
