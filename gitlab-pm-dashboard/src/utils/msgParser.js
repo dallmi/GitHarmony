@@ -107,25 +107,73 @@ export async function parseMsgFile(msgBuffer) {
         console.log(`${encoding} found ${uniqueEmails.length} email addresses`)
       }
 
-      // Extract body with multiple strategies
-      const bodyMatch1 = text.match(/[\x00-\xFF]{0,1000}([a-zA-Z0-9\sÄÖÜäöüß.,!?;:'"()\-—–]{200,})/g)
-      const bodyMatch2 = text.split(/Subject.*?\n/i).slice(1).join('\n')
-      const bodyMatch3 = text.match(/([a-zA-Z0-9\sÄÖÜäöüß.,!?;:'"()\-—–\n]{100,})/g)
-
+      // Extract body with multiple strategies, skipping headers and metadata
       let bodyText = ''
-      if (bodyMatch1 && bodyMatch1.length > 0) {
-        bodyText = bodyMatch1.reduce((a, b) => a.length > b.length ? a : b, '')
+
+      // Strategy 1: Find content after common header patterns
+      // Split after headers like "Sent:", then skip X-MS-Exchange headers
+      const afterSentMatch = text.split(/Sent[:\s]+[^\r\n]+[\r\n]+/i)
+      if (afterSentMatch.length > 1) {
+        let candidateBody = afterSentMatch.slice(1).join('\n')
+
+        // Skip X-MS-Exchange and Return-Path metadata
+        candidateBody = candidateBody.replace(/^[\s\S]*?(?:X-MS-Exchange|Return-Path|Received:|Content-Type:|MIME-Version:)[\s\S]*?(?:\r?\n\r?\n)/i, '')
+
+        // Extract readable text (letters, numbers, common punctuation)
+        const readableMatches = candidateBody.match(/([a-zA-Z0-9\sÄÖÜäöüß.,!?;:'"()\-—–]{100,})/g)
+        if (readableMatches && readableMatches.length > 0) {
+          bodyText = readableMatches.reduce((a, b) => a.length > b.length ? a : b, '')
+        }
       }
+
+      // Strategy 2: Look for long readable text blocks, excluding header patterns
       if (!bodyText || bodyText.length < 50) {
+        const bodyMatch1 = text.match(/[\x00-\xFF]{0,1000}([a-zA-Z0-9\sÄÖÜäöüß.,!?;:'"()\-—–]{200,})/g)
+        if (bodyMatch1 && bodyMatch1.length > 0) {
+          // Filter out matches that look like headers (contain Return-Path, X-MS-, etc.)
+          const filtered = bodyMatch1.filter(match =>
+            !match.includes('Return-Path:') &&
+            !match.includes('X-MS-Exchange') &&
+            !match.includes('Content-Type:') &&
+            !match.includes('MIME-Version:')
+          )
+          if (filtered.length > 0) {
+            bodyText = filtered.reduce((a, b) => a.length > b.length ? a : b, '')
+          }
+        }
+      }
+
+      // Strategy 3: Split after Subject and clean
+      if (!bodyText || bodyText.length < 50) {
+        const bodyMatch2 = text.split(/Subject[:\s]+[^\r\n]+[\r\n]+/i).slice(1).join('\n')
         if (bodyMatch2 && bodyMatch2.length > 50) {
-          bodyText = bodyMatch2
+          // Skip metadata lines
+          const lines = bodyMatch2.split(/[\r\n]+/)
+          const contentLines = lines.filter(line =>
+            !line.includes('Return-Path:') &&
+            !line.includes('X-MS-Exchange') &&
+            !line.includes('Content-Type:') &&
+            !line.includes('MIME-Version:') &&
+            line.trim().length > 0
+          )
+          bodyText = contentLines.join('\n')
         }
       }
+
+      // Strategy 4: Find any long readable text
       if (!bodyText || bodyText.length < 50) {
+        const bodyMatch3 = text.match(/([a-zA-Z0-9\sÄÖÜäöüß.,!?;:'"()\-—–\n]{100,})/g)
         if (bodyMatch3 && bodyMatch3.length > 0) {
-          bodyText = bodyMatch3.reduce((a, b) => a.length > b.length ? a : b, '')
+          const filtered = bodyMatch3.filter(match =>
+            !match.includes('Return-Path:') &&
+            !match.includes('X-MS-Exchange')
+          )
+          if (filtered.length > 0) {
+            bodyText = filtered.reduce((a, b) => a.length > b.length ? a : b, '')
+          }
         }
       }
+
       extracted.body = bodyText
       console.log(`${encoding} body length:`, bodyText.length)
 
@@ -158,13 +206,18 @@ export async function parseMsgFile(msgBuffer) {
       result.from = parseEmailAddress(bestExtraction.from)
     }
 
-    if (bestExtraction.to) {
-      result.to = parseEmailAddresses(bestExtraction.to)
-    }
-
-    // Parse CC recipients
+    // Parse CC recipients first (more reliable pattern)
     if (bestExtraction.cc) {
       result.cc = parseEmailAddresses(bestExtraction.cc)
+    }
+
+    // Try to extract To recipients more carefully
+    if (bestExtraction.to) {
+      const toRecipients = parseEmailAddresses(bestExtraction.to)
+      // Validate that we got actual email addresses, not body text
+      if (toRecipients.length > 0 && toRecipients.every(r => r.email && r.email.includes('@'))) {
+        result.to = toRecipients
+      }
     }
 
     // Parse sent date (when email was sent)
@@ -179,18 +232,56 @@ export async function parseMsgFile(msgBuffer) {
       }
     }
 
-    // If still no recipients, use found email addresses
-    if (result.to.length === 0 && bestExtraction.emails) {
-      result.to = bestExtraction.emails.map(email => ({ name: '', email: cleanString(email) }))
+    // If still no To recipients, try alternative strategies
+    if (result.to.length === 0) {
+      console.log('Attempting alternative To extraction strategies...')
+
+      // Strategy 1: Look for To: field more carefully with email validation
+      const toPattern1 = /To[:\s]+([^\x00\r\n]*?@[^\x00\r\n;,]{5,100}[;,\s]?[^\x00\r\n]{0,200}?)(?:\r|\n|Subject|From|Cc|Sent)/i
+      const toMatch1 = bestText.match(toPattern1)
+      if (toMatch1) {
+        const extracted = cleanString(toMatch1[1])
+        console.log('Strategy 1 extracted:', extracted.substring(0, 100))
+        const recipients = parseEmailAddresses(extracted)
+        if (recipients.length > 0 && recipients.every(r => r.email && r.email.includes('@'))) {
+          result.to = recipients
+        }
+      }
     }
 
-    // If still no recipients, extract from best text
+    // If still no To recipients, use found email addresses (but exclude From and CC)
+    if (result.to.length === 0 && bestExtraction.emails) {
+      const fromEmail = result.from.email.toLowerCase()
+      const ccEmails = result.cc.map(c => c.email.toLowerCase())
+      const candidateEmails = bestExtraction.emails
+        .filter(email => {
+          const cleanEmail = cleanString(email).toLowerCase()
+          return cleanEmail !== fromEmail && !ccEmails.includes(cleanEmail)
+        })
+
+      if (candidateEmails.length > 0) {
+        result.to = candidateEmails.slice(0, 5).map(email => ({ name: '', email: cleanString(email) }))
+        console.log('Using candidate emails for To field:', result.to.map(t => t.email))
+      }
+    }
+
+    // If still no recipients, extract from best text but filter out From/CC
     if (result.to.length === 0) {
       const emailPattern = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g
       const emails = bestText.match(emailPattern)
       if (emails && emails.length > 0) {
+        const fromEmail = result.from.email.toLowerCase()
+        const ccEmails = result.cc.map(c => c.email.toLowerCase())
         const uniqueEmails = [...new Set(emails)]
-        result.to = uniqueEmails.slice(0, 5).map(email => ({ name: '', email: cleanString(email) }))
+          .filter(email => {
+            const cleanEmail = cleanString(email).toLowerCase()
+            return cleanEmail !== fromEmail && !ccEmails.includes(cleanEmail)
+          })
+
+        if (uniqueEmails.length > 0) {
+          result.to = uniqueEmails.slice(0, 5).map(email => ({ name: '', email: cleanString(email) }))
+          console.log('Using filtered unique emails for To field:', result.to.map(t => t.email))
+        }
       }
     }
 
@@ -224,7 +315,7 @@ function cleanBodyText(text) {
     .replace(/[\x01-\x08\x0B-\x0C\x0E-\x1F]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-    .substring(0, 50000) // Limit for longer emails
+    // No character limit - show full email including trail
 }
 
 /**

@@ -38,10 +38,11 @@ export function parseHtmlEmail(htmlContent) {
     result.subject = doc.title || extractFromElement('[name="Subject"]') || extractFromElement('div.Subject')
 
     // Try to find email headers in the HTML
+    // Extended patterns to capture multi-line recipients (especially CC)
     const headerPatterns = [
       { pattern: /From:\s*([^\n<]+)/i, field: 'from' },
-      { pattern: /To:\s*([^\n<]+)/i, field: 'to' },
-      { pattern: /Cc:\s*([^\n<]+)/i, field: 'cc' },
+      { pattern: /To:\s*([^\n]+?)(?:\s*(?:Cc|Subject|Sent):)/i, field: 'to' },
+      { pattern: /Cc:\s*([^\n]+?)(?:\s*(?:Subject|Sent):)/i, field: 'cc' },
       { pattern: /Subject:\s*([^\n<]+)/i, field: 'subject' },
       { pattern: /Sent:\s*([^\n<]+)/i, field: 'sent' }
     ]
@@ -73,6 +74,21 @@ export function parseHtmlEmail(htmlContent) {
       }
     })
 
+    // Fallback patterns for To and CC if the above didn't capture everything
+    if (result.to.length === 0) {
+      const toMatch = plainText.match(/To:\s*([^]+?)(?:\r?\n\s*(?:Cc|Subject|Sent):|$)/i)
+      if (toMatch) {
+        result.to = parseEmailAddresses(toMatch[1])
+      }
+    }
+
+    if (result.cc.length === 0) {
+      const ccMatch = plainText.match(/Cc:\s*([^]+?)(?:\r?\n\s*(?:Subject|Sent):|$)/i)
+      if (ccMatch) {
+        result.cc = parseEmailAddresses(ccMatch[1])
+      }
+    }
+
     // Extract body content
     const bodyElement = doc.querySelector('body') || doc.querySelector('.EmailBody') || doc.querySelector('#bodyContent')
 
@@ -82,16 +98,30 @@ export function parseHtmlEmail(htmlContent) {
       scripts.forEach(el => el.remove())
 
       // Get text content
-      result.body = bodyElement.textContent
+      let bodyText = bodyElement.textContent
         .replace(/\s+/g, ' ')
         .trim()
-        .substring(0, 50000)
+
+      // Remove email headers from body (From:, To:, Cc:, Subject:, Sent:)
+      // These headers often appear at the start of the body in HTML exports
+      bodyText = bodyText.replace(/^[\s\S]*?(From:\s*[^\n]+\s+Sent:\s*[^\n]+\s+To:\s*[^\n]+(\s+Cc:\s*[^\n]+)?\s+Subject:\s*[^\n]+\s+)/i, '')
+      bodyText = bodyText.replace(/^[\s\S]*?(From:\s*[^\n]+\s+To:\s*[^\n]+(\s+Cc:\s*[^\n]+)?\s+Sent:\s*[^\n]+\s+Subject:\s*[^\n]+\s+)/i, '')
+
+      // Alternative pattern: headers might be in different order
+      bodyText = bodyText.replace(/^(From|To|Cc|Subject|Sent|Date):\s*[^\n]+\s*/gim, '')
+
+      result.body = bodyText.trim()
     } else {
       // Fallback: strip all HTML tags
-      result.body = plainText
+      let bodyText = plainText
         .replace(/\s+/g, ' ')
         .trim()
-        .substring(0, 50000)
+
+      // Remove headers from fallback as well
+      bodyText = bodyText.replace(/^[\s\S]*?(From:\s*[^\n]+\s+Sent:\s*[^\n]+\s+To:\s*[^\n]+(\s+Cc:\s*[^\n]+)?\s+Subject:\s*[^\n]+\s+)/i, '')
+      bodyText = bodyText.replace(/^(From|To|Cc|Subject|Sent|Date):\s*[^\n]+\s*/gim, '')
+
+      result.body = bodyText.trim()
     }
 
     // If we didn't find any headers, try to extract emails from the entire content

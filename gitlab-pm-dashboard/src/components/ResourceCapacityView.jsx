@@ -108,6 +108,8 @@ export default function ResourceCapacityView({ issues: allIssues }) {
             username: assignee.username,
             name: assignee.name,
             avatar: assignee.avatar_url,
+            gpn: teamMember?.gpn,
+            tNumber: teamMember?.tNumber,
             role: teamMember?.role || 'Unknown',
             defaultCapacity: teamMember?.defaultCapacity || capacitySettings.defaultWeeklyCapacity,
             openIssues: 0,
@@ -952,8 +954,10 @@ export default function ResourceCapacityView({ issues: allIssues }) {
                           </span>
                         )}
                       </div>
-                      <div style={{ fontSize: '14px', color: '#6B7280' }}>
-                        @{member.username}
+                      <div style={{ fontSize: '13px', color: '#6B7280', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                        {member.username && <span>@{member.username}</span>}
+                        {member.gpn && <span>GPN: {member.gpn}</span>}
+                        {member.tNumber && <span>T-Number: {member.tNumber}</span>}
                       </div>
                     </div>
                     <div

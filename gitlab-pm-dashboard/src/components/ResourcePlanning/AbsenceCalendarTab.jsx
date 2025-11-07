@@ -25,7 +25,16 @@ export default function AbsenceCalendarTab({ issues, isCrossProject, refreshKey,
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth()) // 0-11
   const [dragState, setDragState] = useState(null) // { username, startDate }
   const [selectedAbsence, setSelectedAbsence] = useState(null)
+  const [selectedAbsenceType, setSelectedAbsenceType] = useState('vacation') // vacation, training, sick, other
   const scrollContainerRef = useRef(null)
+
+  // Absence type configurations
+  const absenceTypes = [
+    { id: 'vacation', label: 'Vacation', color: '#3B82F6', bgColor: '#DBEAFE' },
+    { id: 'training', label: 'Training', color: '#8B5CF6', bgColor: '#EDE9FE' },
+    { id: 'sick', label: 'Sick Leave', color: '#F59E0B', bgColor: '#FEF3C7' },
+    { id: 'other', label: 'Other', color: '#6B7280', bgColor: '#F3F4F6' }
+  ]
 
   // Load data - reload when refreshKey changes (from parent)
   useEffect(() => {
@@ -99,7 +108,7 @@ export default function AbsenceCalendarTab({ issues, isCrossProject, refreshKey,
       const startDate = dragState.startDate < date ? dragState.startDate : date
       const endDate = dragState.startDate < date ? date : dragState.startDate
 
-      addAbsence(dragState.username, startDate, endDate, 'Absence', 'vacation')
+      addAbsence(dragState.username, startDate, endDate, 'Absence', selectedAbsenceType)
       refreshAbsences()
       onAbsenceUpdate()
       setDragState(null)
@@ -231,144 +240,96 @@ export default function AbsenceCalendarTab({ issues, isCrossProject, refreshKey,
 
   return (
     <div>
-      <div style={{ marginBottom: '20px' }}>
+      <div style={{ marginBottom: '16px' }}>
 
-        {/* Controls - Date Picker and View Selector */}
-        <div style={{ display: 'flex', gap: '32px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-          {/* Date Picker - Year and Month Selection */}
-          <div style={{
-            background: '#F9FAFB',
-            border: '1px solid #E5E7EB',
-            borderRadius: '8px',
-            padding: '16px',
-            minWidth: '280px'
-          }}>
-            {/* Year Selector */}
-            <div style={{ marginBottom: '12px' }}>
-              <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B7280', marginBottom: '6px', textTransform: 'uppercase' }}>
-                Year
-              </div>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center' }}>
-                <button
-                  onClick={() => setSelectedYear(selectedYear - 1)}
-                  style={{
-                    padding: '6px 10px',
-                    background: 'white',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#374151'
-                  }}
-                >
-                  ◀
-                </button>
-                <span style={{ fontSize: '18px', fontWeight: '700', minWidth: '80px', textAlign: 'center', color: '#1F2937' }}>
-                  {selectedYear}
-                </span>
-                <button
-                  onClick={() => setSelectedYear(selectedYear + 1)}
-                  style={{
-                    padding: '6px 10px',
-                    background: 'white',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#374151'
-                  }}
-                >
-                  ▶
-                </button>
-              </div>
-            </div>
-
-            {/* Month Grid */}
-            <div style={{ marginTop: '12px' }}>
-              <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B7280', marginBottom: '6px', textTransform: 'uppercase' }}>
-                Starting Month
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
-                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedMonth(idx)}
-                    style={{
-                      padding: '8px',
-                      background: selectedMonth === idx ? '#3B82F6' : 'white',
-                      color: selectedMonth === idx ? 'white' : '#374151',
-                      border: selectedMonth === idx ? 'none' : '1px solid #D1D5DB',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: selectedMonth === idx ? '600' : '500',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s'
-                    }}
-                  >
-                    {month}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Months to View Selector */}
-          <div style={{
-            background: '#F9FAFB',
-            border: '1px solid #E5E7EB',
-            borderRadius: '8px',
-            padding: '16px',
-            minWidth: '280px'
-          }}>
-            <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B7280', marginBottom: '6px', textTransform: 'uppercase' }}>
-              Months to View
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' }}>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(months => (
-                <button
-                  key={months}
-                  onClick={() => setMonthsToView(months)}
-                  style={{
-                    padding: '8px',
-                    background: monthsToView === months ? '#3B82F6' : 'white',
-                    color: monthsToView === months ? 'white' : '#374151',
-                    border: monthsToView === months ? 'none' : '1px solid #D1D5DB',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: monthsToView === months ? '600' : '500',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s'
-                  }}
-                >
-                  {months}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {/* Compact Controls - Single Row */}
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '12px' }}>
+          {/* Year Selector - Compact */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '11px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', marginRight: '4px' }}>Year</span>
             <button
-              onClick={() => {
-                const today = new Date()
-                setSelectedYear(today.getFullYear())
-                setSelectedMonth(today.getMonth())
-              }}
+              onClick={() => setSelectedYear(selectedYear - 1)}
               style={{
-                padding: '8px 16px',
-                background: '#10B981',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
+                padding: '4px 8px',
+                background: 'white',
+                border: '1px solid #D1D5DB',
+                borderRadius: '4px',
                 cursor: 'pointer',
-                fontSize: '13px',
-                fontWeight: '600'
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#374151'
               }}
             >
-              📍 Jump to Today
+              ◀
             </button>
+            <span style={{ fontSize: '16px', fontWeight: '700', minWidth: '60px', textAlign: 'center', color: '#1F2937' }}>
+              {selectedYear}
+            </span>
+            <button
+              onClick={() => setSelectedYear(selectedYear + 1)}
+              style={{
+                padding: '4px 8px',
+                background: 'white',
+                border: '1px solid #D1D5DB',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#374151'
+              }}
+            >
+              ▶
+            </button>
+          </div>
+
+          {/* Month Selector - Inline */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+            {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, idx) => (
+              <button
+                key={idx}
+                onClick={() => setSelectedMonth(idx)}
+                style={{
+                  padding: '4px 8px',
+                  background: selectedMonth === idx ? '#3B82F6' : 'white',
+                  color: selectedMonth === idx ? 'white' : '#374151',
+                  border: selectedMonth === idx ? 'none' : '1px solid #D1D5DB',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: selectedMonth === idx ? '600' : '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                {month}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ width: '1px', height: '24px', background: '#D1D5DB' }} />
+
+          {/* Months to View - Compact */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ fontSize: '11px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', marginRight: '4px' }}>Months</span>
+            {[1, 2, 3, 4, 5, 6].map(months => (
+              <button
+                key={months}
+                onClick={() => setMonthsToView(months)}
+                style={{
+                  padding: '4px 8px',
+                  background: monthsToView === months ? '#3B82F6' : 'white',
+                  color: monthsToView === months ? 'white' : '#374151',
+                  border: monthsToView === months ? 'none' : '1px solid #D1D5DB',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: monthsToView === months ? '600' : '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                  minWidth: '28px'
+                }}
+              >
+                {months}
+              </button>
+            ))}
           </div>
 
           <div style={{ flex: 1 }} />
@@ -377,17 +338,47 @@ export default function AbsenceCalendarTab({ issues, isCrossProject, refreshKey,
           <button
             onClick={handleExport}
             style={{
-              padding: '8px 16px',
-              background: '#F3F4F6',
-              border: 'none',
+              padding: '6px 14px',
+              background: 'white',
+              border: '1px solid #D1D5DB',
               borderRadius: '6px',
               cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '500'
+              fontSize: '13px',
+              fontWeight: '500',
+              color: '#374151',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
             }}
           >
-            📥 Export CSV
+            <span>Export CSV</span>
           </button>
+        </div>
+
+        {/* Absence Type Filter */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '11px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase' }}>Absence Type</span>
+          {absenceTypes.map(type => (
+            <button
+              key={type.id}
+              onClick={() => setSelectedAbsenceType(type.id)}
+              disabled={isCrossProject}
+              style={{
+                padding: '6px 14px',
+                background: selectedAbsenceType === type.id ? type.color : 'white',
+                color: selectedAbsenceType === type.id ? 'white' : type.color,
+                border: selectedAbsenceType === type.id ? 'none' : `1px solid ${type.color}`,
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '600',
+                cursor: isCrossProject ? 'not-allowed' : 'pointer',
+                transition: 'all 0.15s',
+                opacity: isCrossProject ? 0.5 : 1
+              }}
+            >
+              {type.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -631,6 +622,9 @@ export default function AbsenceCalendarTab({ issues, isCrossProject, refreshKey,
                     const isInDrag = isDateInDragSelection(member.username, day)
                     const absence = getAbsenceForDate(member.username, day)
 
+                    // Get the color for the selected absence type
+                    const selectedTypeColor = absenceTypes.find(t => t.id === selectedAbsenceType)?.bgColor || '#DBEAFE'
+
                     return (
                       <div
                         key={dayIdx}
@@ -640,7 +634,7 @@ export default function AbsenceCalendarTab({ issues, isCrossProject, refreshKey,
                           width: '24px',
                           minWidth: '24px',
                           height: '60px',
-                          background: isInDrag ? '#DBEAFE' :
+                          background: isInDrag ? selectedTypeColor :
                                       isInAbsence ? '#FEE2E2' :
                                       isWknd ? '#F9FAFB' :
                                       'white',
@@ -665,9 +659,8 @@ export default function AbsenceCalendarTab({ issues, isCrossProject, refreshKey,
 
                     const typeColors = {
                       vacation: { bg: '#DBEAFE', border: '#3B82F6', text: '#1E40AF' },
+                      training: { bg: '#EDE9FE', border: '#8B5CF6', text: '#5B21B6' },
                       sick: { bg: '#FEF3C7', border: '#F59E0B', text: '#92400E' },
-                      conference: { bg: '#E0E7FF', border: '#6366F1', text: '#3730A3' },
-                      training: { bg: '#D1FAE5', border: '#059669', text: '#065F46' },
                       other: { bg: '#F3F4F6', border: '#6B7280', text: '#374151' }
                     }
 

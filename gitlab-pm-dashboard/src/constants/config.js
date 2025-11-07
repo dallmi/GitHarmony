@@ -99,7 +99,7 @@ export const VIEW_GROUPS = [
     label: 'Governance',
     views: [
       { id: 'riskmanagement', label: 'Risks', roles: ['executive', 'manager'] },
-      { id: 'stakeholders', label: 'Stakeholders', roles: ['executive', 'manager'] },
+      { id: 'stakeholders', label: 'Communication Hub', roles: ['executive', 'manager'] },
       { id: 'backup', label: 'Backup & Restore', roles: ['executive', 'manager', 'team'] }
     ]
   }

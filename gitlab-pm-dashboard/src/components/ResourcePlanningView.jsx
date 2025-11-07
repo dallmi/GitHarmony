@@ -19,9 +19,9 @@ export default function ResourcePlanningView({ issues }) {
   const triggerRefresh = () => setRefreshKey(prev => prev + 1)
 
   const tabs = [
-    { id: 'team', label: '👥 Team Setup', icon: '👥' },
-    { id: 'absences', label: '📅 Absence Calendar', icon: '📅' },
-    { id: 'capacity', label: '📊 Sprint Capacity', icon: '📊' }
+    { id: 'team', label: 'Team Setup' },
+    { id: 'absences', label: 'Absence Calendar' },
+    { id: 'capacity', label: 'Sprint Capacity' }
   ]
 
   return (

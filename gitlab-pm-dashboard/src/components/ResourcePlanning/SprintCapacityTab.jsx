@@ -79,6 +79,10 @@ export default function SprintCapacityTab({ issues, isCrossProject, refreshKey }
 
       return {
         username: member.username,
+        name: member.name,
+        gpn: member.gpn,
+        tNumber: member.tNumber,
+        avatarUrl: member.avatarUrl,
         role: member.role,
         weeklyDefault: defaultCapacity,
         sprintDefault: sprintDefaultCapacity,
@@ -254,18 +258,60 @@ export default function SprintCapacityTab({ issues, isCrossProject, refreshKey }
             {capacityBreakdown.map((member, idx) => (
               <tr key={member.username} style={{ borderBottom: '1px solid #E5E7EB' }}>
                 <td style={{ padding: '12px' }}>
-                  <div style={{ fontWeight: '500', color: '#1F2937', marginBottom: '2px' }}>
-                    {member.username}
-                  </div>
-                  <div style={{
-                    fontSize: '11px',
-                    color: '#6B7280',
-                    background: '#F3F4F6',
-                    display: 'inline-block',
-                    padding: '2px 6px',
-                    borderRadius: '3px'
-                  }}>
-                    {member.role} • {member.weeklyDefault}h/week
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {/* Avatar */}
+                    <div>
+                      {member.avatarUrl ? (
+                        <img
+                          src={member.avatarUrl}
+                          alt={member.name || member.username}
+                          style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            border: '2px solid #E5E7EB'
+                          }}
+                          onError={(e) => { e.target.style.display = 'none' }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          background: '#E5E7EB',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '16px',
+                          color: '#9CA3AF',
+                          fontWeight: '600'
+                        }}>
+                          {(member.name || member.username).charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    {/* Member Info */}
+                    <div>
+                      <div style={{ fontWeight: '500', color: '#1F2937', marginBottom: '2px' }}>
+                        {member.name || member.username}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#6B7280', display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '2px' }}>
+                        {member.username && <span>@{member.username}</span>}
+                        {member.gpn && <span>GPN: {member.gpn}</span>}
+                        {member.tNumber && <span>T-Number: {member.tNumber}</span>}
+                      </div>
+                      <div style={{
+                        fontSize: '11px',
+                        color: '#6B7280',
+                        background: '#F3F4F6',
+                        display: 'inline-block',
+                        padding: '2px 6px',
+                        borderRadius: '3px'
+                      }}>
+                        {member.role} • {member.weeklyDefault}h/week
+                      </div>
+                    </div>
                   </div>
                 </td>
                 <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: '#374151' }}>
