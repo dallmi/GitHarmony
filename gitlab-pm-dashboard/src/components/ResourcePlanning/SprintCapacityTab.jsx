@@ -15,6 +15,9 @@ export default function SprintCapacityTab({ issues, isCrossProject, refreshKey }
   const [manualOverrides, setManualOverrides] = useState({})
   const [editingMember, setEditingMember] = useState(null)
 
+  // Debug cross-project detection
+  console.log('SprintCapacityTab - isCrossProject:', isCrossProject)
+
   useEffect(() => {
     loadData()
   }, [refreshKey])

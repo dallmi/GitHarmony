@@ -73,6 +73,8 @@ export const VIEW_GROUPS = [
     views: [
       { id: 'roadmap', label: 'Milestones', roles: ['executive', 'manager', 'team'] },
       { id: 'epicmanagement', label: 'Epics', roles: ['manager', 'team'] },
+      { id: 'releases', label: 'Releases', roles: ['executive', 'manager', 'team'] },
+      { id: 'dependencies', label: 'Dependencies', roles: ['manager', 'team'] },
       { id: 'crossteam', label: 'Cross-Team Coordination', roles: ['executive', 'manager'] }
     ]
   },
@@ -81,8 +83,7 @@ export const VIEW_GROUPS = [
     label: 'Execution',
     views: [
       { id: 'sprintmanagement', label: 'Sprints', roles: ['manager', 'team'] },
-      { id: 'resources', label: 'Resources', roles: ['manager', 'team'] },
-      { id: 'resourceplanning', label: 'Resource Planning', roles: ['manager', 'team'] }
+      { id: 'teammanagement', label: 'Team Management', roles: ['manager', 'team'] }
     ]
   },
   {

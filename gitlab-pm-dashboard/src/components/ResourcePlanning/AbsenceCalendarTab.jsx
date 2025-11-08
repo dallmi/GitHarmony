@@ -310,7 +310,7 @@ export default function AbsenceCalendarTab({ issues, isCrossProject, refreshKey,
           {/* Months to View - Compact */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span style={{ fontSize: '11px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', marginRight: '4px' }}>Months</span>
-            {[1, 2, 3, 4, 5, 6].map(months => (
+            {[1, 2, 3, 6, 9, 12].map(months => (
               <button
                 key={months}
                 onClick={() => setMonthsToView(months)}
@@ -361,19 +361,34 @@ export default function AbsenceCalendarTab({ issues, isCrossProject, refreshKey,
           {absenceTypes.map(type => (
             <button
               key={type.id}
-              onClick={() => setSelectedAbsenceType(type.id)}
+              onClick={() => {
+                if (!isCrossProject) {
+                  setSelectedAbsenceType(type.id)
+                }
+              }}
               disabled={isCrossProject}
               style={{
                 padding: '6px 14px',
                 background: selectedAbsenceType === type.id ? type.color : 'white',
                 color: selectedAbsenceType === type.id ? 'white' : type.color,
-                border: selectedAbsenceType === type.id ? 'none' : `1px solid ${type.color}`,
+                border: selectedAbsenceType === type.id ? `2px solid ${type.color}` : `1px solid ${type.color}`,
                 borderRadius: '6px',
                 fontSize: '12px',
                 fontWeight: '600',
                 cursor: isCrossProject ? 'not-allowed' : 'pointer',
                 transition: 'all 0.15s',
-                opacity: isCrossProject ? 0.5 : 1
+                opacity: isCrossProject ? 0.5 : 1,
+                userSelect: 'none'
+              }}
+              onMouseEnter={(e) => {
+                if (!isCrossProject && selectedAbsenceType !== type.id) {
+                  e.target.style.transform = 'scale(1.05)'
+                  e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'scale(1)'
+                e.target.style.boxShadow = 'none'
               }}
             >
               {type.label}

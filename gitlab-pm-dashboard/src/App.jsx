@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { isConfigured, loadConfig } from './services/storageService'
+import { isConfigured, loadConfig, getActiveProjectId } from './services/storageService'
 import useGitLabData from './hooks/useGitLabData'
 import useHealthScore from './hooks/useHealthScore'
 import useRisks from './hooks/useRisks'
@@ -28,6 +28,9 @@ import RiskManagementView from './components/RiskManagementView'
 import SprintManagementView from './components/SprintManagementView'
 import CrossTeamCoordinationView from './components/CrossTeamCoordinationView'
 import ResourcePlanningView from './components/ResourcePlanningView'
+import TeamManagementView from './components/TeamManagementView'
+import DependencyManagementView from './components/DependencyManagementView'
+import ReleasePlanningView from './components/ReleasePlanningView'
 
 function App() {
   console.log('App: Component initializing...')
@@ -114,13 +117,17 @@ function App() {
             'compliance',
             'cycletime',
             'resources',
+            'resourceplanning',
+            'teammanagement',
             'velocity',
             'sprintmanagement',
             'epicmanagement',
             'riskmanagement',
             'roadmap',
             'stakeholders',
-            'crossteam'
+            'crossteam',
+            'dependencies',
+            'releases'
             // Note: 'backup' view doesn't need iteration filter
           ].includes(activeView)
         ) && (
@@ -209,8 +216,11 @@ function App() {
             {activeView === 'velocity' && <VelocityView issues={issues} />}
             {activeView === 'resources' && <ResourceCapacityView issues={issues} />}
             {activeView === 'resourceplanning' && <ResourcePlanningView issues={issues} />}
+            {activeView === 'teammanagement' && <TeamManagementView issues={issues} milestones={milestones} crossProjectMode={getActiveProjectId() === 'cross-project'} />}
             {activeView === 'stakeholders' && <StakeholderHubView stats={stats} healthScore={healthScore} />}
             {activeView === 'crossteam' && <CrossTeamCoordinationView issues={issues} epics={epics} milestones={milestones} />}
+            {activeView === 'dependencies' && <DependencyManagementView issues={issues} epics={epics} milestones={milestones} />}
+            {activeView === 'releases' && <ReleasePlanningView issues={issues} milestones={milestones} epics={epics} />}
           </>
         )}
       </div>
