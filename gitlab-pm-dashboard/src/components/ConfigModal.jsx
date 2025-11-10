@@ -185,7 +185,15 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
                   placeholder="glpat-xxxxxxxxxxxxxxxxxxxx"
                 />
                 <div className="text-small text-muted" style={{ marginTop: '4px' }}>
-                  Create a personal access token with 'api' and 'read_api' scopes
+                  <div style={{ marginBottom: '4px' }}>
+                    <strong>Required:</strong> Personal access token with <code>api</code> and <code>read_api</code> scopes
+                  </div>
+                  <div style={{ color: '#DC2626', fontSize: '13px' }}>
+                    ⚠️ <strong>For Epic support:</strong> Token must have group-level access. Project-only tokens cannot fetch epics.
+                  </div>
+                  <div style={{ marginTop: '6px', fontSize: '12px' }}>
+                    Create at: GitLab → User Settings → Access Tokens (not Project Settings)
+                  </div>
                 </div>
               </div>
 
