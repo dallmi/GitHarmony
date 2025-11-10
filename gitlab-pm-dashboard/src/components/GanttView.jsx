@@ -51,6 +51,8 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
   const [expandedEpics, setExpandedEpics] = useState(new Set())
   const [expandedDiagnostics, setExpandedDiagnostics] = useState(new Set())
   const [showExecutiveSummary, setShowExecutiveSummary] = useState(true)
+  const [selectedPhases, setSelectedPhases] = useState([]) // Empty = show all phases
+  const [issuesPerEpic, setIssuesPerEpic] = useState(new Map()) // Track how many issues to show per epic (default: 20)
 
   // Quarter selection handler - consecutive quarters only
   const handleQuarterToggle = (quarter, event) => {
@@ -89,6 +91,29 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
 
   const handleFullYearToggle = () => {
     setSelectedQuarters([1, 2, 3, 4])
+  }
+
+  const handlePhaseToggle = (phase) => {
+    setSelectedPhases(prev => {
+      if (prev.includes(phase)) {
+        return prev.filter(p => p !== phase)
+      } else {
+        return [...prev, phase]
+      }
+    })
+  }
+
+  const handleClearPhaseFilters = () => {
+    setSelectedPhases([])
+  }
+
+  const handleLoadMoreIssues = (epicId) => {
+    setIssuesPerEpic(prev => {
+      const newMap = new Map(prev)
+      const current = newMap.get(epicId) || 20
+      newMap.set(epicId, current + 10)
+      return newMap
+    })
   }
 
   // Calculate date range based on selected quarters
@@ -527,6 +552,57 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
             </div>
           </div>
 
+          {/* Phase Filter */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <label style={{ fontSize: '12px', color: '#6B7280', fontWeight: '600' }}>Filter by Status</label>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', maxWidth: '400px' }}>
+              {['backlog', 'inProgress', 'review', 'testing', 'awaitingRelease', 'blocked', 'done'].map(phase => {
+                const isSelected = selectedPhases.includes(phase)
+                const phaseColor = getPhaseColor(phase)
+                return (
+                  <button
+                    key={phase}
+                    onClick={() => handlePhaseToggle(phase)}
+                    style={{
+                      padding: '6px 12px',
+                      background: isSelected ? phaseColor : 'white',
+                      color: isSelected ? 'white' : '#374151',
+                      border: isSelected ? 'none' : '1px solid #D1D5DB',
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      fontWeight: isSelected ? '600' : '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      boxShadow: isSelected ? '0 1px 3px rgba(0,0,0,0.2)' : 'none'
+                    }}
+                    title={`Filter ${getPhaseLabel(phase)} issues`}
+                  >
+                    {getPhaseLabel(phase)}
+                  </button>
+                )
+              })}
+              {selectedPhases.length > 0 && (
+                <button
+                  onClick={handleClearPhaseFilters}
+                  style={{
+                    padding: '6px 12px',
+                    background: '#EF4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s'
+                  }}
+                  title="Clear all filters"
+                >
+                  Clear ({selectedPhases.length})
+                </button>
+              )}
+            </div>
+          </div>
+
           <button
             onClick={() => setShowExecutiveSummary(!showExecutiveSummary)}
             style={{
@@ -926,7 +1002,20 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
                       </div>
                     )}
 
-                    {allIssues.slice(0, 20).map(issue => {
+                    {(() => {
+                      // Apply phase filter
+                      const filteredIssues = selectedPhases.length === 0
+                        ? allIssues
+                        : allIssues.filter(issue => selectedPhases.includes(detectIssuePhase(issue)))
+
+                      // Get limit for this epic
+                      const limit = issuesPerEpic.get(epic.id) || 20
+                      const visibleIssues = filteredIssues.slice(0, limit)
+                      const hasMore = filteredIssues.length > limit
+
+                      return (
+                        <>
+                          {visibleIssues.map(issue => {
                     const issueProgress = getIssueProgressPercent(issue)
                     const issueTimelinePos = getTimelinePosition(
                       issue.created_at,
@@ -1048,16 +1137,37 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
                       </div>
                     )
                   })}
-                  {allIssues.length > 20 && (
-                    <div style={{
-                      padding: '8px 0',
-                      fontSize: '11px',
-                      color: '#6B7280',
-                      fontStyle: 'italic'
-                    }}>
-                      + {allIssues.length - 20} more issues (showing first 20)
-                    </div>
-                  )}
+                          {hasMore && (
+                            <button
+                              onClick={() => handleLoadMoreIssues(epic.id)}
+                              style={{
+                                width: '100%',
+                                padding: '12px',
+                                marginTop: '8px',
+                                background: '#F3F4F6',
+                                border: '1px solid #D1D5DB',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                color: '#3B82F6',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#E5E7EB'
+                                e.currentTarget.style.borderColor = '#3B82F6'
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = '#F3F4F6'
+                                e.currentTarget.style.borderColor = '#D1D5DB'
+                              }}
+                            >
+                              Load +10 More Issues ({filteredIssues.length - limit} remaining)
+                            </button>
+                          )}
+                        </>
+                      )
+                    })()}
                 </div>
                 )
               })()}
