@@ -184,6 +184,10 @@ export function calculateBurndown(issues, currentSprint) {
 
   for (let day = 0; day <= days; day++) {
     const date = new Date(sprintStart.getTime() + day * 24 * 60 * 60 * 1000)
+
+    // Don't generate points beyond sprint end date
+    if (date > sprintEnd) break
+
     // Use local date string to avoid timezone issues
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
