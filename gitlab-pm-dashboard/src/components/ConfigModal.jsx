@@ -7,7 +7,11 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
 
   const [gitlabUrl, setGitlabUrl] = useState(existingConfig.gitlabUrl || 'https://gitlab.com')
   const [projectId, setProjectId] = useState(existingConfig.projectId || '')
-  const [groupPath, setGroupPath] = useState(existingConfig.groupPath || '')
+  const [groupPaths, setGroupPaths] = useState(
+    existingConfig.groupPaths && Array.isArray(existingConfig.groupPaths)
+      ? existingConfig.groupPaths
+      : (existingConfig.groupPath ? [existingConfig.groupPath] : [''])
+  )
   const [token, setToken] = useState(existingConfig.token || '')
   const [filter2025, setFilter2025] = useState(existingConfig.filter2025 || false)
 
@@ -26,10 +30,13 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
   if (!show) return null
 
   const handleSave = () => {
+    // Filter out empty group paths and save both formats for compatibility
+    const filteredGroupPaths = groupPaths.filter(path => path.trim() !== '')
     const config = {
       gitlabUrl,
       projectId,
-      groupPath,
+      groupPath: filteredGroupPaths[0] || '', // For backward compatibility
+      groupPaths: filteredGroupPaths, // New format supporting multiple paths
       token,
       filter2025
     }
@@ -37,6 +44,22 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
     saveConfig(config)
     onSave()
     onClose()
+  }
+
+  const handleAddGroupPath = () => {
+    setGroupPaths([...groupPaths, ''])
+  }
+
+  const handleUpdateGroupPath = (index, value) => {
+    const updated = [...groupPaths]
+    updated[index] = value
+    setGroupPaths(updated)
+  }
+
+  const handleRemoveGroupPath = (index) => {
+    if (groupPaths.length > 1) {
+      setGroupPaths(groupPaths.filter((_, i) => i !== index))
+    }
   }
 
   // Portfolio management functions
@@ -162,16 +185,56 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
               </div>
 
               <div className="form-group">
-                <label className="form-label">Group Path (Optional)</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={groupPath}
-                  onChange={e => setGroupPath(e.target.value)}
-                  placeholder="my-group or parent-group/sub-group"
-                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label className="form-label" style={{ marginBottom: 0 }}>Group Paths (Optional)</label>
+                  <button
+                    type="button"
+                    onClick={handleAddGroupPath}
+                    style={{
+                      padding: '4px 12px',
+                      background: '#10B981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    + Add Group
+                  </button>
+                </div>
+                {groupPaths.map((path, index) => (
+                  <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={path}
+                      onChange={e => handleUpdateGroupPath(index, e.target.value)}
+                      placeholder="my-group or parent-group/sub-group"
+                      style={{ flex: 1 }}
+                    />
+                    {groupPaths.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveGroupPath(index)}
+                        style={{
+                          padding: '8px 12px',
+                          background: '#DC2626',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
                 <div className="text-small text-muted" style={{ marginTop: '4px' }}>
-                  Required for Epic support (Premium/Ultimate only)
+                  Required for Epic support (Premium/Ultimate only). Add multiple groups to fetch epics from different parts of your hierarchy.
                 </div>
               </div>
 

@@ -370,11 +370,22 @@ export async function fetchAllData(config) {
 
   await validateProject(gitlabUrl, projectId, token)
 
-  const [allIssues, allMilestones, allEpics] = await Promise.all([
+  // Support both single groupPath and multiple groupPaths
+  const groupPathsToFetch = groupPaths && Array.isArray(groupPaths) && groupPaths.length > 0
+    ? groupPaths
+    : (groupPath ? [groupPath] : [])
+
+  const [allIssues, allMilestones, ...epicResults] = await Promise.all([
     fetchIssues(gitlabUrl, projectId, token),
     fetchMilestones(gitlabUrl, projectId, token),
-    groupPath ? fetchEpics(gitlabUrl, groupPath, token) : Promise.resolve([])
+    ...groupPathsToFetch.map(path => fetchEpics(gitlabUrl, path, token))
   ])
+
+  // Merge epics from all groups and remove duplicates
+  const allEpics = epicResults.flat()
+  const uniqueEpics = Array.from(
+    new Map(allEpics.map(epic => [epic.id, epic])).values()
+  )
 
   // Apply 2025 filter if enabled (default: true for backwards compatibility)
   const shouldFilter = filter2025 !== false
@@ -391,10 +402,10 @@ export async function fetchAllData(config) {
 
   // Filter epics: show if start_date, end_date, or created_at >= 2025
   const epics = shouldFilter
-    ? filterByYear2025(allEpics, ['start_date', 'end_date', 'created_at'])
-    : allEpics
+    ? filterByYear2025(uniqueEpics, ['start_date', 'end_date', 'created_at'])
+    : uniqueEpics
 
-  console.log(`Filtered data: ${allIssues.length} → ${issues.length} issues, ${allMilestones.length} → ${milestones.length} milestones, ${allEpics.length} → ${epics.length} epics ${shouldFilter ? '(>= 2025)' : '(no filter)'}`)
+  console.log(`Filtered data: ${allIssues.length} → ${issues.length} issues, ${allMilestones.length} → ${milestones.length} milestones, ${uniqueEpics.length} → ${epics.length} epics ${shouldFilter ? '(>= 2025)' : '(no filter)'} (from ${groupPathsToFetch.length} group${groupPathsToFetch.length !== 1 ? 's' : ''})`)
 
   // Import cross-project linking functions
   const {
