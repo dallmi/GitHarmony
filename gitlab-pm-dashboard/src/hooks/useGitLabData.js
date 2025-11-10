@@ -58,6 +58,7 @@ export default function useGitLabData() {
               token: project.token,
               projectId: project.projectId,
               groupPath: project.groupPath,
+              groupPaths: project.groupPaths, // Support multiple group paths
               filter2025: loadConfig().filter2025 // Use global filter setting
             }
             const data = await fetchAllData(projectConfig)

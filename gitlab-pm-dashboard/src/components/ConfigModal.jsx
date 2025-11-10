@@ -24,7 +24,7 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
     gitlabUrl: 'https://gitlab.com',
     token: '',
     projectId: '',
-    groupPath: ''
+    groupPaths: ['']
   })
 
   if (!show) return null
@@ -62,6 +62,22 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
     }
   }
 
+  const handleAddFormGroupPath = () => {
+    setFormData({ ...formData, groupPaths: [...formData.groupPaths, ''] })
+  }
+
+  const handleUpdateFormGroupPath = (index, value) => {
+    const updated = [...formData.groupPaths]
+    updated[index] = value
+    setFormData({ ...formData, groupPaths: updated })
+  }
+
+  const handleRemoveFormGroupPath = (index) => {
+    if (formData.groupPaths.length > 1) {
+      setFormData({ ...formData, groupPaths: formData.groupPaths.filter((_, i) => i !== index) })
+    }
+  }
+
   // Portfolio management functions
   const handleAddProject = () => {
     if (!formData.name || !formData.token || !formData.projectId) {
@@ -69,14 +85,21 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
       return
     }
 
-    const updatedProjects = saveProject(formData)
+    const filteredGroupPaths = formData.groupPaths.filter(path => path.trim() !== '')
+    const projectData = {
+      ...formData,
+      groupPath: filteredGroupPaths[0] || '', // For backward compatibility
+      groupPaths: filteredGroupPaths
+    }
+
+    const updatedProjects = saveProject(projectData)
     setProjects(updatedProjects)
     setFormData({
       name: '',
       gitlabUrl: 'https://gitlab.com',
       token: '',
       projectId: '',
-      groupPath: ''
+      groupPaths: ['']
     })
     setShowAddForm(false)
     setEditingProject(null)
@@ -90,7 +113,9 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
       gitlabUrl: project.gitlabUrl,
       token: project.token,
       projectId: project.projectId,
-      groupPath: project.groupPath || ''
+      groupPaths: project.groupPaths && Array.isArray(project.groupPaths) && project.groupPaths.length > 0
+        ? project.groupPaths
+        : (project.groupPath ? [project.groupPath] : [''])
     })
     setShowAddForm(true)
   }
@@ -348,14 +373,54 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
                     </div>
 
                     <div className="form-group">
-                      <label className="form-label">Group Path (Optional)</label>
-                      <input
-                        type="text"
-                        className="form-input"
-                        value={formData.groupPath}
-                        onChange={e => setFormData({ ...formData, groupPath: e.target.value })}
-                        placeholder="my-group"
-                      />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <label className="form-label" style={{ marginBottom: 0 }}>Group Paths (Optional)</label>
+                        <button
+                          type="button"
+                          onClick={handleAddFormGroupPath}
+                          style={{
+                            padding: '4px 12px',
+                            background: '#10B981',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: '500'
+                          }}
+                        >
+                          + Add Group
+                        </button>
+                      </div>
+                      {formData.groupPaths.map((path, index) => (
+                        <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                          <input
+                            type="text"
+                            className="form-input"
+                            value={path}
+                            onChange={e => handleUpdateFormGroupPath(index, e.target.value)}
+                            placeholder="my-group or parent-group/sub-group"
+                            style={{ flex: 1 }}
+                          />
+                          {formData.groupPaths.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveFormGroupPath(index)}
+                              style={{
+                                padding: '8px 12px',
+                                background: '#DC2626',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      ))}
                     </div>
 
                     <div className="form-group">
