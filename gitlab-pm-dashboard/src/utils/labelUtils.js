@@ -128,10 +128,23 @@ export function getPriorityFromLabels(labels) {
  */
 export function isBlocked(labels) {
   if (!labels || labels.length === 0) return false
-  return labels.some(l =>
-    l.toLowerCase().includes('blocker') ||
-    l.toLowerCase().includes('blocked')
-  )
+
+  const hasBlocker = labels.some(l => {
+    const lower = l.toLowerCase()
+    const isBlocking = lower.includes('blocker') || lower.includes('blocked')
+
+    // Debug logging to understand why issues are marked as blocked
+    if (isBlocking) {
+      console.log('🚫 BLOCKED ISSUE DETECTED:', {
+        matchedLabel: l,
+        allLabels: labels
+      })
+    }
+
+    return isBlocking
+  })
+
+  return hasBlocker
 }
 
 /**

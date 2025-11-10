@@ -18,7 +18,7 @@ export const DEFAULT_PHASE_PATTERNS = {
   released: ['released', 'deployed', 'in production'],
   cancelled: ['cancelled', 'canceled', 'rejected', 'wont fix', 'won\'t fix'],
   done: ['done', 'completed', 'closed', 'resolved', 'finished'],
-  blocked: ['blocked', 'blocker', 'waiting', 'on hold', 'paused']
+  blocked: ['blocked', 'blocker', 'on hold', 'paused']
 }
 
 /**
