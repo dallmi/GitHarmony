@@ -326,11 +326,13 @@ export function getTeamAbsenceStats(teamMembers, startDate, endDate) {
 
   teamMembers.forEach(member => {
     const memberAbsences = absences.filter(a => a.username === member.username)
+    // Use member's actual capacity - if undefined/null use 40, but allow 0
+    const memberCapacity = member.defaultCapacity !== undefined && member.defaultCapacity !== null ? member.defaultCapacity : 40
     const hoursLost = calculateAbsenceImpact(
       member.username,
       startDate,
       endDate,
-      member.defaultCapacity || 40
+      memberCapacity
     )
 
     stats.byMember[member.username] = {

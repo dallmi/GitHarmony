@@ -8,7 +8,8 @@ import {
   getUserAbsences,
   calculateSprintCapacityWithAbsences,
   getTeamAbsenceStats,
-  exportAbsencesToCSV
+  exportAbsencesToCSV,
+  calculateWorkingDays
 } from '../../services/absenceService'
 import { getUniqueIterations } from '../../services/velocityService'
 import { getIterationName } from '../../utils/labelUtils'
@@ -773,6 +774,23 @@ export default function AbsenceCalendarTab({ issues, isCrossProject, refreshKey,
                 <strong>Reason:</strong> {selectedAbsence.reason}
               </div>
             )}
+            <div style={{ marginBottom: '12px' }}>
+              <strong>Working Days:</strong> {(() => {
+                const member = teamMembers.find(m => m.username === selectedAbsence.username)
+                const days = calculateWorkingDays(selectedAbsence.startDate, selectedAbsence.endDate)
+                return days
+              })()}
+            </div>
+            <div style={{ marginBottom: '12px' }}>
+              <strong>Capacity Impact:</strong> {(() => {
+                const member = teamMembers.find(m => m.username === selectedAbsence.username)
+                const memberCapacity = member?.defaultCapacity !== undefined && member?.defaultCapacity !== null ? member.defaultCapacity : 40
+                const days = calculateWorkingDays(selectedAbsence.startDate, selectedAbsence.endDate)
+                const dailyCapacity = memberCapacity / 5
+                const impact = Math.round(days * dailyCapacity * 10) / 10
+                return `${impact}h`
+              })()}
+            </div>
 
             <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
               <button
