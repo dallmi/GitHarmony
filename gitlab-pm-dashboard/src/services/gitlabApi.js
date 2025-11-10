@@ -355,7 +355,7 @@ function filterByYear2025(data, dateFields) {
  * Fetch all data needed for the dashboard
  */
 export async function fetchAllData(config) {
-  const { gitlabUrl, projectId, groupPath, token, filter2025 } = config
+  const { gitlabUrl, projectId, groupPath, groupPaths, token, filter2025 } = config
 
   // First validate project access to provide clear error messages
   console.log('=== Starting GitLab Data Fetch ===')
