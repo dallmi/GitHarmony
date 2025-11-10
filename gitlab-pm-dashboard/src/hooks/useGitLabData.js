@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { fetchAllData } from '../services/gitlabApi'
 import { loadConfig, isConfigured, getActiveProjectId, getAllProjects } from '../services/storageService'
+import { getProjectGroup, getProjectsForGroup } from '../services/projectGroupService'
 
 export default function useGitLabData() {
   const [data, setData] = useState({
@@ -29,12 +30,162 @@ export default function useGitLabData() {
     setConfig(savedConfig)
   }, [])
 
-  // Fetch data from GitLab (single project or cross-project aggregation)
+  // Fetch data from GitLab (single project, project group, or cross-project aggregation)
   const fetchData = useCallback(async () => {
     const activeProjectId = getActiveProjectId()
 
+    // Check if project group mode is active
+    if (activeProjectId?.startsWith('group:')) {
+      console.log('useGitLabData: Project group mode detected')
+      const groupId = activeProjectId.replace('group:', '')
+      const group = getProjectGroup(groupId)
+
+      if (!group) {
+        console.warn('useGitLabData: Project group not found:', groupId)
+        return
+      }
+
+      const allProjects = getAllProjects()
+      const groupProjects = getProjectsForGroup(groupId, allProjects)
+
+      if (groupProjects.length === 0) {
+        console.warn('useGitLabData: No projects in group:', group.name)
+        return
+      }
+
+      setLoading(true)
+      setError(null)
+
+      try {
+        console.log(`useGitLabData: Fetching data for project group "${group.name}" (${groupProjects.length} projects)...`)
+
+        // Fetch data from all projects in the group
+        const projectDataPromises = groupProjects.map(async (project) => {
+          try {
+            console.log(`  Fetching project: ${project.name}`)
+            const projectConfig = {
+              gitlabUrl: project.gitlabUrl,
+              token: project.token,
+              projectId: project.projectId,
+              groupPath: project.groupPath,
+              groupPaths: project.groupPaths, // Support multiple group paths per project
+              filter2025: loadConfig().filter2025
+            }
+            const data = await fetchAllData(projectConfig)
+
+            // Tag each item with its source project
+            return {
+              projectId: project.id,
+              projectName: project.name,
+              issues: data.issues.map(issue => ({ ...issue, _projectId: project.id, _projectName: project.name })),
+              milestones: data.milestones.map(ms => ({ ...ms, _projectId: project.id, _projectName: project.name })),
+              epics: data.epics.map(epic => ({ ...epic, _projectId: project.id, _projectName: project.name }))
+            }
+          } catch (err) {
+            console.error(`  Failed to fetch project ${project.name}:`, err)
+            return {
+              projectId: project.id,
+              projectName: project.name,
+              issues: [],
+              milestones: [],
+              epics: [],
+              error: err.message
+            }
+          }
+        })
+
+        const projectsData = await Promise.all(projectDataPromises)
+
+        // If the group has shared group paths, fetch additional epics
+        let sharedEpics = []
+        if (group.sharedGroupPaths && group.sharedGroupPaths.length > 0) {
+          console.log(`  Fetching epics from ${group.sharedGroupPaths.length} shared group paths...`)
+
+          // Use the first project's config as base for shared group fetches
+          const baseProject = groupProjects[0]
+          const sharedEpicPromises = group.sharedGroupPaths.map(async (groupPath) => {
+            try {
+              console.log(`    Fetching shared group: ${groupPath}`)
+              const sharedConfig = {
+                gitlabUrl: baseProject.gitlabUrl,
+                token: baseProject.token,
+                projectId: baseProject.projectId, // Still need a project for base URL
+                groupPaths: [groupPath],
+                filter2025: loadConfig().filter2025
+              }
+              const data = await fetchAllData(sharedConfig)
+              return data.epics.map(epic => ({ ...epic, _sharedSource: groupPath }))
+            } catch (err) {
+              console.error(`    Failed to fetch shared group ${groupPath}:`, err)
+              return []
+            }
+          })
+
+          const sharedEpicsResults = await Promise.all(sharedEpicPromises)
+          sharedEpics = sharedEpicsResults.flat()
+          console.log(`  Found ${sharedEpics.length} epics from shared groups`)
+        }
+
+        // Import cross-project linking functions
+        const { linkCrossProjectIssues, buildEpicHierarchy } = await import('../services/crossProjectLinkingService.js')
+
+        // Aggregate all data
+        const allIssues = projectsData.flatMap(p => p.issues)
+        const allEpics = [...projectsData.flatMap(p => p.epics), ...sharedEpics]
+        const allMilestones = projectsData.flatMap(p => p.milestones)
+
+        // Deduplicate epics (in case of overlap between project groups and shared groups)
+        const uniqueEpicsMap = new Map()
+        allEpics.forEach(epic => {
+          if (!uniqueEpicsMap.has(epic.id)) {
+            uniqueEpicsMap.set(epic.id, epic)
+          }
+        })
+        const uniqueEpics = Array.from(uniqueEpicsMap.values())
+
+        // Build cross-project relationships
+        const crossProjectData = linkCrossProjectIssues(allIssues, uniqueEpics)
+        const epicHierarchy = buildEpicHierarchy(uniqueEpics)
+
+        // Mark as project group mode
+        crossProjectData.singleProjectMode = false
+        crossProjectData.limitedView = false
+        crossProjectData.projectGroupMode = true
+        crossProjectData.projectGroupName = group.name
+        crossProjectData.projectCount = groupProjects.length
+
+        const aggregatedData = {
+          issues: allIssues,
+          milestones: allMilestones,
+          epics: uniqueEpics,
+          crossProjectData: {
+            ...crossProjectData,
+            epicHierarchy
+          }
+        }
+
+        console.log(`useGitLabData: Project group aggregation complete:`)
+        console.log(`  Group: ${group.name}`)
+        console.log(`  Total issues: ${aggregatedData.issues.length}`)
+        console.log(`  Total milestones: ${aggregatedData.milestones.length}`)
+        console.log(`  Total epics: ${aggregatedData.epics.length}`)
+
+        // Log any project failures
+        const failedProjects = projectsData.filter(p => p.error)
+        if (failedProjects.length > 0) {
+          console.warn(`  Failed projects: ${failedProjects.map(p => p.projectName).join(', ')}`)
+        }
+
+        setData(aggregatedData)
+      } catch (err) {
+        console.error('Project group data fetch failed:', err)
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
     // Check if cross-project mode is active
-    if (activeProjectId === 'cross-project') {
+    else if (activeProjectId === 'cross-project') {
       console.log('useGitLabData: Cross-project mode detected')
       const allProjects = getAllProjects()
 
@@ -152,12 +303,12 @@ export default function useGitLabData() {
     }
   }, [config])
 
-  // Auto-fetch on config change or when entering cross-project mode
+  // Auto-fetch on config change or when entering cross-project/group mode
   useEffect(() => {
     const activeProjectId = getActiveProjectId()
 
-    // Fetch if in cross-project mode OR if single project is configured
-    if (activeProjectId === 'cross-project' || (config && isConfigured())) {
+    // Fetch if in cross-project mode OR project group mode OR if single project is configured
+    if (activeProjectId === 'cross-project' || activeProjectId?.startsWith('group:') || (config && isConfigured())) {
       fetchData()
     }
   }, [config, fetchData])

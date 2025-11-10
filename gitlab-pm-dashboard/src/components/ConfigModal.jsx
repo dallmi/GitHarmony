@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { loadConfig, saveConfig, getAllProjects, saveProject, removeProject, setActiveProject } from '../services/storageService'
+import ProjectGroupManager from './ProjectGroupManager'
 
 export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) {
   const existingConfig = loadConfig()
@@ -178,6 +179,12 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
             onClick={() => setActiveTab('projects')}
           >
             Projects
+          </button>
+          <button
+            className={`tab ${activeTab === 'groups' ? 'active' : ''}`}
+            onClick={() => setActiveTab('groups')}
+          >
+            Project Groups
           </button>
         </div>
 
@@ -498,6 +505,20 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
                 )}
               </div>
             </>
+          )}
+
+          {activeTab === 'groups' && (
+            <ProjectGroupManager
+              onSelect={(groupId) => {
+                // Switch to the project group
+                if (onProjectSwitch) {
+                  setActiveProject(`group:${groupId}`)
+                  onProjectSwitch(`group:${groupId}`)
+                  onClose()
+                }
+              }}
+              onClose={onClose}
+            />
           )}
         </div>
 

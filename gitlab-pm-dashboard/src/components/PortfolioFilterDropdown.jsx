@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { getAllProjects, getActiveProjectId, setActiveProject } from '../services/storageService'
+import { loadProjectGroups } from '../services/projectGroupService'
 
 /**
  * Portfolio Filter Dropdown
@@ -8,6 +9,7 @@ import { getAllProjects, getActiveProjectId, setActiveProject } from '../service
  */
 export default function PortfolioFilterDropdown({ onProjectChange }) {
   const [projects, setProjects] = useState([])
+  const [projectGroups, setProjectGroups] = useState([])
   const [activeProjectId, setActiveProjectId] = useState(null)
   const [isOpen, setIsOpen] = useState(false)
 
@@ -18,6 +20,9 @@ export default function PortfolioFilterDropdown({ onProjectChange }) {
   const loadProjects = () => {
     const allProjects = getAllProjects()
     setProjects(allProjects)
+
+    const allGroups = loadProjectGroups()
+    setProjectGroups(allGroups)
 
     const currentActiveId = getActiveProjectId()
     setActiveProjectId(currentActiveId)
@@ -53,8 +58,14 @@ export default function PortfolioFilterDropdown({ onProjectChange }) {
   }
 
   const activeProject = projects.find(p => p.id === activeProjectId)
+  const activeGroup = activeProjectId?.startsWith('group:')
+    ? projectGroups.find(g => `group:${g.id}` === activeProjectId)
+    : null
+
   const displayName = activeProjectId === 'cross-project'
     ? 'Cross-Project View'
+    : activeGroup
+    ? activeGroup.name
     : activeProject?.name || 'Select Project'
 
   return (
@@ -186,6 +197,65 @@ export default function PortfolioFilterDropdown({ onProjectChange }) {
                   Aggregate data across all {projects.length} projects
                 </div>
               </div>
+
+              {/* Project Groups */}
+              {projectGroups.length > 0 && (
+                <div style={{
+                  padding: '8px 0',
+                  borderBottom: '1px solid #E5E7EB'
+                }}>
+                  <div style={{
+                    padding: '6px 16px',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    color: '#6B7280',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Project Groups ({projectGroups.length})
+                  </div>
+
+                  {projectGroups.map(group => {
+                    const groupId = `group:${group.id}`
+                    const isActive = activeProjectId === groupId
+
+                    return (
+                      <div
+                        key={group.id}
+                        onClick={() => handleProjectSelect(groupId)}
+                        style={{
+                          padding: '10px 16px',
+                          cursor: 'pointer',
+                          background: isActive ? '#EFF6FF' : 'white',
+                          borderLeft: isActive ? '3px solid #3B82F6' : '3px solid transparent',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = '#EFF6FF'}
+                        onMouseLeave={(e) => {
+                          if (!isActive) {
+                            e.currentTarget.style.background = 'white'
+                          }
+                        }}
+                      >
+                        <div style={{
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          color: '#1F2937',
+                          marginBottom: '2px'
+                        }}>
+                          📁 {group.name}
+                        </div>
+                        <div style={{
+                          fontSize: '11px',
+                          color: '#6B7280'
+                        }}>
+                          {projects.filter(p => group.projectIds.includes(p.id)).length} projects
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
 
               {/* Individual Projects */}
               <div style={{
