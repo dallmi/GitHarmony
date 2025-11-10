@@ -626,7 +626,7 @@ export default function AbsenceCalendarTab({ issues, isCrossProject, refreshKey,
                     {member.role || 'Team Member'}
                   </div>
                   <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '4px' }}>
-                    {member.defaultCapacity || 40}h/week
+                    {member.defaultCapacity !== undefined && member.defaultCapacity !== null ? member.defaultCapacity : 40}h/week
                   </div>
                 </div>
 

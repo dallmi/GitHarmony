@@ -27,9 +27,10 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
       }, 0)
 
       // Get current sprint capacity (with absences)
+      const memberDefaultCapacity = member.defaultCapacity !== undefined && member.defaultCapacity !== null ? member.defaultCapacity : 40
       const currentCapacity = sprintCapacity?.breakdown?.find(
         b => b.username === member.username
-      )?.availableCapacity || member.defaultCapacity || 40
+      )?.availableCapacity || memberDefaultCapacity
 
       // Calculate utilization
       const hoursAllocated = storyPoints * 6 // Assuming 6 hours per story point

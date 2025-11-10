@@ -37,7 +37,10 @@ export default function TeamManagementView({ issues = [], milestones = [], cross
       const absenceStats = getTeamAbsenceStats(teamMembers)
 
       // Calculate total capacity
-      const totalCapacity = teamMembers.reduce((sum, m) => sum + (m.defaultCapacity || 40), 0)
+      const totalCapacity = teamMembers.reduce((sum, m) => {
+        const capacity = m.defaultCapacity !== undefined && m.defaultCapacity !== null ? m.defaultCapacity : 40
+        return sum + capacity
+      }, 0)
 
       setTeamData({
         teamMembers,

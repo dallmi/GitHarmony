@@ -28,7 +28,7 @@ export default function CapacityForecast({ teamMembers, issues, milestones, abse
       const memberCapacities = []
 
       teamMembers.forEach(member => {
-        const baseCapacity = member.defaultCapacity || 40
+        const baseCapacity = member.defaultCapacity !== undefined && member.defaultCapacity !== null ? member.defaultCapacity : 40
 
         // Check for absences in this week
         const memberAbsences = absences.filter(absence =>

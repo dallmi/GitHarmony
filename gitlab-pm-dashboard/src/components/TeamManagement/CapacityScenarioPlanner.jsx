@@ -176,7 +176,7 @@ export default function CapacityScenarioPlanner({ teamMembers, issues, milestone
       let effectiveCapacity = 0
 
       activeTeam.forEach(member => {
-        const baseCapacity = member.defaultCapacity || 40
+        const baseCapacity = member.defaultCapacity !== undefined && member.defaultCapacity !== null ? member.defaultCapacity : 40
         totalCapacity += baseCapacity
 
         // Apply ramp-up factor for new hires
@@ -287,7 +287,7 @@ export default function CapacityScenarioPlanner({ teamMembers, issues, milestone
           week: parseInt(changeFormData.week),
           name: member.name || member.username,
           username: member.username,
-          oldCapacity: member.defaultCapacity || 40,
+          oldCapacity: member.defaultCapacity !== undefined && member.defaultCapacity !== null ? member.defaultCapacity : 40,
           newCapacity: parseInt(changeFormData.newCapacity)
         })
       }
@@ -478,7 +478,7 @@ export default function CapacityScenarioPlanner({ teamMembers, issues, milestone
                   capacity: 40,
                   rampUpWeeks: 4,
                   memberUsername: teamMembers[0]?.username || '',
-                  newCapacity: teamMembers[0]?.defaultCapacity || 40
+                  newCapacity: teamMembers[0]?.defaultCapacity !== undefined && teamMembers[0]?.defaultCapacity !== null ? teamMembers[0].defaultCapacity : 40
                 })
                 setShowChangeModal(true)
               }}
@@ -1025,7 +1025,7 @@ export default function CapacityScenarioPlanner({ teamMembers, issues, milestone
                       setChangeFormData({
                         ...changeFormData,
                         memberUsername: e.target.value,
-                        newCapacity: member?.defaultCapacity || 40
+                        newCapacity: member?.defaultCapacity !== undefined && member?.defaultCapacity !== null ? member.defaultCapacity : 40
                       })
                     }}
                     style={{
@@ -1038,7 +1038,7 @@ export default function CapacityScenarioPlanner({ teamMembers, issues, milestone
                   >
                     {teamMembers.map(member => (
                       <option key={member.username} value={member.username}>
-                        {member.name || member.username} ({member.role}) - Current: {member.defaultCapacity || 40}h
+                        {member.name || member.username} ({member.role}) - Current: {member.defaultCapacity !== undefined && member.defaultCapacity !== null ? member.defaultCapacity : 40}h
                       </option>
                     ))}
                   </select>
@@ -1063,7 +1063,10 @@ export default function CapacityScenarioPlanner({ teamMembers, issues, milestone
                     }}
                   />
                   <div style={{ marginTop: '4px', fontSize: '11px', color: '#6B7280' }}>
-                    Current capacity: {teamMembers.find(m => m.username === changeFormData.memberUsername)?.defaultCapacity || 40}h/week
+                    Current capacity: {(() => {
+                      const member = teamMembers.find(m => m.username === changeFormData.memberUsername)
+                      return member?.defaultCapacity !== undefined && member?.defaultCapacity !== null ? member.defaultCapacity : 40
+                    })()}h/week
                   </div>
                 </div>
               </>
