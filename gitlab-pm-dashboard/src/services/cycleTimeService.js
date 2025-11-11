@@ -95,23 +95,23 @@ export function getLeadTime(issue) {
 }
 
 /**
- * Estimate cycle time (assuming started when moved from backlog)
- * This is approximate without full label history
- * Cycle time includes: analysis, in progress, review, testing, etc.
- * Excludes only: backlog (work not yet started)
+ * Estimate cycle time (time from creation to closure for closed issues)
+ * NOTE: Without GitLab label event history, we cannot accurately determine when
+ * work actually started (moved from backlog to in-progress). Therefore, for closed
+ * issues we use the full lifecycle time (created_at to closed_at).
+ *
+ * This is the same as lead time, but we keep this function separate for
+ * semantic clarity and potential future enhancement when label history is available.
  */
 export function estimateCycleTime(issue) {
-  const phase = detectIssuePhase(issue)
-
-  if (phase === 'backlog') {
-    return null // Not started yet
+  // Only calculate for closed issues
+  if (!issue.closed_at) {
+    return null
   }
 
-  // Use updated_at as proxy for when work started
-  // This is an approximation
-  const updated = new Date(issue.updated_at)
-  const end = issue.closed_at ? new Date(issue.closed_at) : new Date()
-  const diffTime = Math.abs(end - updated)
+  const created = new Date(issue.created_at)
+  const closed = new Date(issue.closed_at)
+  const diffTime = Math.abs(closed - created)
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
   return diffDays
 }
@@ -161,7 +161,18 @@ export function getCycleTimeStats(issues) {
 
   if (cycleTimes.length > 0) {
     avgCycleTime = Math.round(cycleTimes.reduce((sum, t) => sum + t, 0) / cycleTimes.length)
-    medianCycleTime = cycleTimes[Math.floor(cycleTimes.length / 2)]
+
+    // Proper median calculation
+    if (cycleTimes.length % 2 === 0) {
+      // Even number: average of two middle values
+      const mid1 = cycleTimes[cycleTimes.length / 2 - 1]
+      const mid2 = cycleTimes[cycleTimes.length / 2]
+      medianCycleTime = Math.round((mid1 + mid2) / 2)
+    } else {
+      // Odd number: middle value
+      medianCycleTime = cycleTimes[Math.floor(cycleTimes.length / 2)]
+    }
+
     minCycleTime = cycleTimes[0]
     maxCycleTime = cycleTimes[cycleTimes.length - 1]
 
