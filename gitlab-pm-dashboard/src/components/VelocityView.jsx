@@ -68,18 +68,18 @@ export default function VelocityView({ issues: allIssues }) {
         impact: `${previous.velocity - recent.velocity} fewer issues completed per sprint`
       })
 
-      // Check if capacity loss due to absences explains the decline
+      // Check if capacity reduction due to absences explains the decline
       if (capacityImpact && capacityImpact.lossPercentage >= 15) {
         causes.push({
           severity: 'warning',
           category: 'capacity-reduced',
-          description: `Team capacity reduced by ${capacityImpact.lossPercentage}% due to ${capacityImpact.absenceCount} absence(s)`,
-          impact: `${capacityImpact.capacityLoss} hours lost (${capacityImpact.affectedMembers.length} team member(s) affected)`
+          description: `Team capacity reduced by ${capacityImpact.lossPercentage}% due to ${capacityImpact.absenceCount} planned absence(s)`,
+          impact: `${capacityImpact.capacityLoss} hours unavailable (${capacityImpact.affectedMembers.length} team member(s) out of office)`
         })
         actions.push({
           priority: 'high',
           title: 'Adjust sprint expectations',
-          description: `Velocity decline is primarily due to ${capacityImpact.absenceCount} team absence(s). Consider this when evaluating sprint performance and adjust expectations accordingly.`,
+          description: `Velocity decline is primarily due to reduced team availability (${capacityImpact.absenceCount} absence(s)). This is expected and should be factored into performance evaluation.`,
           estimatedImpact: 'Context-aware performance assessment'
         })
       }
