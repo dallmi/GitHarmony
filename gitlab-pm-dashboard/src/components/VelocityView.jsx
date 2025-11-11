@@ -27,8 +27,6 @@ export default function VelocityView({ issues: allIssues }) {
     const causes = []
     const actions = []
 
-    const recent3 = velocityData.slice(-3)
-
     // Use current sprint if specified, otherwise fall back to most recent
     let recentIndex = velocityData.length - 1
     if (currentSprintName) {
@@ -126,14 +124,16 @@ export default function VelocityView({ issues: allIssues }) {
       })
     } else {
       // Stable velocity
+      const avgVelocityValue = typeof avgVelocity === 'object' ? avgVelocity.byIssues : avgVelocity
+
       causes.push({
         severity: 'info',
         category: 'velocity-stable',
-        description: `Velocity stable at ~${avgVelocity} issues/sprint`,
+        description: `Velocity stable at ~${avgVelocityValue} issues/sprint`,
         impact: 'Predictable delivery rate'
       })
 
-      if (avgVelocity < 5 && recent.totalIssues > 10) {
+      if (avgVelocityValue < 5 && recent.totalIssues > 10) {
         causes.push({
           severity: 'warning',
           category: 'low-velocity',
