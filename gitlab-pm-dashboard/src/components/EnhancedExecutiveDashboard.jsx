@@ -490,7 +490,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                         flex: 1,
                         height: `${heightPercent}%`,
                         minHeight: '12px',
-                        background: isLatest ? 'var(--primary)' : '#93C5FD',
+                        background: isLatest ? '#2563EB' : '#93C5FD',
                         borderRadius: '4px 4px 0 0',
                         position: 'relative',
                         display: 'flex',
