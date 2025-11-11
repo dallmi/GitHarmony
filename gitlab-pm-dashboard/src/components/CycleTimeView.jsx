@@ -552,9 +552,9 @@ export default function CycleTimeView({ issues: allIssues }) {
             </div>
 
             {/* Control Chart Visualization */}
-            <div style={{ position: 'relative', height: '400px', background: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '20px' }}>
+            <div style={{ position: 'relative', height: '450px', background: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '20px' }}>
               {/* Y-axis labels and horizontal grid lines */}
-              <div style={{ position: 'absolute', left: '0', top: '20px', bottom: '40px', width: '50px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div style={{ position: 'absolute', left: '0', top: '20px', bottom: '70px', width: '50px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 {[analytics.controlChartData.upperControlLimit, analytics.controlChartData.percentile95, analytics.controlChartData.average, analytics.controlChartData.lowerControlLimit].map((value, i) => (
                   <div key={i} style={{ fontSize: '11px', color: '#6B7280', textAlign: 'right', paddingRight: '8px' }}>
                     {value}d
@@ -563,7 +563,7 @@ export default function CycleTimeView({ issues: allIssues }) {
               </div>
 
               {/* Chart area */}
-              <div style={{ position: 'absolute', left: '60px', right: '20px', top: '20px', bottom: '40px' }}>
+              <div style={{ position: 'absolute', left: '60px', right: '20px', top: '20px', bottom: '70px' }}>
                 {/* Control limits and percentile lines */}
                 {[
                   { value: analytics.controlChartData.upperControlLimit, color: '#EF4444', label: 'Upper Control Limit', dash: true },
@@ -630,9 +630,113 @@ export default function CycleTimeView({ issues: allIssues }) {
                 })}
               </div>
 
-              {/* X-axis label */}
-              <div style={{ position: 'absolute', left: '60px', right: '20px', bottom: '10px', fontSize: '11px', color: '#6B7280', textAlign: 'center' }}>
-                Issues Completed Over Time (oldest → newest)
+              {/* X-axis date labels */}
+              <div style={{ position: 'absolute', left: '60px', right: '20px', bottom: '0px', height: '40px' }}>
+                {(() => {
+                  const dataPoints = analytics.controlChartData.dataPoints
+                  if (dataPoints.length === 0) return null
+
+                  // Calculate time span
+                  const firstDate = dataPoints[0].date
+                  const lastDate = dataPoints[dataPoints.length - 1].date
+                  const daysDiff = Math.ceil((lastDate - firstDate) / (1000 * 60 * 60 * 24))
+
+                  // Determine time indicator and label interval
+                  let timeIndicator = ''
+                  let labelInterval = 1
+                  let dateFormat = {}
+
+                  if (daysDiff <= 7) {
+                    timeIndicator = 'Daily View'
+                    labelInterval = 1
+                    dateFormat = { month: 'short', day: 'numeric' }
+                  } else if (daysDiff <= 31) {
+                    timeIndicator = 'Weekly View'
+                    labelInterval = Math.ceil(dataPoints.length / 7)
+                    dateFormat = { month: 'short', day: 'numeric' }
+                  } else if (daysDiff <= 90) {
+                    timeIndicator = 'Monthly View'
+                    labelInterval = Math.ceil(dataPoints.length / 12)
+                    dateFormat = { month: 'short', day: 'numeric' }
+                  } else if (daysDiff <= 365) {
+                    timeIndicator = 'Quarterly View'
+                    labelInterval = Math.ceil(dataPoints.length / 16)
+                    dateFormat = { month: 'short', year: 'numeric' }
+                  } else {
+                    timeIndicator = 'Yearly View'
+                    labelInterval = Math.ceil(dataPoints.length / 20)
+                    dateFormat = { month: 'short', year: 'numeric' }
+                  }
+
+                  // Generate labels
+                  const labels = []
+
+                  // Always show first date
+                  labels.push(
+                    <div
+                      key={0}
+                      style={{
+                        position: 'absolute',
+                        left: '0%',
+                        fontSize: '10px',
+                        color: '#6B7280',
+                        transform: 'translateX(0)',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {dataPoints[0].date.toLocaleDateString('en-US', dateFormat)}
+                    </div>
+                  )
+
+                  // Show intermediate labels
+                  for (let i = labelInterval; i < dataPoints.length - 1; i += labelInterval) {
+                    const xPos = (i / (dataPoints.length - 1)) * 100
+                    labels.push(
+                      <div
+                        key={i}
+                        style={{
+                          position: 'absolute',
+                          left: `${xPos}%`,
+                          fontSize: '10px',
+                          color: '#6B7280',
+                          transform: 'translateX(-50%)',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {dataPoints[i].date.toLocaleDateString('en-US', dateFormat)}
+                      </div>
+                    )
+                  }
+
+                  // Always show last date
+                  labels.push(
+                    <div
+                      key={dataPoints.length - 1}
+                      style={{
+                        position: 'absolute',
+                        right: '0%',
+                        fontSize: '10px',
+                        color: '#6B7280',
+                        transform: 'translateX(0)',
+                        whiteSpace: 'nowrap',
+                        textAlign: 'right'
+                      }}
+                    >
+                      {dataPoints[dataPoints.length - 1].date.toLocaleDateString('en-US', dateFormat)}
+                    </div>
+                  )
+
+                  return (
+                    <>
+                      <div style={{ position: 'relative', height: '18px', marginTop: '4px' }}>
+                        {labels}
+                      </div>
+                      <div style={{ fontSize: '10px', color: '#9CA3AF', textAlign: 'center', marginTop: '2px', fontStyle: 'italic' }}>
+                        {timeIndicator} ({daysDiff} days span)
+                      </div>
+                    </>
+                  )
+                })()}
               </div>
             </div>
 
