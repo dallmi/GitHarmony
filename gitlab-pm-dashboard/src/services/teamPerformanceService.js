@@ -316,9 +316,14 @@ export function getTeamVelocityByMember(issues) {
 }
 
 /**
- * Extract story points from issue labels or title
+ * Extract story points from issue weight, labels, or title
  */
 function extractStoryPoints(issue) {
+  // First, check GitLab's native weight property (most common)
+  if (issue.weight !== undefined && issue.weight !== null) {
+    return issue.weight
+  }
+
   // Check labels for story points
   if (issue.labels) {
     for (const label of issue.labels) {
@@ -351,7 +356,13 @@ export function getTeamPerformanceSummary(issues, daysBack = 30) {
 
   const totalCompleted = contributions.reduce((sum, c) => sum + c.issuesCompleted, 0)
   const totalStoryPoints = contributions.reduce((sum, c) => sum + c.storyPoints, 0)
-  const activeMembers = workload.filter(m => !m.isOnLeave).length
+
+  // If team config exists, use configured members; otherwise, count actual contributors
+  let activeMembers = workload.filter(m => !m.isOnLeave).length
+  if (activeMembers === 0 && contributions.length > 0) {
+    // No team config, but we have contributors from the data
+    activeMembers = contributions.filter(c => c.name !== 'Unassigned').length
+  }
 
   return {
     topContributors: contributions.slice(0, 5),
