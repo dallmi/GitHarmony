@@ -91,6 +91,13 @@ export default function SprintBoardView({ issues }) {
             done: sprintIssues.filter(i => i.state === 'closed')
           }
 
+          // Calculate story points for each column
+          const storyPoints = {
+            todo: grouped.todo.reduce((sum, issue) => sum + (issue.weight || 0), 0),
+            progress: grouped.progress.reduce((sum, issue) => sum + (issue.weight || 0), 0),
+            done: grouped.done.reduce((sum, issue) => sum + (issue.weight || 0), 0)
+          }
+
           // Calculate team capacity and recommendations
           const workingDays = calculateWorkingDays(startDate, dueDate)
           const teamWorkload = calculateTeamWorkload(sprintIssues, workingDays)
@@ -269,9 +276,14 @@ export default function SprintBoardView({ issues }) {
               <div className="grid grid-3" style={{ gap: '16px' }}>
                 {/* To Do Column */}
                 <div style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '8px' }}>
-                  <h4 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: '600' }}>
-                    📋 To Do ({grouped.todo.length})
-                  </h4>
+                  <div style={{ marginBottom: '12px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
+                      📋 To Do ({grouped.todo.length})
+                    </h4>
+                    <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                      {storyPoints.todo} story points
+                    </div>
+                  </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {grouped.todo.map(issue => (
                       <div
@@ -289,8 +301,9 @@ export default function SprintBoardView({ issues }) {
                         <div style={{ fontSize: '13px', fontWeight: '500', marginBottom: '4px' }}>
                           #{issue.iid} {issue.title}
                         </div>
-                        <div className="text-small text-muted">
-                          {issue.assignees?.[0]?.name || 'Unassigned'}
+                        <div className="text-small text-muted" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>{issue.assignees?.[0]?.name || 'Unassigned'}</span>
+                          {issue.weight && <span style={{ fontWeight: '600' }}>{issue.weight} pts</span>}
                         </div>
                       </div>
                     ))}
@@ -304,9 +317,14 @@ export default function SprintBoardView({ issues }) {
 
                 {/* In Progress Column */}
                 <div style={{ background: '#DBEAFE', padding: '16px', borderRadius: '8px' }}>
-                  <h4 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: '600' }}>
-                    🔄 In Progress ({grouped.progress.length})
-                  </h4>
+                  <div style={{ marginBottom: '12px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
+                      🔄 In Progress ({grouped.progress.length})
+                    </h4>
+                    <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                      {storyPoints.progress} story points
+                    </div>
+                  </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {grouped.progress.map(issue => (
                       <div
@@ -324,8 +342,9 @@ export default function SprintBoardView({ issues }) {
                         <div style={{ fontSize: '13px', fontWeight: '500', marginBottom: '4px' }}>
                           #{issue.iid} {issue.title}
                         </div>
-                        <div className="text-small text-muted">
-                          {issue.assignees?.[0]?.name || 'Unassigned'}
+                        <div className="text-small text-muted" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>{issue.assignees?.[0]?.name || 'Unassigned'}</span>
+                          {issue.weight && <span style={{ fontWeight: '600' }}>{issue.weight} pts</span>}
                         </div>
                       </div>
                     ))}
@@ -339,9 +358,14 @@ export default function SprintBoardView({ issues }) {
 
                 {/* Done Column */}
                 <div style={{ background: '#D1FAE5', padding: '16px', borderRadius: '8px' }}>
-                  <h4 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: '600' }}>
-                    ✅ Done ({grouped.done.length})
-                  </h4>
+                  <div style={{ marginBottom: '12px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
+                      ✅ Done ({grouped.done.length})
+                    </h4>
+                    <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                      {storyPoints.done} story points
+                    </div>
+                  </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {grouped.done.map(issue => (
                       <div
