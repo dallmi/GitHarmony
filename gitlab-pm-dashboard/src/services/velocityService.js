@@ -323,62 +323,82 @@ export function predictCompletion(issues, averageVelocity) {
 }
 
 /**
- * Get current active sprint (most recent iteration with open issues)
+ * Get current active sprint based on today's date
+ * Returns the iteration where today falls between start_date and due_date
  */
 export function getCurrentSprint(issues) {
   if (!issues || issues.length === 0) return null
 
-  // Build a map of iteration name to start date
-  const iterationDates = new Map()
+  // Build a map of iteration name to date range
+  const iterationRanges = new Map()
 
-  issues
-    .filter((i) => i.state === 'opened')
-    .forEach((issue) => {
-      const sprint = getSprintFromLabels(issue.labels, issue.iteration)
-      if (!sprint) return
+  issues.forEach((issue) => {
+    const sprint = getSprintFromLabels(issue.labels, issue.iteration)
+    if (!sprint) return
 
-      // Try to get the start date from the iteration object
-      const startDate = issue.iteration?.start_date
-      if (startDate && !iterationDates.has(sprint)) {
-        iterationDates.set(sprint, startDate)
-      }
-    })
+    // Get iteration dates
+    const startDate = issue.iteration?.start_date
+    const endDate = issue.iteration?.due_date
 
-  if (iterationDates.size === 0) {
-    // Fallback: if no iterations with dates, just return any sprint with open issues
-    const sprintsWithOpenIssues = issues
-      .filter((i) => i.state === 'opened')
-      .map((i) => getSprintFromLabels(i.labels, i.iteration))
-      .filter((s) => s !== null)
-
-    if (sprintsWithOpenIssues.length === 0) return null
-
-    // Try to parse as number for legacy "Sprint X" format
-    const asNumbers = sprintsWithOpenIssues
-      .map(s => typeof s === 'number' ? s : parseInt(s, 10))
-      .filter(n => !isNaN(n))
-
-    if (asNumbers.length > 0) {
-      return Math.max(...asNumbers)
-    }
-
-    // Otherwise return the first one
-    return sprintsWithOpenIssues[0]
-  }
-
-  // Find the iteration with the most recent start date
-  let mostRecentSprint = null
-  let mostRecentDate = null
-
-  iterationDates.forEach((date, sprint) => {
-    const dateObj = new Date(date)
-    if (!mostRecentDate || dateObj > mostRecentDate) {
-      mostRecentDate = dateObj
-      mostRecentSprint = sprint
+    if (startDate && endDate && !iterationRanges.has(sprint)) {
+      iterationRanges.set(sprint, {
+        start: new Date(startDate),
+        end: new Date(endDate)
+      })
     }
   })
 
-  return mostRecentSprint
+  // Find the sprint where today falls between start and end dates
+  const today = new Date()
+  today.setHours(0, 0, 0, 0) // Normalize to start of day
+
+  for (const [sprint, range] of iterationRanges.entries()) {
+    const start = new Date(range.start)
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(range.end)
+    end.setHours(23, 59, 59, 999)
+
+    if (today >= start && today <= end) {
+      return sprint
+    }
+  }
+
+  // Fallback 1: If no current sprint found, find the most recently completed sprint
+  // (for teams between sprints)
+  let mostRecentPastSprint = null
+  let mostRecentPastDate = null
+
+  iterationRanges.forEach((range, sprint) => {
+    const end = new Date(range.end)
+    if (end < today && (!mostRecentPastDate || end > mostRecentPastDate)) {
+      mostRecentPastDate = end
+      mostRecentPastSprint = sprint
+    }
+  })
+
+  if (mostRecentPastSprint) {
+    return mostRecentPastSprint
+  }
+
+  // Fallback 2: If no iterations with dates, return any sprint with open issues
+  const sprintsWithOpenIssues = issues
+    .filter((i) => i.state === 'opened')
+    .map((i) => getSprintFromLabels(i.labels, i.iteration))
+    .filter((s) => s !== null)
+
+  if (sprintsWithOpenIssues.length === 0) return null
+
+  // Try to parse as number for legacy "Sprint X" format
+  const asNumbers = sprintsWithOpenIssues
+    .map(s => typeof s === 'number' ? s : parseInt(s, 10))
+    .filter(n => !isNaN(n))
+
+  if (asNumbers.length > 0) {
+    return Math.max(...asNumbers)
+  }
+
+  // Otherwise return the first one
+  return sprintsWithOpenIssues[0]
 }
 
 /**
