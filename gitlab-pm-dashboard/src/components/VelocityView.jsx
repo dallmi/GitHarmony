@@ -280,7 +280,6 @@ export default function VelocityView({ issues: allIssues }) {
 
     // Calculate trend and average using current sprint to avoid future sprints
     const avgVelocity = calculateAverageVelocity(velocityData, 3, currentSprint)
-    const trend = calculateVelocityTrend(velocityData, currentSprint)
 
     const burndownIssues = calculateBurndown(issues, currentSprint, 'issues')
     const burndownPoints = calculateBurndown(issues, currentSprint, 'points')
@@ -289,7 +288,6 @@ export default function VelocityView({ issues: allIssues }) {
     return {
       velocityData,
       avgVelocity,
-      trend,
       currentSprint,
       burndownIssues,
       burndownPoints,
@@ -308,7 +306,10 @@ export default function VelocityView({ issues: allIssues }) {
     )
   }
 
-  const { velocityData, avgVelocity, trend, currentSprint, burndownIssues, burndownPoints, prediction } = analytics
+  const { velocityData, avgVelocity, currentSprint, burndownIssues, burndownPoints, prediction } = analytics
+
+  // Calculate trend based on current view mode
+  const trend = calculateVelocityTrend(velocityData, currentSprint, viewMode)
 
   // Select burndown based on view mode
   const burndown = viewMode === 'points' ? burndownPoints : burndownIssues

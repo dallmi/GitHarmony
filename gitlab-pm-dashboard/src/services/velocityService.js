@@ -151,9 +151,10 @@ export function calculateAverageVelocityLegacy(velocityData, lastNSprints = 3) {
  * Returns both short-term (sprint-to-sprint) and long-term (moving average) trends
  * @param {Array} velocityData - Array of sprint velocity data
  * @param {string} currentSprintName - Optional: name of current sprint to use instead of most recent
+ * @param {string} mode - 'issues' or 'points' (default: 'issues')
  * @returns {Object} { shortTerm, longTerm } - Both trend percentages
  */
-export function calculateVelocityTrend(velocityData, currentSprintName = null) {
+export function calculateVelocityTrend(velocityData, currentSprintName = null, mode = 'issues') {
   if (!velocityData || velocityData.length < 2) {
     return { shortTerm: 0, longTerm: 0 }
   }
@@ -172,13 +173,18 @@ export function calculateVelocityTrend(velocityData, currentSprintName = null) {
     return { shortTerm: 0, longTerm: 0 }
   }
 
+  // Helper to get velocity value based on mode
+  const getVelocityValue = (sprint) => mode === 'points' ? (sprint.velocityPoints || 0) : sprint.velocity
+
   // SHORT-TERM TREND: Current sprint vs previous sprint
   const currentSprint = velocityData[currentIndex]
   const previousSprint = velocityData[currentIndex - 1]
 
   let shortTerm = 0
-  if (previousSprint.velocity > 0) {
-    shortTerm = Math.round(((currentSprint.velocity - previousSprint.velocity) / previousSprint.velocity) * 100)
+  const previousValue = getVelocityValue(previousSprint)
+  if (previousValue > 0) {
+    const currentValue = getVelocityValue(currentSprint)
+    shortTerm = Math.round(((currentValue - previousValue) / previousValue) * 100)
   }
 
   // LONG-TERM TREND: Average of last 3 sprints vs average of 3 sprints before that
@@ -189,7 +195,7 @@ export function calculateVelocityTrend(velocityData, currentSprintName = null) {
     // Recent 3 sprints (including current)
     const recentStart = Math.max(0, currentIndex - 2)
     const recentSprints = velocityData.slice(recentStart, currentIndex + 1)
-    const recentAvg = recentSprints.reduce((sum, s) => sum + s.velocity, 0) / recentSprints.length
+    const recentAvg = recentSprints.reduce((sum, s) => sum + getVelocityValue(s), 0) / recentSprints.length
 
     // Previous 3 sprints (before the recent group)
     const previousStart = Math.max(0, recentStart - 3)
@@ -197,7 +203,7 @@ export function calculateVelocityTrend(velocityData, currentSprintName = null) {
     const previousSprints = velocityData.slice(previousStart, previousEnd)
 
     if (previousSprints.length > 0) {
-      const previousAvg = previousSprints.reduce((sum, s) => sum + s.velocity, 0) / previousSprints.length
+      const previousAvg = previousSprints.reduce((sum, s) => sum + getVelocityValue(s), 0) / previousSprints.length
 
       if (previousAvg > 0) {
         longTerm = Math.round(((recentAvg - previousAvg) / previousAvg) * 100)
