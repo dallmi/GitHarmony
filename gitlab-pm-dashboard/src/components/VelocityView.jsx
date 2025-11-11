@@ -25,7 +25,7 @@ export default function VelocityView({ issues: allIssues }) {
   const [viewMode, setViewMode] = useState('issues') // 'issues' or 'points'
   // Get velocity root cause analysis
   const getVelocityRootCause = (velocityData, trend, avgVelocity, currentSprintName, allIssues, viewMode) => {
-    if (!velocityData || velocityData.length < 2) return { causes: [], actions: [] }
+    if (!velocityData || velocityData.length < 4) return { causes: [], actions: [] }
 
     const causes = []
     const actions = []
@@ -39,147 +39,198 @@ export default function VelocityView({ issues: allIssues }) {
       }
     }
 
-    const recent = velocityData[recentIndex]
-    const previous = velocityData[recentIndex - 1]
-
-    // Need at least 2 data points (current and previous)
-    if (!recent || !previous) return { causes: [], actions: [] }
+    // Need at least 4 sprints for meaningful long-term analysis
+    if (recentIndex < 3) return { causes: [], actions: [] }
 
     // Determine unit labels and values based on view mode
     const unit = viewMode === 'points' ? 'point' : 'issue'
     const units = viewMode === 'points' ? 'points' : 'issues'
-    const recentValue = viewMode === 'points' ? recent.velocityPoints : recent.velocity
-    const previousValue = viewMode === 'points' ? previous.velocityPoints : previous.velocity
     const avgVelocityValue = viewMode === 'points' ? avgVelocity.byPoints : avgVelocity.byIssues
 
-    // Extract short-term trend for analysis (handle both object and number)
-    const trendValue = typeof trend === 'object' ? trend.shortTerm : trend
+    // Extract long-term trend for analysis (handle both object and number)
+    const trendValue = typeof trend === 'object' ? trend.longTerm : trend
+    const shortTermValue = typeof trend === 'object' ? trend.shortTerm : 0
 
-    // Check for capacity impact due to absences
-    let capacityImpact = null
-    if (allIssues && currentSprintName) {
-      capacityImpact = calculateSprintCapacityImpact(
-        allIssues,
-        currentSprintName,
-        getTeamAbsenceStats,
-        loadTeamConfig
-      )
-    }
+    // Calculate recent 3 sprints average and previous 3 sprints average
+    const recentStart = Math.max(0, recentIndex - 2)
+    const recentSprints = velocityData.slice(recentStart, recentIndex + 1)
+    const recentAvg = recentSprints.reduce((sum, s) => {
+      const val = viewMode === 'points' ? s.velocityPoints : s.velocity
+      return sum + val
+    }, 0) / recentSprints.length
 
-    // Analyze velocity drop
+    const previousStart = Math.max(0, recentStart - 3)
+    const previousEnd = recentStart
+    const previousSprints = velocityData.slice(previousStart, previousEnd)
+    const previousAvg = previousSprints.length > 0
+      ? previousSprints.reduce((sum, s) => {
+          const val = viewMode === 'points' ? s.velocityPoints : s.velocity
+          return sum + val
+        }, 0) / previousSprints.length
+      : 0
+
+    // Identify outlier sprints in the 6-sprint window
+    const allSixSprints = velocityData.slice(previousStart, recentIndex + 1)
+    const sixSprintAvg = allSixSprints.reduce((sum, s) => {
+      const val = viewMode === 'points' ? s.velocityPoints : s.velocity
+      return sum + val
+    }, 0) / allSixSprints.length
+
+    // Find sprints that are significantly below average (>30% below)
+    const outliers = allSixSprints
+      .map((sprint, idx) => {
+        const val = viewMode === 'points' ? sprint.velocityPoints : sprint.velocity
+        const deviation = ((val - sixSprintAvg) / sixSprintAvg) * 100
+        return { sprint, val, deviation, globalIndex: previousStart + idx }
+      })
+      .filter(item => item.deviation < -30)
+      .sort((a, b) => a.deviation - b.deviation) // Most problematic first
+
+    // Check capacity impact for outlier sprints
+    const outliersWithReasons = outliers.map(outlier => {
+      let capacityImpact = null
+      if (allIssues && outlier.sprint.sprint) {
+        capacityImpact = calculateSprintCapacityImpact(
+          allIssues,
+          outlier.sprint.sprint,
+          getTeamAbsenceStats,
+          loadTeamConfig
+        )
+      }
+      return { ...outlier, capacityImpact }
+    })
+
+    // LONG-TERM ANALYSIS: Focus on 6-sprint trend
     if (trendValue < -10) {
-      // Significant decline
+      // Significant long-term decline
       const dropPercent = Math.abs(trendValue)
-      const dropAmount = previousValue - recentValue
+      const dropAmount = Math.round(previousAvg - recentAvg)
 
       causes.push({
         severity: 'critical',
         category: 'velocity-decline',
-        description: `Velocity declined by ${dropPercent}% (from ${previousValue} to ${recentValue} ${units}/sprint)`,
-        impact: `${dropAmount} fewer ${dropAmount !== 1 ? units : unit} completed per sprint`
+        description: `Long-term velocity declining by ${dropPercent}% over last 6 sprints`,
+        impact: `Average dropped from ${Math.round(previousAvg)} to ${Math.round(recentAvg)} ${units}/sprint (${dropAmount} ${units} less per sprint)`
       })
 
-      // Check if capacity reduction due to absences explains the decline
-      if (capacityImpact && capacityImpact.lossPercentage >= 15) {
-        causes.push({
-          severity: 'warning',
-          category: 'capacity-reduced',
-          description: `Team capacity reduced by ${capacityImpact.lossPercentage}% due to ${capacityImpact.absenceCount} planned absence(s)`,
-          impact: `${capacityImpact.capacityLoss} hours unavailable (${capacityImpact.affectedMembers.length} team member(s) out of office)`
+      // Identify problematic sprints with root causes
+      if (outliersWithReasons.length > 0) {
+        outliersWithReasons.forEach((outlier, idx) => {
+          const sprintName = outlier.sprint.sprint
+          const capacityReason = outlier.capacityImpact && outlier.capacityImpact.lossPercentage >= 15
+            ? ` due to ${outlier.capacityImpact.lossPercentage}% capacity reduction (${outlier.capacityImpact.absenceCount} team member(s) absent)`
+            : ''
+
+          const completionIssue = outlier.sprint.completionRate < 70
+            ? ` and low completion rate (${outlier.sprint.completionRate}%)`
+            : ''
+
+          causes.push({
+            severity: 'warning',
+            category: 'outlier-sprint',
+            description: `Sprint "${sprintName}" dragged velocity down by ${Math.abs(Math.round(outlier.deviation))}%${capacityReason}${completionIssue}`,
+            impact: `Only ${Math.round(outlier.val)} ${units} completed vs ${Math.round(sixSprintAvg)} average`
+          })
         })
-        actions.push({
-          priority: 'high',
-          title: 'Adjust sprint expectations',
-          description: `Velocity decline is primarily due to reduced team availability (${capacityImpact.absenceCount} absence(s)). This is expected and should be factored into performance evaluation.`,
-          estimatedImpact: 'Context-aware performance assessment'
-        })
+
+        // Check if capacity issues explain the trend
+        const capacityRelatedOutliers = outliersWithReasons.filter(o =>
+          o.capacityImpact && o.capacityImpact.lossPercentage >= 15
+        )
+
+        if (capacityRelatedOutliers.length > 0) {
+          actions.push({
+            priority: 'high',
+            title: 'Adjust for capacity fluctuations',
+            description: `${capacityRelatedOutliers.length} sprint(s) had significant absences. Factor in planned time off when setting expectations and improve capacity planning.`,
+            estimatedImpact: 'Context-aware performance assessment'
+          })
+        }
       }
 
-      // Analyze potential reasons
-      if (recent.completionRate < 70) {
+      // Check recent sprint completion rates
+      const recentLowCompletion = recentSprints.filter(s => s.completionRate < 70)
+      if (recentLowCompletion.length >= 2) {
         causes.push({
           severity: 'warning',
           category: 'completion-rate',
-          description: `Low completion rate: ${recent.completionRate}% in Sprint ${recent.sprint}`,
-          impact: `${recent.openIssues} issues not completed`
+          description: `${recentLowCompletion.length} of last 3 sprints had completion rate below 70%`,
+          impact: 'Team consistently overcommitting'
         })
         actions.push({
           priority: 'high',
           title: 'Reduce sprint scope',
-          description: 'Team is taking on too much work. Reduce planned issues by 20-30%',
-          estimatedImpact: 'Improve completion rate to 80%+'
-        })
-      }
-
-      // Check for increasing WIP
-      if (recent.openIssues > previous.openIssues) {
-        causes.push({
-          severity: 'warning',
-          category: 'wip-increase',
-          description: `Work in progress increased from ${previous.openIssues} to ${recent.openIssues} issues`,
-          impact: 'More started work not being completed'
-        })
-        actions.push({
-          priority: 'high',
-          title: 'Implement WIP limits',
-          description: 'Focus on completing existing work before starting new issues',
-          estimatedImpact: 'Increase completion rate'
+          description: 'Team is taking on too much work. Reduce planned work by 20-30% for next 2 sprints',
+          estimatedImpact: 'Improve completion rate to 80%+ and stabilize velocity'
         })
       }
 
       actions.push({
         priority: 'high',
-        title: 'Investigate blockers',
-        description: 'Review issues for blockers, dependencies, or scope creep',
-        estimatedImpact: 'Identify and remove impediments'
+        title: 'Investigate systemic issues',
+        description: 'Long-term decline suggests deeper problems. Review: technical debt, process bottlenecks, team morale, or changing requirements complexity.',
+        estimatedImpact: 'Identify and address root causes'
       })
     } else if (trendValue > 10) {
-      // Improving velocity
-      const increaseAmount = recentValue - previousValue
+      // Improving long-term velocity
+      const increasePercent = trendValue
+      const increaseAmount = Math.round(recentAvg - previousAvg)
 
       causes.push({
         severity: 'info',
         category: 'velocity-improvement',
-        description: `Velocity improved by ${trendValue}% (from ${previousValue} to ${recentValue} ${units}/sprint)`,
-        impact: `${increaseAmount} more ${increaseAmount !== 1 ? units : unit} completed per sprint`
+        description: `Long-term velocity improving by ${increasePercent}% over last 6 sprints`,
+        impact: `Average increased from ${Math.round(previousAvg)} to ${Math.round(recentAvg)} ${units}/sprint (+${increaseAmount} ${units} per sprint)`
       })
 
-      if (recent.completionRate > 90) {
+      // Check if improvement is consistent
+      const recentHighCompletion = recentSprints.filter(s => s.completionRate > 85)
+      if (recentHighCompletion.length >= 2) {
         causes.push({
           severity: 'info',
           category: 'high-completion',
-          description: `Excellent completion rate: ${recent.completionRate}% in Sprint ${recent.sprint}`,
-          impact: 'Team is efficiently completing planned work'
+          description: `${recentHighCompletion.length} of last 3 sprints exceeded 85% completion rate`,
+          impact: 'Team efficiently delivering planned work'
         })
         actions.push({
           priority: 'low',
-          title: 'Consider increasing scope',
-          description: 'Team may have capacity for more work. Test with 10-15% increase',
+          title: 'Consider scope increase',
+          description: 'Team showing consistent high performance. Test capacity with 10-15% scope increase',
           estimatedImpact: 'Optimize team utilization'
         })
       }
 
       actions.push({
         priority: 'low',
-        title: 'Document success factors',
-        description: 'Capture what worked well this sprint to replicate in future',
-        estimatedImpact: 'Maintain improved velocity'
+        title: 'Document and replicate success',
+        description: 'Capture improvements made over last 6 sprints (process changes, tooling, team dynamics) to sustain growth',
+        estimatedImpact: 'Maintain upward velocity trend'
       })
     } else {
-      // Stable velocity
+      // Stable long-term velocity
       causes.push({
         severity: 'info',
         category: 'velocity-stable',
-        description: `Velocity stable at ~${avgVelocityValue} ${units}/sprint`,
-        impact: 'Predictable delivery rate'
+        description: `Velocity stable over last 6 sprints at ~${Math.round(recentAvg)} ${units}/sprint`,
+        impact: 'Predictable and reliable delivery rate'
       })
 
-      if (avgVelocityValue < 5 && recent.totalIssues > 10) {
-        const totalItems = viewMode === 'points' ? recent.totalPoints : recent.totalIssues
+      // Check if there are concerning outliers despite overall stability
+      if (outliers.length > 0) {
+        const outlierSprint = outliers[0]
+        causes.push({
+          severity: 'info',
+          category: 'outlier-sprint',
+          description: `Sprint "${outlierSprint.sprint.sprint}" was ${Math.abs(Math.round(outlierSprint.deviation))}% below average but overall trend remains stable`,
+          impact: 'One-time disruption, not a systemic issue'
+        })
+      }
+
+      if (recentAvg < 5 && recentSprints.some(s => s.totalIssues > 10)) {
         causes.push({
           severity: 'warning',
           category: 'low-velocity',
-          description: `Low velocity despite ${totalItems} ${totalItems !== 1 ? units : unit} in sprint`,
+          description: `Velocity stable but low at ${Math.round(recentAvg)} ${units}/sprint despite significant work planned`,
           impact: 'Team may be overloaded or work items too large'
         })
         actions.push({
@@ -191,6 +242,16 @@ export default function VelocityView({ issues: allIssues }) {
           estimatedImpact: 'Increase throughput and visibility'
         })
       }
+    }
+
+    // Add short-term context as additional info
+    if (Math.abs(shortTermValue) > 20 && Math.abs(shortTermValue - trendValue) > 15) {
+      causes.push({
+        severity: 'info',
+        category: 'short-term-note',
+        description: `Note: Sprint-to-sprint change is ${shortTermValue >= 0 ? '+' : ''}${shortTermValue}% which differs from long-term trend`,
+        impact: 'Recent sprint may be an outlier - focus on 6-sprint trend for strategic decisions'
+      })
     }
 
     return { causes, actions }
@@ -369,23 +430,36 @@ export default function VelocityView({ issues: allIssues }) {
 
         <div className="card">
           <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>Velocity Trend</div>
-          {/* Short-term trend (primary display) */}
-          <div style={{ fontSize: '32px', fontWeight: '600', color: shortTermDisplay.color, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>{shortTermDisplay.icon}</span>
-            <span>{Math.abs(shortTerm)}%</span>
-          </div>
-          <div style={{ fontSize: '12px', color: shortTermDisplay.color, marginTop: '4px' }}>
-            {shortTermDisplay.label} (Sprint-to-Sprint)
-          </div>
-          {/* Long-term trend (if available) */}
-          {hasLongTerm && (
-            <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #E5E7EB' }}>
-              <span style={{ fontWeight: '600' }}>Long-term: </span>
-              <span style={{ color: longTermDisplay.color, fontWeight: '600' }}>
-                {longTermDisplay.icon} {Math.abs(longTerm)}%
-              </span>
-              <span> ({longTermDisplay.label})</span>
-            </div>
+          {/* Long-term trend (primary display) */}
+          {hasLongTerm ? (
+            <>
+              <div style={{ fontSize: '32px', fontWeight: '600', color: longTermDisplay.color, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>{longTermDisplay.icon}</span>
+                <span>{Math.abs(longTerm)}%</span>
+              </div>
+              <div style={{ fontSize: '12px', color: longTermDisplay.color, marginTop: '4px' }}>
+                {longTermDisplay.label} (6-Sprint Trend)
+              </div>
+              {/* Short-term trend (secondary info) */}
+              <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #E5E7EB' }}>
+                <span style={{ fontWeight: '600' }}>Sprint-to-Sprint: </span>
+                <span style={{ color: shortTermDisplay.color, fontWeight: '600' }}>
+                  {shortTermDisplay.icon} {Math.abs(shortTerm)}%
+                </span>
+                <span> ({shortTermDisplay.label})</span>
+              </div>
+            </>
+          ) : (
+            /* Fallback to short-term if long-term unavailable */
+            <>
+              <div style={{ fontSize: '32px', fontWeight: '600', color: shortTermDisplay.color, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>{shortTermDisplay.icon}</span>
+                <span>{Math.abs(shortTerm)}%</span>
+              </div>
+              <div style={{ fontSize: '12px', color: shortTermDisplay.color, marginTop: '4px' }}>
+                {shortTermDisplay.label} (Sprint-to-Sprint)
+              </div>
+            </>
           )}
         </div>
 
