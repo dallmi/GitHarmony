@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
   calculateVelocity,
   calculateAverageVelocity,
@@ -17,6 +17,9 @@ import { useIterationFilter } from '../contexts/IterationFilterContext'
 export default function VelocityView({ issues: allIssues }) {
   // Use filtered issues from iteration context
   const { filteredIssues: issues, selectedIterations, isFiltered } = useIterationFilter()
+
+  // Toggle between issue count and story points
+  const [viewMode, setViewMode] = useState('issues') // 'issues' or 'points'
   // Get velocity root cause analysis
   const getVelocityRootCause = (velocityData, trend, avgVelocity) => {
     if (!velocityData || velocityData.length < 2) return { causes: [], actions: [] }
@@ -158,15 +161,17 @@ export default function VelocityView({ issues: allIssues }) {
       currentSprint = getCurrentSprint(issues)
     }
 
-    const burndown = calculateBurndown(issues, currentSprint)
-    const prediction = predictCompletion(issues, avgVelocity)
+    const burndownIssues = calculateBurndown(issues, currentSprint, 'issues')
+    const burndownPoints = calculateBurndown(issues, currentSprint, 'points')
+    const prediction = predictCompletion(issues, avgVelocity.byIssues)
 
     return {
       velocityData,
       avgVelocity,
       trend,
       currentSprint,
-      burndown,
+      burndownIssues,
+      burndownPoints,
       prediction
     }
   }, [issues, selectedIterations, isFiltered])
@@ -182,7 +187,10 @@ export default function VelocityView({ issues: allIssues }) {
     )
   }
 
-  const { velocityData, avgVelocity, trend, currentSprint, burndown, prediction } = analytics
+  const { velocityData, avgVelocity, trend, currentSprint, burndownIssues, burndownPoints, prediction } = analytics
+
+  // Select burndown based on view mode
+  const burndown = viewMode === 'points' ? burndownPoints : burndownIssues
 
   // Helper to get trend color and icon
   const getTrendDisplay = (trendValue) => {
@@ -193,8 +201,8 @@ export default function VelocityView({ issues: allIssues }) {
 
   const trendDisplay = getTrendDisplay(trend)
 
-  // Calculate max values for chart scaling
-  const maxVelocity = Math.max(...velocityData.map((s) => s.velocity), 10)
+  // Calculate max values for chart scaling based on view mode
+  const maxVelocity = Math.max(...velocityData.map((s) => viewMode === 'points' ? s.velocityPoints : s.velocity), 10)
   const maxBurndown = burndown.total || 10
 
   const handleExportCSV = () => {
@@ -205,7 +213,7 @@ export default function VelocityView({ issues: allIssues }) {
 
   return (
     <div className="container-fluid">
-      {/* Header with Export Button */}
+      {/* Header with Mode Toggle and Export Button */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>Velocity & Burndown Analytics</h2>
@@ -213,13 +221,58 @@ export default function VelocityView({ issues: allIssues }) {
             Sprint velocity, trends, burndown chart, and predictive analytics
           </p>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={handleExportCSV}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-        >
-          <span>Export Velocity CSV</span>
-        </button>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          {/* View Mode Toggle */}
+          <div style={{
+            display: 'flex',
+            background: '#F3F4F6',
+            borderRadius: '8px',
+            padding: '4px'
+          }}>
+            <button
+              onClick={() => setViewMode('issues')}
+              style={{
+                padding: '6px 16px',
+                background: viewMode === 'issues' ? 'white' : 'transparent',
+                color: viewMode === 'issues' ? '#1F2937' : '#6B7280',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: viewMode === 'issues' ? '600' : '400',
+                boxShadow: viewMode === 'issues' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              Issue Count
+            </button>
+            <button
+              onClick={() => setViewMode('points')}
+              style={{
+                padding: '6px 16px',
+                background: viewMode === 'points' ? 'white' : 'transparent',
+                color: viewMode === 'points' ? '#1F2937' : '#6B7280',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: viewMode === 'points' ? '600' : '400',
+                boxShadow: viewMode === 'points' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              Story Points
+            </button>
+          </div>
+
+          <button
+            className="btn btn-primary"
+            onClick={handleExportCSV}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <span>Export CSV</span>
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -234,7 +287,17 @@ export default function VelocityView({ issues: allIssues }) {
         <div className="card">
           <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>Avg. Velocity (Last 3)</div>
           <div style={{ fontSize: '32px', fontWeight: '600', color: '#2563EB' }}>
-            {avgVelocity} <span style={{ fontSize: '16px', color: '#6B7280' }}>issues/sprint</span>
+            {viewMode === 'points' ? avgVelocity.byPoints : avgVelocity.byIssues}{' '}
+            <span style={{ fontSize: '16px', color: '#6B7280' }}>
+              {viewMode === 'points' ? 'points/sprint' : 'issues/sprint'}
+            </span>
+          </div>
+          {/* Show both metrics in small text */}
+          <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '4px' }}>
+            {viewMode === 'points'
+              ? `${avgVelocity.byIssues} issues/sprint`
+              : `${avgVelocity.byPoints} points/sprint`
+            }
           </div>
         </div>
 
@@ -369,7 +432,8 @@ export default function VelocityView({ issues: allIssues }) {
                 {/* Chart area */}
                 <div style={{ position: 'absolute', left: '50px', right: 0, top: 0, bottom: 40, borderLeft: '2px solid #E5E7EB', borderBottom: '2px solid #E5E7EB', display: 'flex', alignItems: 'flex-end', gap: '8px', padding: '10px' }}>
                   {velocityData.map((sprint, index) => {
-                    const barHeightPercent = (sprint.velocity / maxVelocity) * 100
+                    const value = viewMode === 'points' ? sprint.velocityPoints : sprint.velocity
+                    const barHeightPercent = (value / maxVelocity) * 100
                     const isRecent = index >= velocityData.length - 3
 
                     // Calculate actual pixel height from the container (300px total - 40px for x-axis - 20px padding = 240px chart area)
@@ -393,7 +457,7 @@ export default function VelocityView({ issues: allIssues }) {
                             fontWeight: '600'
                           }}
                         >
-                          {sprint.velocity}
+                          {value}
                         </div>
                       </div>
                     )

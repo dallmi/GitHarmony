@@ -8,6 +8,7 @@ import { getSprintFromLabels } from '../utils/labelUtils'
 /**
  * Calculate velocity metrics for all sprints
  * Returns velocity data sorted by sprint number
+ * Tracks both issue count and story points (weight)
  */
 export function calculateVelocity(issues) {
   if (!issues || issues.length === 0) {
@@ -27,20 +28,28 @@ export function calculateVelocity(issues) {
         totalIssues: 0,
         completedIssues: 0,
         openIssues: 0,
+        totalPoints: 0,
+        completedPoints: 0,
+        openPoints: 0,
         completedAt: []
       })
     }
 
     const sprintData = sprintMap.get(sprint)
+    const issueWeight = issue.weight || 0
+
     sprintData.totalIssues++
+    sprintData.totalPoints += issueWeight
 
     if (issue.state === 'closed') {
       sprintData.completedIssues++
+      sprintData.completedPoints += issueWeight
       if (issue.closed_at) {
         sprintData.completedAt.push(new Date(issue.closed_at))
       }
     } else {
       sprintData.openIssues++
+      sprintData.openPoints += issueWeight
     }
   })
 
@@ -77,9 +86,13 @@ export function calculateVelocity(issues) {
     })
     .map((sprint) => ({
       ...sprint,
-      velocity: sprint.completedIssues, // Velocity = completed issues
+      velocity: sprint.completedIssues, // Velocity by issue count (default)
+      velocityPoints: sprint.completedPoints, // Velocity by story points
       completionRate: sprint.totalIssues > 0
         ? Math.round((sprint.completedIssues / sprint.totalIssues) * 100)
+        : 0,
+      completionRatePoints: sprint.totalPoints > 0
+        ? Math.round((sprint.completedPoints / sprint.totalPoints) * 100)
         : 0
     }))
 
@@ -88,14 +101,30 @@ export function calculateVelocity(issues) {
 
 /**
  * Calculate average velocity over last N sprints
+ * Returns both issue count and story points averages
  */
 export function calculateAverageVelocity(velocityData, lastNSprints = 3) {
-  if (!velocityData || velocityData.length === 0) return 0
+  if (!velocityData || velocityData.length === 0) {
+    return { byIssues: 0, byPoints: 0 }
+  }
 
   const recentSprints = velocityData.slice(-lastNSprints)
   const totalVelocity = recentSprints.reduce((sum, s) => sum + s.velocity, 0)
+  const totalPoints = recentSprints.reduce((sum, s) => sum + (s.velocityPoints || 0), 0)
 
-  return Math.round(totalVelocity / recentSprints.length)
+  return {
+    byIssues: Math.round(totalVelocity / recentSprints.length),
+    byPoints: Math.round(totalPoints / recentSprints.length)
+  }
+}
+
+/**
+ * Legacy function for backwards compatibility
+ * Returns only issue count average
+ */
+export function calculateAverageVelocityLegacy(velocityData, lastNSprints = 3) {
+  const result = calculateAverageVelocity(velocityData, lastNSprints)
+  return typeof result === 'object' ? result.byIssues : result
 }
 
 /**
@@ -118,10 +147,14 @@ export function calculateVelocityTrend(velocityData) {
 
 /**
  * Calculate burndown data for current sprint
+ * Supports both issue count and story points modes
+ * @param {Array} issues - All issues
+ * @param {string} currentSprint - Current sprint name
+ * @param {string} mode - 'issues' or 'points' (default: 'issues')
  */
-export function calculateBurndown(issues, currentSprint) {
+export function calculateBurndown(issues, currentSprint, mode = 'issues') {
   if (!issues || !currentSprint) {
-    return { actual: [], ideal: [], total: 0 }
+    return { actual: [], ideal: [], total: 0, mode }
   }
 
   const sprintIssues = issues.filter(
@@ -129,7 +162,7 @@ export function calculateBurndown(issues, currentSprint) {
   )
 
   if (sprintIssues.length === 0) {
-    return { actual: [], ideal: [], total: 0 }
+    return { actual: [], ideal: [], total: 0, mode }
   }
 
   // Try to get sprint dates from iteration object
@@ -174,7 +207,10 @@ export function calculateBurndown(issues, currentSprint) {
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
+  // Calculate totals based on mode
   const totalIssues = sprintIssues.length
+  const totalPoints = sprintIssues.reduce((sum, issue) => sum + (issue.weight || 0), 0)
+  const total = mode === 'points' ? totalPoints : totalIssues
 
   // Generate ideal burndown line (linear)
   const idealData = []
@@ -194,28 +230,29 @@ export function calculateBurndown(issues, currentSprint) {
     const dayStr = String(date.getDate()).padStart(2, '0')
     const dateKey = `${year}-${month}-${dayStr}`
 
-    const remaining = totalIssues - (totalIssues / days) * day
+    const remaining = total - (total / days) * day
     idealData.push({
       date: dateKey,
       remaining: Math.max(0, Math.round(remaining))
     })
   }
 
-  // Generate actual burndown (issues closed over time)
+  // Generate actual burndown (issues/points closed over time)
   const closedIssues = sprintIssues
     .filter((i) => i.state === 'closed' && i.closed_at)
     .map((i) => ({
       date: new Date(i.closed_at),
-      issue: i
+      issue: i,
+      value: mode === 'points' ? (i.weight || 0) : 1
     }))
     .sort((a, b) => a.date - b.date)
 
   const actualData = []
-  let remainingIssues = totalIssues
+  let remaining = total
 
-  // Track daily progress
+  // Track daily progress (by issue count or points)
   const dayMap = new Map()
-  closedIssues.forEach(({ date }) => {
+  closedIssues.forEach(({ date, value }) => {
     // Normalize the date and use local date string
     const normalizedDate = new Date(date)
     normalizedDate.setHours(0, 0, 0, 0)
@@ -223,7 +260,7 @@ export function calculateBurndown(issues, currentSprint) {
     const month = String(normalizedDate.getMonth() + 1).padStart(2, '0')
     const day = String(normalizedDate.getDate()).padStart(2, '0')
     const dateKey = `${year}-${month}-${day}`
-    dayMap.set(dateKey, (dayMap.get(dateKey) || 0) + 1)
+    dayMap.set(dateKey, (dayMap.get(dateKey) || 0) + value)
   })
 
   // Generate actual burndown points (start at day 0 to match ideal)
@@ -232,7 +269,8 @@ export function calculateBurndown(issues, currentSprint) {
     sprintEnd: sprintEnd.toISOString(),
     today: today.toISOString(),
     days,
-    totalIssues
+    total,
+    mode
   })
 
   for (let day = 0; day <= days; day++) {
@@ -251,14 +289,14 @@ export function calculateBurndown(issues, currentSprint) {
 
     console.log(`Day ${day}: ${dateKey}, cleanDate > today: ${cleanDate > today}, cleanDate: ${cleanDate.toISOString()}, today: ${today.toISOString()}`)
 
-    // For day 0, don't check closed issues (start point)
+    // For day 0, don't check closed items (start point)
     if (day > 0 && dayMap.has(dateKey)) {
-      remainingIssues -= dayMap.get(dateKey)
+      remaining -= dayMap.get(dateKey)
     }
 
     actualData.push({
       date: dateKey,
-      remaining: Math.max(0, remainingIssues)
+      remaining: Math.max(0, remaining)
     })
   }
 
@@ -278,7 +316,10 @@ export function calculateBurndown(issues, currentSprint) {
   return {
     actual: actualData,
     ideal: idealData,
-    total: totalIssues,
+    total,
+    totalIssues,
+    totalPoints,
+    mode,
     sprintStart: startDateKey,
     sprintEnd: endDateKey
   }
