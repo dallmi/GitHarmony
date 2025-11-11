@@ -8,10 +8,12 @@ import HealthScoreConfigModal from './HealthScoreConfigModal'
 import { isBlocker } from '../services/metricsService'
 import { calculateBurnupData, calculateVelocity, calculateVelocityTrend, getCurrentSprint, calculateDeliveryConfidence, calculateMonthOverMonthMetrics } from '../services/velocityService'
 import { getCycleTimeStats } from '../services/cycleTimeService'
+import { getEnhancedCycleTimeStats } from '../services/enhancedCycleTimeService'
 import { getRecentDecisions, getDecisionsStats } from '../services/decisionsService'
 import { getTeamPerformanceSummary } from '../services/teamPerformanceService'
 import { getForecastAccuracyStats, getForecastAccuracyTrends, calculateForecastReliability, getRecentForecasts } from '../services/forecastAccuracyService'
 import BurnupChart from './BurnupChart'
+import useLabelEvents from '../hooks/useLabelEvents'
 
 /**
  * Enhanced Executive Dashboard
@@ -39,6 +41,9 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
 
   // Use filtered issues from iteration context
   const { filteredIssues: issues } = useIterationFilter()
+
+  // Fetch label events for accurate cycle time (GitLab Premium/Ultimate)
+  const { labelEventsMap, loading: labelEventsLoading, hasData: hasLabelEvents } = useLabelEvents(issues)
   // Get initiatives from epics
   const initiatives = useMemo(() => {
     if (!epics || !issues) return []
@@ -166,11 +171,24 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
     }
   }, [issues])
 
-  // Calculate cycle time metrics
+  // Calculate cycle time metrics - use enhanced if label events available
   const cycleTimeMetrics = useMemo(() => {
     if (!issues || issues.length === 0) return null
+
+    // Use enhanced cycle time if label events are available (GitLab Premium/Ultimate)
+    if (hasLabelEvents && labelEventsMap) {
+      const enhanced = getEnhancedCycleTimeStats(issues, labelEventsMap)
+      console.log('Using enhanced cycle time with label events:', {
+        accurateCount: enhanced.accurateCount,
+        estimatedCount: enhanced.estimatedCount,
+        dataQuality: enhanced.dataQuality
+      })
+      return enhanced
+    }
+
+    // Fall back to estimated cycle time
     return getCycleTimeStats(issues)
-  }, [issues])
+  }, [issues, hasLabelEvents, labelEventsMap])
 
   // Calculate delivery confidence score
   const deliveryConfidence = useMemo(() => {
@@ -530,11 +548,29 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
         {/* Cycle Time Metrics */}
         {cycleTimeMetrics && (
           <div className="card">
-            <h3 style={{ marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
-              Delivery Efficiency
-            </h3>
-            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-              How quickly work flows through the system
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
+                  Delivery Efficiency
+                </h3>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  How quickly work flows through the system
+                </div>
+              </div>
+              {/* Data quality indicator */}
+              {cycleTimeMetrics.dataQuality && (
+                <div style={{
+                  fontSize: '10px',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  background: hasLabelEvents ? '#DBEAFE' : '#F3F4F6',
+                  color: hasLabelEvents ? '#1E40AF' : '#6B7280',
+                  fontWeight: '600'
+                }}
+                title={hasLabelEvents ? 'Using accurate cycle time from label history' : 'Using estimated cycle time'}>
+                  {hasLabelEvents ? `✓ ${cycleTimeMetrics.dataQuality}` : 'Estimated'}
+                </div>
+              )}
             </div>
 
             {cycleTimeMetrics.count > 0 ? (
