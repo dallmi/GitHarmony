@@ -946,103 +946,120 @@ export function calculateDeliveryConfidence(issues, targetDate = null, targetSco
 }
 
 /**
- * Calculate month-over-month comparison metrics for executive reporting
- * Compares current month vs previous month across key metrics
+ * Calculate trailing 30-day comparison metrics for executive reporting
+ * Compares last 30 days vs previous 30 days across key metrics
+ * This provides a fair comparison since both periods are complete
  *
  * @param {Array} issues - All project issues
- * @returns {Object} Month-over-month comparison data
+ * @returns {Object} Trailing 30-day comparison data
  */
 export function calculateMonthOverMonthMetrics(issues) {
   if (!issues || issues.length === 0) {
     return {
-      currentMonth: { name: '', issues: 0, completed: 0, velocity: 0, points: 0 },
-      previousMonth: { name: '', issues: 0, completed: 0, velocity: 0, points: 0 },
+      currentPeriod: { name: '', issues: 0, completed: 0, velocity: 0, points: 0 },
+      previousPeriod: { name: '', issues: 0, completed: 0, velocity: 0, points: 0 },
       changes: { issues: 0, completed: 0, velocity: 0, points: 0 },
       percentChanges: { issues: 0, completed: 0, velocity: 0, points: 0 }
     }
   }
 
   const today = new Date()
+  today.setHours(23, 59, 59, 999) // End of today
 
-  // Current month boundaries
-  const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-  currentMonthStart.setHours(0, 0, 0, 0)
-  const currentMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-  currentMonthEnd.setHours(23, 59, 59, 999)
+  // Last 30 days (days 0-29 counting back from today)
+  const last30DaysEnd = new Date(today)
+  const last30DaysStart = new Date(today)
+  last30DaysStart.setDate(last30DaysStart.getDate() - 29) // 30 days including today
+  last30DaysStart.setHours(0, 0, 0, 0)
 
-  // Previous month boundaries
-  const previousMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-  previousMonthStart.setHours(0, 0, 0, 0)
-  const previousMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0)
-  previousMonthEnd.setHours(23, 59, 59, 999)
+  // Previous 30 days (days 30-59 counting back from today)
+  const previous30DaysEnd = new Date(last30DaysStart)
+  previous30DaysEnd.setHours(23, 59, 59, 999)
+  previous30DaysEnd.setDate(previous30DaysEnd.getDate() - 1) // Day before last30DaysStart
+  const previous30DaysStart = new Date(previous30DaysEnd)
+  previous30DaysStart.setDate(previous30DaysStart.getDate() - 29) // 30 days total
+  previous30DaysStart.setHours(0, 0, 0, 0)
 
-  // Get month names
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  const currentMonthName = monthNames[currentMonthStart.getMonth()]
-  const previousMonthName = monthNames[previousMonthStart.getMonth()]
+  // Format period names
+  const formatPeriodName = (start, end) => {
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    const startMonth = monthNames[start.getMonth()]
+    const endMonth = monthNames[end.getMonth()]
+    const startDay = start.getDate()
+    const endDay = end.getDate()
 
-  // Current month metrics
-  const currentMonthIssues = issues.filter(i => {
+    if (start.getMonth() === end.getMonth()) {
+      return `${startMonth} ${startDay}-${endDay}`
+    } else {
+      return `${startMonth} ${startDay} - ${endMonth} ${endDay}`
+    }
+  }
+
+  const currentPeriodName = formatPeriodName(last30DaysStart, last30DaysEnd)
+  const previousPeriodName = formatPeriodName(previous30DaysStart, previous30DaysEnd)
+
+  // Last 30 days metrics
+  const last30DaysIssues = issues.filter(i => {
     const created = i.created_at ? new Date(i.created_at) : null
-    return created && created >= currentMonthStart && created <= currentMonthEnd
+    return created && created >= last30DaysStart && created <= last30DaysEnd
   })
 
-  const currentMonthCompleted = issues.filter(i => {
+  const last30DaysCompleted = issues.filter(i => {
     if (i.state !== 'closed' || !i.closed_at) return false
     const closed = new Date(i.closed_at)
-    return closed >= currentMonthStart && closed <= currentMonthEnd
+    return closed >= last30DaysStart && closed <= last30DaysEnd
   })
 
-  const currentMonthPoints = currentMonthCompleted.reduce((sum, i) => sum + (i.weight || 0), 0)
-  const currentMonthVelocity = currentMonthCompleted.length
+  const last30DaysPoints = last30DaysCompleted.reduce((sum, i) => sum + (i.weight || 0), 0)
+  const last30DaysVelocity = last30DaysCompleted.length
 
-  // Previous month metrics
-  const previousMonthIssues = issues.filter(i => {
+  // Previous 30 days metrics
+  const previous30DaysIssues = issues.filter(i => {
     const created = i.created_at ? new Date(i.created_at) : null
-    return created && created >= previousMonthStart && created <= previousMonthEnd
+    return created && created >= previous30DaysStart && created <= previous30DaysEnd
   })
 
-  const previousMonthCompleted = issues.filter(i => {
+  const previous30DaysCompleted = issues.filter(i => {
     if (i.state !== 'closed' || !i.closed_at) return false
     const closed = new Date(i.closed_at)
-    return closed >= previousMonthStart && closed <= previousMonthEnd
+    return closed >= previous30DaysStart && closed <= previous30DaysEnd
   })
 
-  const previousMonthPoints = previousMonthCompleted.reduce((sum, i) => sum + (i.weight || 0), 0)
-  const previousMonthVelocity = previousMonthCompleted.length
+  const previous30DaysPoints = previous30DaysCompleted.reduce((sum, i) => sum + (i.weight || 0), 0)
+  const previous30DaysVelocity = previous30DaysCompleted.length
 
   // Calculate changes
-  const issuesChange = currentMonthIssues.length - previousMonthIssues.length
-  const completedChange = currentMonthVelocity - previousMonthVelocity
-  const pointsChange = currentMonthPoints - previousMonthPoints
+  const issuesChange = last30DaysIssues.length - previous30DaysIssues.length
+  const completedChange = last30DaysVelocity - previous30DaysVelocity
+  const pointsChange = last30DaysPoints - previous30DaysPoints
 
   // Calculate percentage changes
-  const issuesPercentChange = previousMonthIssues.length > 0
-    ? Math.round((issuesChange / previousMonthIssues.length) * 100)
+  const issuesPercentChange = previous30DaysIssues.length > 0
+    ? Math.round((issuesChange / previous30DaysIssues.length) * 100)
     : 0
 
-  const completedPercentChange = previousMonthVelocity > 0
-    ? Math.round((completedChange / previousMonthVelocity) * 100)
+  const completedPercentChange = previous30DaysVelocity > 0
+    ? Math.round((completedChange / previous30DaysVelocity) * 100)
     : 0
 
-  const pointsPercentChange = previousMonthPoints > 0
-    ? Math.round((pointsChange / previousMonthPoints) * 100)
+  const pointsPercentChange = previous30DaysPoints > 0
+    ? Math.round((pointsChange / previous30DaysPoints) * 100)
     : 0
 
   return {
-    currentMonth: {
-      name: currentMonthName,
-      issues: currentMonthIssues.length,
-      completed: currentMonthVelocity,
-      velocity: currentMonthVelocity,
-      points: currentMonthPoints
+    currentPeriod: {
+      name: currentPeriodName,
+      issues: last30DaysIssues.length,
+      completed: last30DaysVelocity,
+      velocity: last30DaysVelocity,
+      points: last30DaysPoints
     },
-    previousMonth: {
-      name: previousMonthName,
-      issues: previousMonthIssues.length,
-      completed: previousMonthVelocity,
-      velocity: previousMonthVelocity,
-      points: previousMonthPoints
+    previousPeriod: {
+      name: previousPeriodName,
+      issues: previous30DaysIssues.length,
+      completed: previous30DaysVelocity,
+      velocity: previous30DaysVelocity,
+      points: previous30DaysPoints
     },
     changes: {
       issues: issuesChange,

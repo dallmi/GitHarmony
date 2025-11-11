@@ -813,16 +813,16 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
         </div>
       )}
 
-      {/* Month-over-Month Comparison & Recent Decisions */}
+      {/* Trailing 30-Day Comparison & Recent Decisions */}
       <div className="grid grid-2" style={{ gap: '30px', marginBottom: '30px' }}>
-        {/* Month-over-Month Metrics */}
+        {/* Trailing 30-Day Metrics */}
         {monthOverMonthMetrics && (
           <div className="card">
             <h3 style={{ marginBottom: '16px', fontSize: '18px', fontWeight: '600' }}>
-              Month-over-Month Trends
+              Trailing 30-Day Trends
             </h3>
             <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-              Comparing {monthOverMonthMetrics.currentMonth.name} vs {monthOverMonthMetrics.previousMonth.name}
+              Comparing {monthOverMonthMetrics.currentPeriod.name} vs {monthOverMonthMetrics.previousPeriod.name}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
@@ -833,7 +833,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                   <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--primary)' }}>
-                    {monthOverMonthMetrics.currentMonth.issues}
+                    {monthOverMonthMetrics.currentPeriod.issues}
                   </div>
                   <div style={{
                     fontSize: '12px',
@@ -844,7 +844,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                   </div>
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                  vs {monthOverMonthMetrics.previousMonth.issues} last month
+                  vs {monthOverMonthMetrics.previousPeriod.issues} previous period
                 </div>
               </div>
 
@@ -855,7 +855,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                   <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--success)' }}>
-                    {monthOverMonthMetrics.currentMonth.completed}
+                    {monthOverMonthMetrics.currentPeriod.completed}
                   </div>
                   <div style={{
                     fontSize: '12px',
@@ -866,7 +866,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                   </div>
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                  vs {monthOverMonthMetrics.previousMonth.completed} last month
+                  vs {monthOverMonthMetrics.previousPeriod.completed} previous period
                 </div>
               </div>
 
@@ -877,7 +877,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                   <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--primary)' }}>
-                    {monthOverMonthMetrics.currentMonth.points}
+                    {monthOverMonthMetrics.currentPeriod.points}
                   </div>
                   <div style={{
                     fontSize: '12px',
@@ -888,7 +888,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                   </div>
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                  vs {monthOverMonthMetrics.previousMonth.points} last month
+                  vs {monthOverMonthMetrics.previousPeriod.points} previous period
                 </div>
               </div>
             </div>
@@ -896,14 +896,14 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
             {/* Trend Summary */}
             <div style={{ marginTop: '16px', padding: '12px', background: '#F9FAFB', borderRadius: '8px' }}>
               <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '6px' }}>
-                Monthly Trend Summary
+                30-Day Trend Summary
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                 {monthOverMonthMetrics.changes.completed > 0
-                  ? `Delivery velocity increased by ${Math.abs(monthOverMonthMetrics.changes.completed)} issues this month.`
+                  ? `Delivery velocity increased by ${Math.abs(monthOverMonthMetrics.changes.completed)} issues in the last 30 days.`
                   : monthOverMonthMetrics.changes.completed < 0
-                  ? `Delivery velocity decreased by ${Math.abs(monthOverMonthMetrics.changes.completed)} issues this month.`
-                  : 'Delivery velocity remained stable this month.'}
+                  ? `Delivery velocity decreased by ${Math.abs(monthOverMonthMetrics.changes.completed)} issues in the last 30 days.`
+                  : 'Delivery velocity remained stable in the last 30 days.'}
                 {' '}
                 {monthOverMonthMetrics.changes.issues > 0 && `New scope increased by ${Math.abs(monthOverMonthMetrics.changes.issues)} issues.`}
               </div>
