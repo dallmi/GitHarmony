@@ -5,10 +5,13 @@ import {
   calculateVelocityTrend,
   calculateBurndown,
   predictCompletion,
-  getCurrentSprint
+  getCurrentSprint,
+  calculateSprintCapacityImpact
 } from '../services/velocityService'
 import { exportVelocityToCSV, downloadCSV } from '../utils/csvExportUtils'
 import { useIterationFilter } from '../contexts/IterationFilterContext'
+import { getTeamAbsenceStats } from '../services/absenceService'
+import { loadTeamConfig } from '../services/teamConfigService'
 
 /**
  * Velocity & Burndown Analytics View
@@ -21,7 +24,7 @@ export default function VelocityView({ issues: allIssues }) {
   // Toggle between issue count and story points
   const [viewMode, setViewMode] = useState('issues') // 'issues' or 'points'
   // Get velocity root cause analysis
-  const getVelocityRootCause = (velocityData, trend, avgVelocity, currentSprintName) => {
+  const getVelocityRootCause = (velocityData, trend, avgVelocity, currentSprintName, allIssues) => {
     if (!velocityData || velocityData.length < 2) return { causes: [], actions: [] }
 
     const causes = []
@@ -42,6 +45,17 @@ export default function VelocityView({ issues: allIssues }) {
     // Need at least 2 data points (current and previous)
     if (!recent || !previous) return { causes: [], actions: [] }
 
+    // Check for capacity impact due to absences
+    let capacityImpact = null
+    if (allIssues && currentSprintName) {
+      capacityImpact = calculateSprintCapacityImpact(
+        allIssues,
+        currentSprintName,
+        getTeamAbsenceStats,
+        loadTeamConfig
+      )
+    }
+
     // Analyze velocity drop
     if (trend < -10) {
       // Significant decline
@@ -53,6 +67,22 @@ export default function VelocityView({ issues: allIssues }) {
         description: `Velocity declined by ${dropPercent}% (from ${previous.velocity} to ${recent.velocity} issues/sprint)`,
         impact: `${previous.velocity - recent.velocity} fewer issues completed per sprint`
       })
+
+      // Check if capacity loss due to absences explains the decline
+      if (capacityImpact && capacityImpact.lossPercentage >= 15) {
+        causes.push({
+          severity: 'warning',
+          category: 'capacity-reduced',
+          description: `Team capacity reduced by ${capacityImpact.lossPercentage}% due to ${capacityImpact.absenceCount} absence(s)`,
+          impact: `${capacityImpact.capacityLoss} hours lost (${capacityImpact.affectedMembers.length} team member(s) affected)`
+        })
+        actions.push({
+          priority: 'high',
+          title: 'Adjust sprint expectations',
+          description: `Velocity decline is primarily due to ${capacityImpact.absenceCount} team absence(s). Consider this when evaluating sprint performance and adjust expectations accordingly.`,
+          estimatedImpact: 'Context-aware performance assessment'
+        })
+      }
 
       // Analyze potential reasons
       if (recent.completionRate < 70) {
@@ -343,7 +373,7 @@ export default function VelocityView({ issues: allIssues }) {
 
       {/* Velocity Root Cause Analysis */}
       {(() => {
-        const { causes, actions } = getVelocityRootCause(velocityData, trend, avgVelocity, currentSprint)
+        const { causes, actions } = getVelocityRootCause(velocityData, trend, avgVelocity, currentSprint, issues)
 
         if (causes.length === 0) return null
 

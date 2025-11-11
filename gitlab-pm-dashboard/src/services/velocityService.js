@@ -514,3 +514,98 @@ export function getUniqueIterations(issues) {
     return String(b).localeCompare(String(a))
   })
 }
+
+/**
+ * Calculate capacity impact for a sprint based on team absences
+ * @param {Array} issues - Issues to extract sprint dates and team members from
+ * @param {string} sprintName - Name of the sprint to analyze
+ * @param {Function} getTeamAbsenceStats - Absence service function
+ * @param {Function} loadTeamConfig - Team config service function
+ * @returns {Object} { capacityLoss, totalCapacity, lossPercentage, absenceCount, affectedMembers, details }
+ */
+export function calculateSprintCapacityImpact(issues, sprintName, getTeamAbsenceStats, loadTeamConfig) {
+  if (!issues || !sprintName) {
+    return {
+      capacityLoss: 0,
+      totalCapacity: 0,
+      lossPercentage: 0,
+      absenceCount: 0,
+      affectedMembers: [],
+      details: null
+    }
+  }
+
+  // Get sprint dates from issues
+  const sprintIssues = issues.filter(i => getSprintFromLabels(i.labels, i.iteration) === sprintName)
+  if (sprintIssues.length === 0) {
+    return {
+      capacityLoss: 0,
+      totalCapacity: 0,
+      lossPercentage: 0,
+      absenceCount: 0,
+      affectedMembers: [],
+      details: null
+    }
+  }
+
+  // Find sprint date range
+  const issueWithDates = sprintIssues.find(i => i.iteration?.start_date && i.iteration?.due_date)
+  if (!issueWithDates) {
+    return {
+      capacityLoss: 0,
+      totalCapacity: 0,
+      lossPercentage: 0,
+      absenceCount: 0,
+      affectedMembers: [],
+      details: null
+    }
+  }
+
+  const startDate = new Date(issueWithDates.iteration.start_date)
+  const endDate = new Date(issueWithDates.iteration.due_date)
+
+  // Load team configuration
+  const teamConfig = loadTeamConfig()
+  if (!teamConfig.teamMembers || teamConfig.teamMembers.length === 0) {
+    return {
+      capacityLoss: 0,
+      totalCapacity: 0,
+      lossPercentage: 0,
+      absenceCount: 0,
+      affectedMembers: [],
+      details: null
+    }
+  }
+
+  // Calculate total team capacity for the sprint (in hours)
+  const sprintLengthDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24))
+  const sprintWeeks = sprintLengthDays / 7
+  const totalCapacity = teamConfig.teamMembers.reduce((sum, member) => {
+    const weeklyCapacity = member.defaultCapacity || 40
+    return sum + (weeklyCapacity * sprintWeeks)
+  }, 0)
+
+  // Get absence statistics for this sprint
+  const absenceStats = getTeamAbsenceStats(teamConfig.teamMembers, startDate, endDate)
+  const capacityLoss = absenceStats.totalHoursImpact
+  const lossPercentage = totalCapacity > 0 ? Math.round((capacityLoss / totalCapacity) * 100) : 0
+
+  // Find affected members (those with absences)
+  const affectedMembers = Object.entries(absenceStats.byMember)
+    .filter(([_, data]) => data.hoursLost > 0)
+    .map(([username, data]) => ({
+      username,
+      hoursLost: data.hoursLost,
+      absenceCount: data.absenceCount,
+      absences: data.absences
+    }))
+
+  return {
+    capacityLoss: Math.round(capacityLoss),
+    totalCapacity: Math.round(totalCapacity),
+    lossPercentage,
+    absenceCount: absenceStats.totalAbsences,
+    affectedMembers,
+    details: absenceStats
+  }
+}
