@@ -75,6 +75,24 @@ export default function BurnupChart({ burnupData, width = 600, height = 300 }) {
     })
     .filter(t => t !== null)
 
+  // Find year boundaries for visual markers
+  const yearBoundaries = []
+  let previousYear = null
+  dataPoints.forEach((point, index) => {
+    const date = new Date(point.date)
+    const year = date.getFullYear()
+
+    // Mark the first occurrence of each new year (except the very first point)
+    if (previousYear !== null && year !== previousYear && index > 0) {
+      yearBoundaries.push({
+        index,
+        year,
+        x: xScale(index)
+      })
+    }
+    previousYear = year
+  })
+
   return (
     <svg width={width} height={height} style={{ fontFamily: 'system-ui, sans-serif' }}>
       {/* Background grid */}
@@ -110,6 +128,34 @@ export default function BurnupChart({ burnupData, width = 600, height = 300 }) {
         stroke="#9CA3AF"
         strokeWidth="2"
       />
+
+      {/* Year boundary markers */}
+      {yearBoundaries.map((boundary, i) => (
+        <g key={`year-${i}`}>
+          {/* Vertical line at year boundary */}
+          <line
+            x1={boundary.x}
+            y1={padding.top}
+            x2={boundary.x}
+            y2={padding.top + chartHeight}
+            stroke="#3B82F6"
+            strokeWidth="1.5"
+            strokeDasharray="5,5"
+            opacity="0.6"
+          />
+          {/* Year label */}
+          <text
+            x={boundary.x}
+            y={padding.top + chartHeight + 35}
+            textAnchor="middle"
+            fontSize="11"
+            fontWeight="600"
+            fill="#3B82F6"
+          >
+            {boundary.year}
+          </text>
+        </g>
+      ))}
 
       {/* Y Axis Labels */}
       {yAxisTicks.map((tick, i) => (

@@ -442,9 +442,10 @@ export function predictCompletion(issues, averageVelocity) {
  * @param {Array} issues - All project issues
  * @param {String} startDate - Project/tracking start date (ISO string)
  * @param {Number} maxDataPoints - Maximum data points to return (defaults to 26 for 6 months of biweekly sprints)
+ * @param {Number} trailingMonths - Number of months to look back (defaults to 12 for 1 year trailing window)
  * @returns {Object} Burnup chart data with dates, scope, and completion lines
  */
-export function calculateBurnupData(issues, startDate = null, maxDataPoints = 26) {
+export function calculateBurnupData(issues, startDate = null, maxDataPoints = 26, trailingMonths = 12) {
   if (!issues || issues.length === 0) {
     return {
       dataPoints: [],
@@ -456,18 +457,14 @@ export function calculateBurnupData(issues, startDate = null, maxDataPoints = 26
     }
   }
 
-  // Determine start date - either provided or earliest issue creation
+  // Determine start date - use trailing window from today
   let chartStartDate
   if (startDate) {
     chartStartDate = new Date(startDate)
   } else {
-    // Find earliest issue creation date
-    const creationDates = issues
-      .map(i => i.created_at ? new Date(i.created_at) : null)
-      .filter(d => d !== null)
-      .sort((a, b) => a - b)
-
-    chartStartDate = creationDates.length > 0 ? creationDates[0] : new Date()
+    // Use trailing window (default 12 months back from today)
+    const today = new Date()
+    chartStartDate = new Date(today.getFullYear(), today.getMonth() - trailingMonths, today.getDate())
   }
 
   // Normalize to midnight
