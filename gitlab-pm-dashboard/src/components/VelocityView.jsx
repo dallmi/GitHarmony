@@ -158,10 +158,9 @@ export default function VelocityView({ issues: allIssues }) {
     }
 
     const velocityData = calculateVelocity(issues)
-    const avgVelocity = calculateAverageVelocity(velocityData, 3)
-    const trend = calculateVelocityTrend(velocityData)
 
-    // Use selected iteration for burndown, or auto-detect current sprint
+    // Determine current sprint FIRST (before calculating trend/average)
+    // This ensures we don't include future sprints in calculations
     let currentSprint
     if (isFiltered && selectedIterations.length === 1) {
       // Single iteration selected - use it for burndown
@@ -173,6 +172,10 @@ export default function VelocityView({ issues: allIssues }) {
       // No filter or "All" selected - auto-detect current sprint
       currentSprint = getCurrentSprint(issues)
     }
+
+    // Calculate trend and average using current sprint to avoid future sprints
+    const avgVelocity = calculateAverageVelocity(velocityData, 3, currentSprint)
+    const trend = calculateVelocityTrend(velocityData, currentSprint)
 
     const burndownIssues = calculateBurndown(issues, currentSprint, 'issues')
     const burndownPoints = calculateBurndown(issues, currentSprint, 'points')
