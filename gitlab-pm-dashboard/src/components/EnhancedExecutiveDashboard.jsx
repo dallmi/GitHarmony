@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react'
 import { getInitiatives, getStatusBadge, formatDate } from '../services/initiativeService'
 import { getUpcomingMilestones, getMilestoneStatusBadge } from '../services/milestoneTimelineService'
 import { calculateCommunicationsMetrics } from '../services/communicationsMetricsService'
-import { exportExecutiveSummaryToCSV, downloadCSV } from '../utils/csvExportUtils'
 import { exportExecutiveDashboardToPDF } from '../utils/pdfExportUtils'
 import { useIterationFilter } from '../contexts/IterationFilterContext'
 import HealthScoreConfigModal from './HealthScoreConfigModal'
@@ -168,18 +167,6 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
     return { stats, trends, reliability, recent }
   }, [])
 
-  const handleExportCSV = () => {
-    const exportData = {
-      initiatives,
-      healthScore,
-      upcomingMilestones,
-      topRisks,
-      stats
-    }
-    const csvContent = exportExecutiveSummaryToCSV(exportData)
-    const date = new Date().toISOString().split('T')[0]
-    downloadCSV(csvContent, `executive-summary-${date}.csv`)
-  }
 
   const handleExportPDF = () => {
     const exportData = {
@@ -229,18 +216,6 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
           >
             <span>⚙️</span>
             <span>Health Score Settings</span>
-          </button>
-          <button
-            className="btn"
-            onClick={handleExportCSV}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              background: 'var(--bg-secondary)'
-            }}
-          >
-            <span>📊 Export CSV</span>
           </button>
           <button
             className="btn btn-primary"
