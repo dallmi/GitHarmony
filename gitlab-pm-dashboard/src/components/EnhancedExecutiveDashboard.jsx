@@ -144,12 +144,25 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
     const peakVelocity = Math.max(...last6Sprints.map(s => s.velocity))
     const lowVelocity = Math.min(...last6Sprints.map(s => s.velocity))
 
+    // Calculate recent 3 vs previous 3 totals
+    const recent3Sprints = last6Sprints.slice(-3)
+    const previous3Sprints = last6Sprints.slice(0, 3)
+
+    const recent3Total = recent3Sprints.reduce((sum, s) => sum + s.velocity, 0)
+    const previous3Total = previous3Sprints.reduce((sum, s) => sum + s.velocity, 0)
+    const trendPercent = previous3Total > 0
+      ? Math.round(((recent3Total - previous3Total) / previous3Total) * 100)
+      : 0
+
     return {
       avgVelocity: Math.round(avgVelocity),
       trend: trend.longTerm,
       peakVelocity,
       lowVelocity,
-      last6Sprints
+      last6Sprints,
+      recent3Total,
+      previous3Total,
+      trendPercent
     }
   }, [issues])
 
@@ -426,21 +439,45 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
             </div>
 
             {/* Key Metrics */}
-            <div style={{ marginBottom: '16px' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
-                Average Velocity
+            <div style={{ marginBottom: '16px', display: 'flex', gap: '24px', alignItems: 'flex-end' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                  Average Velocity
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--primary)' }}>
+                  {velocityTrend.avgVelocity}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                  issues per iteration
+                </div>
               </div>
-              <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--primary)' }}>
-                {velocityTrend.avgVelocity}
+
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                  Recent 3 Iterations
+                </div>
+                <div style={{ fontSize: '20px', fontWeight: '600', color: '#374151' }}>
+                  {velocityTrend.recent3Total}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                  vs {velocityTrend.previous3Total} previous
+                </div>
               </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                issues per iteration
+
+              <div style={{ display: 'flex', alignItems: 'center', paddingBottom: '8px' }}>
+                <span style={{
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: velocityTrend.trendPercent >= 0 ? '#059669' : '#DC2626'
+                }}>
+                  {velocityTrend.trendPercent >= 0 ? '▲' : '▼'} {Math.abs(velocityTrend.trendPercent)}%
+                </span>
               </div>
             </div>
 
             {/* Mini Sprint Velocity Chart */}
             {velocityTrend.last6Sprints && velocityTrend.last6Sprints.length > 0 && (
-              <div style={{ marginBottom: '16px', height: '80px', display: 'flex', alignItems: 'flex-end', gap: '4px' }}>
+              <div style={{ marginBottom: '12px', height: '120px', display: 'flex', alignItems: 'flex-end', gap: '4px' }}>
                 {velocityTrend.last6Sprints.map((sprint, idx) => {
                   const maxVelocity = Math.max(...velocityTrend.last6Sprints.map(s => s.velocity))
                   const heightPercent = maxVelocity > 0 ? (sprint.velocity / maxVelocity) * 100 : 0
@@ -452,7 +489,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                       style={{
                         flex: 1,
                         height: `${heightPercent}%`,
-                        minHeight: '8px',
+                        minHeight: '12px',
                         background: isLatest ? 'var(--primary)' : '#93C5FD',
                         borderRadius: '4px 4px 0 0',
                         position: 'relative',
@@ -476,36 +513,13 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
               </div>
             )}
 
-            {/* Trend Indicator */}
-            <div style={{
-              padding: '12px',
-              background: velocityTrend.trend >= 0 ? '#DCFCE7' : '#F3F4F6',
-              borderRadius: '8px',
-              marginBottom: '12px'
-            }}>
-              <div style={{
-                fontSize: '11px',
-                fontWeight: '600',
-                color: velocityTrend.trend >= 0 ? '#166534' : '#374151',
-                marginBottom: '4px'
-              }}>
-                {velocityTrend.trend >= 0 ? '▲' : '▼'} {Math.abs(velocityTrend.trend)}% Trend
-              </div>
-              <div style={{
-                fontSize: '11px',
-                color: velocityTrend.trend >= 0 ? '#15803D' : '#6B7280'
-              }}>
-                {velocityTrend.trend >= 0 ? 'Improving' : 'Declining'} compared to previous 3 iterations
-              </div>
-            </div>
-
             {/* Peak and Low */}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-tertiary)' }}>
               <div>
-                <span style={{ fontWeight: '600' }}>Peak:</span> {velocityTrend.peakVelocity}
+                <span style={{ fontWeight: '600' }}>Low:</span> {velocityTrend.lowVelocity}
               </div>
               <div>
-                <span style={{ fontWeight: '600' }}>Low:</span> {velocityTrend.lowVelocity}
+                <span style={{ fontWeight: '600' }}>Peak:</span> {velocityTrend.peakVelocity}
               </div>
             </div>
           </div>
