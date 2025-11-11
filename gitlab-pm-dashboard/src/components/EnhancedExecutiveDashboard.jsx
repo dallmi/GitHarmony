@@ -192,7 +192,9 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
       monthOverMonthMetrics,
       recentDecisions,
       upcomingMilestones,
-      stats
+      stats,
+      teamPerformance,
+      forecastAccuracy
     }
     exportExecutiveDashboardToPDF(exportData)
   }
@@ -203,7 +205,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
   }
 
   return (
-    <div className="container">
+    <div className="container-fluid">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>

@@ -19,7 +19,9 @@ export function exportExecutiveDashboardToPDF(data) {
     monthOverMonthMetrics,
     recentDecisions,
     upcomingMilestones,
-    stats
+    stats,
+    teamPerformance,
+    forecastAccuracy
   } = data
 
   const date = new Date().toLocaleDateString('en-US', {
@@ -39,16 +41,22 @@ export function exportExecutiveDashboardToPDF(data) {
     @media print {
       body { margin: 0; }
       .page-break { page-break-before: always; }
-      @page { margin: 0.75in; }
+      @page { margin: 0.5in; }
     }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      line-height: 1.6;
+      line-height: 1.5;
       color: #111827;
-      max-width: 8.5in;
-      margin: 0 auto;
-      padding: 20px;
+      max-width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    .content-wrapper {
+      width: 100%;
+      padding: 0;
+      margin: 0;
     }
 
     h1 {
@@ -203,6 +211,95 @@ export function exportExecutiveDashboardToPDF(data) {
       text-align: center;
       font-size: 12px;
       color: #6B7280;
+    }
+
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .team-member-card {
+      padding: 10px;
+      background: #F9FAFB;
+      border-radius: 6px;
+      border: 1px solid #E5E7EB;
+      text-align: center;
+    }
+
+    .burnout-alert {
+      padding: 12px;
+      background: #FEE2E2;
+      border: 2px solid #DC2626;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .risk-item {
+      padding: 10px;
+      background: white;
+      border-radius: 6px;
+      border-left: 4px solid #DC2626;
+      margin-bottom: 8px;
+    }
+
+    .trend-metric {
+      padding: 12px;
+      background: #F9FAFB;
+      border-radius: 8px;
+      border: 1px solid #E5E7EB;
+    }
+
+    .trend-positive { color: #16A34A; }
+    .trend-negative { color: #DC2626; }
+    .trend-neutral { color: #6B7280; }
+
+    .chart-placeholder {
+      width: 100%;
+      height: 200px;
+      background: #F9FAFB;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6B7280;
+      font-size: 12px;
+      margin-bottom: 20px;
+    }
+
+    .workload-bar {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      background: #F9FAFB;
+      border-radius: 6px;
+      margin-bottom: 6px;
+    }
+
+    .workload-bar.overloaded {
+      background: #FEF3C7;
+      border-left: 3px solid #F59E0B;
+    }
+
+    .workload-bar.on-leave {
+      background: #F3F4F6;
+      opacity: 0.7;
+    }
+
+    .forecast-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .reliability-factors-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
     }
 
     @media screen {
@@ -381,6 +478,415 @@ export function exportExecutiveDashboardToPDF(data) {
         </div>
       </div>
     `).join('')}
+  </div>
+  ` : ''}
+
+  <!-- Burnup Chart Visualization -->
+  ${burnupData && burnupData.dataPoints && burnupData.dataPoints.length > 0 ? (() => {
+    const dataPoints = burnupData.dataPoints
+    const width = 700
+    const height = 300
+    const padding = { top: 40, right: 20, bottom: 50, left: 60 }
+    const chartWidth = width - padding.left - padding.right
+    const chartHeight = height - padding.top - padding.bottom
+
+    // Find max value for Y axis
+    const maxValue = Math.max(...dataPoints.map(d => d.totalScope), 10)
+    const yAxisMax = Math.ceil(maxValue * 1.1 / 10) * 10
+
+    // Calculate scales
+    const xScale = (index) => padding.left + (index / (dataPoints.length - 1 || 1)) * chartWidth
+    const yScale = (value) => padding.top + chartHeight - (value / yAxisMax) * chartHeight
+
+    // Create path data
+    const scopePath = dataPoints.map((d, i) => {
+      const x = xScale(i)
+      const y = yScale(d.totalScope)
+      return `${i === 0 ? 'M' : 'L'} ${x} ${y}`
+    }).join(' ')
+
+    const completedPath = dataPoints.map((d, i) => {
+      const x = xScale(i)
+      const y = yScale(d.completed)
+      return `${i === 0 ? 'M' : 'L'} ${x} ${y}`
+    }).join(' ')
+
+    // Y axis ticks
+    const yAxisTicks = []
+    for (let i = 0; i <= 5; i++) {
+      const value = Math.round((yAxisMax / 5) * i)
+      const y = yScale(value)
+      yAxisTicks.push({ value, y })
+    }
+
+    // X axis ticks (show every Nth point)
+    const xAxisInterval = Math.max(1, Math.floor(dataPoints.length / 6))
+    const xAxisTicks = dataPoints
+      .filter((_, i) => i % xAxisInterval === 0 || i === dataPoints.length - 1)
+      .map((d, idx) => {
+        const actualIndex = idx * xAxisInterval
+        if (actualIndex >= dataPoints.length) return null
+        return {
+          label: new Date(d.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }),
+          x: xScale(actualIndex)
+        }
+      })
+      .filter(t => t !== null)
+
+    return `
+  <div class="page-break"></div>
+  <h2>Burnup Chart - Scope vs Completion</h2>
+  <div style="margin-bottom: 20px;">
+    <svg width="${width}" height="${height}" style="font-family: system-ui, sans-serif; display: block; margin: 0 auto;">
+      <!-- Background grid -->
+      ${yAxisTicks.map((tick, i) => `
+        <line x1="${padding.left}" y1="${tick.y}" x2="${padding.left + chartWidth}" y2="${tick.y}"
+              stroke="#E5E7EB" stroke-width="1" stroke-dasharray="2,2"/>
+      `).join('')}
+
+      <!-- Y Axis -->
+      <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${padding.top + chartHeight}"
+            stroke="#9CA3AF" stroke-width="2"/>
+
+      <!-- X Axis -->
+      <line x1="${padding.left}" y1="${padding.top + chartHeight}" x2="${padding.left + chartWidth}" y2="${padding.top + chartHeight}"
+            stroke="#9CA3AF" stroke-width="2"/>
+
+      <!-- Y Axis Labels -->
+      ${yAxisTicks.map(tick => `
+        <text x="${padding.left - 10}" y="${tick.y + 4}" text-anchor="end" font-size="11" fill="#6B7280">
+          ${tick.value}
+        </text>
+      `).join('')}
+
+      <!-- X Axis Labels -->
+      ${xAxisTicks.map(tick => `
+        <text x="${tick.x}" y="${padding.top + chartHeight + 20}" text-anchor="middle" font-size="10" fill="#6B7280">
+          ${tick.label}
+        </text>
+      `).join('')}
+
+      <!-- Fill area under completed line -->
+      <path d="${completedPath} L ${xScale(dataPoints.length - 1)} ${padding.top + chartHeight} L ${padding.left} ${padding.top + chartHeight} Z"
+            fill="#10B981" fill-opacity="0.1"/>
+
+      <!-- Total Scope Line (red) -->
+      <path d="${scopePath}" fill="none" stroke="#EF4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+      <!-- Completed Work Line (green) -->
+      <path d="${completedPath}" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+      <!-- Data points -->
+      ${dataPoints.map((point, i) => {
+        const x = xScale(i)
+        const yScope = yScale(point.totalScope)
+        const yCompleted = yScale(point.completed)
+        return `
+        <circle cx="${x}" cy="${yScope}" r="3" fill="#EF4444" stroke="white" stroke-width="2"/>
+        <circle cx="${x}" cy="${yCompleted}" r="3" fill="#10B981" stroke="white" stroke-width="2"/>
+        `
+      }).join('')}
+
+      <!-- Legend -->
+      <g transform="translate(${padding.left + 20}, ${padding.top - 20})">
+        <line x1="0" y1="0" x2="30" y2="0" stroke="#EF4444" stroke-width="2.5"/>
+        <text x="35" y="4" font-size="11" fill="#374151">Total Scope</text>
+        <line x1="130" y1="0" x2="160" y2="0" stroke="#10B981" stroke-width="2.5"/>
+        <text x="165" y="4" font-size="11" fill="#374151">Completed</text>
+      </g>
+
+      <!-- Chart Title -->
+      <text x="${padding.left + chartWidth / 2}" y="20" text-anchor="middle" font-size="13" font-weight="600" fill="#111827">
+        Burnup Chart - Progress Over Time
+      </text>
+
+      <!-- Y Axis Label -->
+      <text x="-${height / 2}" y="15" text-anchor="middle" font-size="11" fill="#6B7280" transform="rotate(-90)">
+        Issue Count
+      </text>
+    </svg>
+  </div>
+
+  <!-- Summary Stats -->
+  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;">
+    <div class="metric-card">
+      <div class="metric-label">Total Scope</div>
+      <div class="metric-value" style="font-size: 24px; color: #EF4444;">
+        ${burnupData.totalScope}
+      </div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Completed</div>
+      <div class="metric-value" style="font-size: 24px; color: #10B981;">
+        ${burnupData.completed}
+      </div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Remaining</div>
+      <div class="metric-value" style="font-size: 24px; color: #6B7280;">
+        ${burnupData.totalScope - burnupData.completed}
+      </div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Progress</div>
+      <div class="metric-value" style="font-size: 24px; color: #2563EB;">
+        ${Math.round((burnupData.completed / burnupData.totalScope) * 100)}%
+      </div>
+    </div>
+  </div>
+    `
+  })() : ''}
+
+  <!-- Trailing 30-Day Trends -->
+  ${monthOverMonthMetrics ? `
+  <h2>Trailing 30-Day Trends</h2>
+  <div style="font-size: 13px; color: #6B7280; margin-bottom: 16px;">
+    Comparing ${monthOverMonthMetrics.currentPeriod.name} vs ${monthOverMonthMetrics.previousPeriod.name}
+  </div>
+  <div class="metrics-grid">
+    <div class="trend-metric">
+      <div class="metric-label">Issues Created</div>
+      <div class="metric-value" style="font-size: 24px;">
+        ${monthOverMonthMetrics.currentPeriod.issues}
+      </div>
+      <div class="metric-subtext ${
+        monthOverMonthMetrics.percentChanges.issues > 0 ? 'trend-positive' :
+        monthOverMonthMetrics.percentChanges.issues < 0 ? 'trend-negative' : 'trend-neutral'
+      }">
+        ${monthOverMonthMetrics.percentChanges.issues > 0 ? '↑' : monthOverMonthMetrics.percentChanges.issues < 0 ? '↓' : '→'}
+        ${Math.abs(monthOverMonthMetrics.percentChanges.issues)}%
+      </div>
+    </div>
+    <div class="trend-metric">
+      <div class="metric-label">Issues Completed</div>
+      <div class="metric-value" style="font-size: 24px;">
+        ${monthOverMonthMetrics.currentPeriod.completed}
+      </div>
+      <div class="metric-subtext ${
+        monthOverMonthMetrics.percentChanges.completed > 0 ? 'trend-positive' :
+        monthOverMonthMetrics.percentChanges.completed < 0 ? 'trend-negative' : 'trend-neutral'
+      }">
+        ${monthOverMonthMetrics.percentChanges.completed > 0 ? '↑' : monthOverMonthMetrics.percentChanges.completed < 0 ? '↓' : '→'}
+        ${Math.abs(monthOverMonthMetrics.percentChanges.completed)}%
+      </div>
+    </div>
+    <div class="trend-metric">
+      <div class="metric-label">Story Points</div>
+      <div class="metric-value" style="font-size: 24px;">
+        ${monthOverMonthMetrics.currentPeriod.points}
+      </div>
+      <div class="metric-subtext ${
+        monthOverMonthMetrics.percentChanges.points > 0 ? 'trend-positive' :
+        monthOverMonthMetrics.percentChanges.points < 0 ? 'trend-negative' : 'trend-neutral'
+      }">
+        ${monthOverMonthMetrics.percentChanges.points > 0 ? '↑' : monthOverMonthMetrics.percentChanges.points < 0 ? '↓' : '→'}
+        ${Math.abs(monthOverMonthMetrics.percentChanges.points)}%
+      </div>
+    </div>
+    <div class="trend-metric">
+      <div class="metric-label">Net Progress</div>
+      <div class="metric-value" style="font-size: 24px;">
+        ${monthOverMonthMetrics.currentPeriod.completed - monthOverMonthMetrics.currentPeriod.issues}
+      </div>
+      <div class="metric-subtext">
+        Completed - Created
+      </div>
+    </div>
+  </div>
+  ` : ''}
+
+  <!-- Forecast Accuracy Tracking -->
+  ${forecastAccuracy && forecastAccuracy.reliability && forecastAccuracy.reliability.score !== null ? `
+  <div class="page-break"></div>
+  <h2>Forecast Accuracy Tracking</h2>
+  <div style="text-align: center; margin-bottom: 20px;">
+    <div style="font-size: 48px; font-weight: 700; color: ${
+      forecastAccuracy.reliability.score >= 80 ? '#16A34A' :
+      forecastAccuracy.reliability.score >= 60 ? '#EAB308' : '#DC2626'
+    };">
+      ${forecastAccuracy.reliability.score}
+    </div>
+    <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: ${
+      forecastAccuracy.reliability.score >= 80 ? '#16A34A' :
+      forecastAccuracy.reliability.score >= 60 ? '#EAB308' : '#DC2626'
+    };">
+      Reliability Score
+    </div>
+  </div>
+
+  <h3>Key Statistics</h3>
+  <div class="forecast-stats-grid">
+    <div class="metric-card">
+      <div class="metric-label">Completed Forecasts</div>
+      <div class="metric-value" style="font-size: 20px; color: #2563EB;">
+        ${forecastAccuracy.stats.completedForecasts}
+      </div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">On Time</div>
+      <div class="metric-value" style="font-size: 20px; color: #16A34A;">
+        ${forecastAccuracy.stats.onTimePercentage}%
+      </div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Avg Days Off</div>
+      <div class="metric-value" style="font-size: 20px; color: #EAB308;">
+        ${forecastAccuracy.stats.avgDaysOff}
+      </div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Early</div>
+      <div class="metric-value" style="font-size: 20px; color: #3B82F6;">
+        ${forecastAccuracy.stats.earlyCount}
+      </div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Late</div>
+      <div class="metric-value" style="font-size: 20px; color: #DC2626;">
+        ${forecastAccuracy.stats.lateCount}
+      </div>
+    </div>
+  </div>
+
+  <h3>Reliability Factors</h3>
+  <div class="reliability-factors-grid">
+    ${forecastAccuracy.reliability.factors.map(factor => {
+      const percentage = Math.round((factor.points / factor.maxPoints) * 100)
+      return `
+      <div class="metric-card">
+        <div class="metric-label">${factor.name}</div>
+        <div style="font-size: 18px; font-weight: 600; color: ${
+          factor.status === 'good' ? '#16A34A' :
+          factor.status === 'warning' ? '#EAB308' : '#DC2626'
+        };">
+          ${percentage}%
+        </div>
+        <div style="font-size: 10px; color: #6B7280; margin-top: 4px;">
+          ${factor.detail}
+        </div>
+      </div>
+      `
+    }).join('')}
+  </div>
+
+  <div style="padding: 12px; background: #EFF6FF; border-radius: 8px; border: 1px solid #BFDBFE;">
+    <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">Recommendation</div>
+    <div style="font-size: 12px; color: #1E40AF;">${forecastAccuracy.reliability.recommendation}</div>
+  </div>
+  ` : ''}
+
+  <!-- Team Performance & Workload -->
+  ${teamPerformance ? `
+  <div class="page-break"></div>
+  <h2>Team Performance & Workload</h2>
+  <div style="font-size: 13px; color: #6B7280; margin-bottom: 16px;">
+    Individual contributions, workload distribution, and burnout risks
+  </div>
+
+  <!-- Summary Stats -->
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-label">Active Members</div>
+      <div class="metric-value" style="font-size: 24px; color: #2563EB;">
+        ${teamPerformance.summary.activeMembers}
+      </div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Issues Completed</div>
+      <div class="metric-value" style="font-size: 24px; color: #16A34A;">
+        ${teamPerformance.summary.totalCompleted}
+      </div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Story Points</div>
+      <div class="metric-value" style="font-size: 24px; color: #2563EB;">
+        ${teamPerformance.summary.totalStoryPoints}
+      </div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Avg per Member</div>
+      <div class="metric-value" style="font-size: 24px; color: #3B82F6;">
+        ${teamPerformance.summary.avgVelocityPerMember}
+      </div>
+    </div>
+    <div class="metric-card" style="${teamPerformance.summary.membersAtRisk > 0 ? 'background: #FEE2E2;' : ''}">
+      <div class="metric-label">At Risk</div>
+      <div class="metric-value" style="font-size: 24px; color: ${teamPerformance.summary.membersAtRisk > 0 ? '#DC2626' : '#16A34A'};">
+        ${teamPerformance.summary.membersAtRisk}
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Contributors -->
+  <h3>Top Contributors (Last 30 Days)</h3>
+  <div class="team-grid">
+    ${teamPerformance.topContributors.slice(0, 5).map((contributor, index) => `
+      <div class="team-member-card" style="${index === 0 ? 'background: #FEF3C7; border: 2px solid #F59E0B;' : ''}">
+        ${index === 0 ? '<div style="font-size: 20px; margin-bottom: 4px;">🏆</div>' : ''}
+        <div style="font-weight: 600; font-size: 13px; margin-bottom: 6px;">${contributor.name}</div>
+        <div style="font-size: 11px; color: #6B7280; margin-bottom: 4px;">
+          ${contributor.issuesCompleted} issues
+        </div>
+        <div style="font-size: 11px; color: #6B7280; margin-bottom: 4px;">
+          ${contributor.storyPoints} pts
+        </div>
+        <div style="font-size: 11px; color: #6B7280;">
+          ${contributor.avgCycleTime}d cycle
+        </div>
+      </div>
+    `).join('')}
+  </div>
+
+  <!-- Burnout Risks -->
+  ${teamPerformance.burnoutRisks.length > 0 ? `
+  <div class="burnout-alert">
+    <h3 style="color: #DC2626; margin-bottom: 12px;">⚠️ Burnout Risk Alert</h3>
+    <div style="font-size: 12px; color: #DC2626; margin-bottom: 12px;">
+      ${teamPerformance.burnoutRisks.length} team member${teamPerformance.burnoutRisks.length !== 1 ? 's' : ''} at risk of burnout
+    </div>
+    ${teamPerformance.burnoutRisks.map(risk => `
+      <div class="risk-item" style="border-left-color: ${
+        risk.riskLevel === 'high' ? '#DC2626' :
+        risk.riskLevel === 'medium' ? '#F97316' : '#EAB308'
+      };">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <strong style="font-size: 13px;">${risk.name}</strong>
+          <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: ${
+            risk.riskLevel === 'high' ? '#DC2626' :
+            risk.riskLevel === 'medium' ? '#F97316' : '#EAB308'
+          };">
+            ${risk.riskLevel} RISK (${risk.riskScore})
+          </span>
+        </div>
+        <div style="font-size: 11px; color: #6B7280; margin-bottom: 4px;">
+          ${risk.openIssues} open issues · ${risk.storyPoints} pts · ${risk.overdueIssues} overdue
+        </div>
+        <div style="font-size: 11px; color: #374151;">
+          Risk Factors: ${risk.riskFactors.join('; ')}
+        </div>
+      </div>
+    `).join('')}
+  </div>
+  ` : ''}
+
+  <!-- Workload Distribution -->
+  <h3>Current Workload Distribution</h3>
+  <div style="margin-bottom: 20px;">
+    ${teamPerformance.workloadDistribution.slice(0, 8).map(member => {
+      const isOverloaded = member.openIssues > 10 || member.storyPoints > 30
+      return `
+      <div class="workload-bar ${isOverloaded ? 'overloaded' : ''} ${member.isOnLeave ? 'on-leave' : ''}">
+        <div style="flex: 1; font-weight: 600; font-size: 13px;">
+          ${member.name}${member.role ? ` (${member.role})` : ''}
+          ${member.isOnLeave ? ' 🏖️' : ''}
+        </div>
+        <div style="font-size: 12px; color: #6B7280; margin-right: 12px;">
+          ${member.openIssues} issues · ${member.storyPoints} pts
+          ${member.overdueIssues > 0 ? ` · ${member.overdueIssues} overdue` : ''}
+        </div>
+      </div>
+      `
+    }).join('')}
   </div>
   ` : ''}
 
