@@ -133,16 +133,14 @@ export function calculateAverageVelocityLegacy(velocityData, lastNSprints = 3) {
 export function calculateVelocityTrend(velocityData) {
   if (!velocityData || velocityData.length < 2) return 0
 
-  const recent = velocityData.slice(-3)
-  if (recent.length < 2) return 0
+  // Compare current sprint (most recent) to previous sprint
+  const currentSprint = velocityData[velocityData.length - 1]
+  const previousSprint = velocityData[velocityData.length - 2]
 
-  const oldAvg = recent.slice(0, Math.floor(recent.length / 2))
-    .reduce((sum, s) => sum + s.velocity, 0) / Math.floor(recent.length / 2)
+  // Calculate trend: (current - previous) / previous * 100
+  if (previousSprint.velocity === 0) return 0
 
-  const newAvg = recent.slice(Math.floor(recent.length / 2))
-    .reduce((sum, s) => sum + s.velocity, 0) / Math.ceil(recent.length / 2)
-
-  return Math.round(((newAvg - oldAvg) / oldAvg) * 100)
+  return Math.round(((currentSprint.velocity - previousSprint.velocity) / previousSprint.velocity) * 100)
 }
 
 /**
