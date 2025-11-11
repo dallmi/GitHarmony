@@ -114,8 +114,9 @@ export default function CycleTimeView({ issues: allIssues }) {
 
   const openIssues = issues.filter(i => i.state === 'opened')
   const totalInProgress = Object.entries(analytics.phaseDistribution)
-    .filter(([phase]) => phase !== 'done')
+    .filter(([phase]) => phase !== 'done' && phase !== 'cancelled')
     .reduce((sum, [_, issuesList]) => sum + issuesList.length, 0)
+  const totalCancelled = analytics.phaseDistribution.cancelled?.length || 0
 
   return (
     <div className="container-fluid">
@@ -186,7 +187,7 @@ export default function CycleTimeView({ issues: allIssues }) {
       )}
 
       {/* Key Metrics */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', marginBottom: '30px' }}>
         <div className="card">
           <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>Avg Lead Time</div>
           <div style={{ fontSize: '32px', fontWeight: '600', color: '#3B82F6' }}>
@@ -224,6 +225,16 @@ export default function CycleTimeView({ issues: allIssues }) {
           </div>
           <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
             currently active
+          </div>
+        </div>
+
+        <div className="card">
+          <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>Cancelled</div>
+          <div style={{ fontSize: '32px', fontWeight: '600', color: '#6B7280' }}>
+            {totalCancelled}
+          </div>
+          <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
+            rejected/cancelled
           </div>
         </div>
       </div>
