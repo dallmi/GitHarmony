@@ -6,6 +6,8 @@ import { exportExecutiveSummaryToCSV, downloadCSV } from '../utils/csvExportUtil
 import { useIterationFilter } from '../contexts/IterationFilterContext'
 import HealthScoreConfigModal from './HealthScoreConfigModal'
 import { isBlocker } from '../services/metricsService'
+import { calculateBurnupData, calculateVelocityTrendHistory, calculateDeliveryConfidence } from '../services/velocityService'
+import { getCycleTimeStats } from '../services/cycleTimeService'
 
 /**
  * Enhanced Executive Dashboard
@@ -106,6 +108,30 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
       .filter(r => r.impact === 'high' || (r.impact === 'medium' && r.probability === 'high'))
       .slice(0, 3)
   }, [risks])
+
+  // Calculate burnup chart data
+  const burnupData = useMemo(() => {
+    if (!issues || issues.length === 0) return null
+    return calculateBurnupData(issues)
+  }, [issues])
+
+  // Calculate 6-month velocity trend
+  const velocityTrend = useMemo(() => {
+    if (!issues || issues.length === 0) return null
+    return calculateVelocityTrendHistory(issues, 6)
+  }, [issues])
+
+  // Calculate cycle time metrics
+  const cycleTimeMetrics = useMemo(() => {
+    if (!issues || issues.length === 0) return null
+    return getCycleTimeStats(issues)
+  }, [issues])
+
+  // Calculate delivery confidence score
+  const deliveryConfidence = useMemo(() => {
+    if (!issues || issues.length === 0) return null
+    return calculateDeliveryConfidence(issues)
+  }, [issues])
 
   const handleExportCSV = () => {
     const exportData = {
@@ -228,6 +254,312 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
           </div>
         )}
       </div>
+
+      {/* Sprint Performance Section - Burnup Chart, Velocity Trend, Cycle Time */}
+      <div className="grid grid-3" style={{ gap: '20px', marginBottom: '30px' }}>
+        {/* Burnup Chart - Scope Tracking */}
+        {burnupData && (
+          <div className="card">
+            <h3 style={{ marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
+              Scope Tracking
+            </h3>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+              Total scope vs completed work over time
+            </div>
+
+            {/* Key Metrics */}
+            <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                  Total Scope
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--primary)' }}>
+                  {burnupData.totalScope}
+                </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                  Completed
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--success)' }}>
+                  {burnupData.completed}
+                </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                  Remaining
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                  {burnupData.remaining}
+                </div>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div style={{ marginBottom: '12px' }}>
+              <div className="progress-bar" style={{ height: '8px' }}>
+                <div
+                  className="progress-fill"
+                  style={{
+                    width: `${burnupData.totalScope > 0 ? (burnupData.completed / burnupData.totalScope) * 100 : 0}%`,
+                    background: 'var(--success)'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Scope Growth Warning */}
+            {burnupData.scopeGrowthPercent > 0 && (
+              <div style={{
+                padding: '8px 12px',
+                background: burnupData.scopeGrowthPercent > 25 ? '#FEF3C7' : '#EFF6FF',
+                borderRadius: '6px',
+                marginBottom: '12px'
+              }}>
+                <div style={{
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  color: burnupData.scopeGrowthPercent > 25 ? '#92400E' : '#1E40AF',
+                  marginBottom: '2px'
+                }}>
+                  Scope Growth: +{burnupData.scopeGrowthPercent}%
+                </div>
+                <div style={{
+                  fontSize: '11px',
+                  color: burnupData.scopeGrowthPercent > 25 ? '#D97706' : '#3B82F6'
+                }}>
+                  +{burnupData.scopeGrowth} items added since start
+                </div>
+              </div>
+            )}
+
+            {/* Projection */}
+            {burnupData.projectedCompletion && (
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                Projected completion: {new Date(burnupData.projectedCompletion).toLocaleDateString()}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 6-Month Velocity Trend */}
+        {velocityTrend && (
+          <div className="card">
+            <h3 style={{ marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
+              Velocity Trend (6 Months)
+            </h3>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+              Historical delivery performance
+            </div>
+
+            {/* Key Metrics */}
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                Average Velocity
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--primary)' }}>
+                {velocityTrend.avgVelocityIssues}
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                issues per 2-week period
+              </div>
+            </div>
+
+            {/* Trend Indicator */}
+            <div style={{
+              padding: '12px',
+              background: velocityTrend.trendIssues >= 0 ? '#DCFCE7' : '#FEE2E2',
+              borderRadius: '8px',
+              marginBottom: '12px'
+            }}>
+              <div style={{
+                fontSize: '11px',
+                fontWeight: '600',
+                color: velocityTrend.trendIssues >= 0 ? '#166534' : '#991B1B',
+                marginBottom: '4px'
+              }}>
+                {velocityTrend.trendIssues >= 0 ? '▲' : '▼'} {Math.abs(velocityTrend.trendIssues)}% Trend
+              </div>
+              <div style={{
+                fontSize: '11px',
+                color: velocityTrend.trendIssues >= 0 ? '#15803D' : '#DC2626'
+              }}>
+                {velocityTrend.trendIssues >= 0 ? 'Improving' : 'Declining'} compared to previous 3 months
+              </div>
+            </div>
+
+            {/* Peak and Low */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-tertiary)' }}>
+              <div>
+                <span style={{ fontWeight: '600' }}>Peak:</span> {velocityTrend.peakVelocityIssues}
+              </div>
+              <div>
+                <span style={{ fontWeight: '600' }}>Low:</span> {velocityTrend.lowVelocityIssues}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Cycle Time Metrics */}
+        {cycleTimeMetrics && (
+          <div className="card">
+            <h3 style={{ marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
+              Delivery Efficiency
+            </h3>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+              How quickly work flows through the system
+            </div>
+
+            {/* Average Cycle Time */}
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                Avg Cycle Time
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--primary)' }}>
+                {cycleTimeMetrics.averageCycleTime}
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                days from start to done
+              </div>
+            </div>
+
+            {/* Lead Time */}
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                Avg Lead Time
+              </div>
+              <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                {cycleTimeMetrics.averageLeadTime} days
+              </div>
+            </div>
+
+            {/* Efficiency Indicator */}
+            <div style={{
+              padding: '8px 12px',
+              background: cycleTimeMetrics.averageCycleTime < 7 ? '#DCFCE7' :
+                         cycleTimeMetrics.averageCycleTime < 14 ? '#FEF3C7' : '#FEE2E2',
+              borderRadius: '6px'
+            }}>
+              <div style={{
+                fontSize: '11px',
+                fontWeight: '600',
+                color: cycleTimeMetrics.averageCycleTime < 7 ? '#166534' :
+                       cycleTimeMetrics.averageCycleTime < 14 ? '#92400E' : '#991B1B'
+              }}>
+                {cycleTimeMetrics.averageCycleTime < 7 ? '✓ Excellent' :
+                 cycleTimeMetrics.averageCycleTime < 14 ? '⚠ Good' : '⚠ Needs Improvement'}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Delivery Confidence Score - Featured Section */}
+      {deliveryConfidence && (
+        <div className="card" style={{ marginBottom: '30px', background: 'linear-gradient(135deg, #F9FAFB 0%, #FFFFFF 100%)', border: '2px solid #E5E7EB' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <div>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '4px' }}>
+                Delivery Confidence Score
+              </h3>
+              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                Will we hit our target? Comprehensive confidence analysis
+              </div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                fontSize: '48px',
+                fontWeight: '700',
+                color: deliveryConfidence.statusColor
+              }}>
+                {deliveryConfidence.score}%
+              </div>
+              <div style={{
+                fontSize: '12px',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                color: deliveryConfidence.statusColor,
+                letterSpacing: '0.5px'
+              }}>
+                {deliveryConfidence.status} Confidence
+              </div>
+            </div>
+          </div>
+
+          {/* Confidence Factors Breakdown */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '20px' }}>
+            {deliveryConfidence.factors.map((factor, index) => {
+              const percentage = Math.round((factor.score / factor.maxScore) * 100)
+              return (
+                <div
+                  key={index}
+                  style={{
+                    padding: '12px',
+                    background: 'white',
+                    borderRadius: '8px',
+                    border: `1px solid ${factor.status === 'good' ? '#D1FAE5' : factor.status === 'warning' ? '#FEF3C7' : '#FEE2E2'}`
+                  }}
+                >
+                  <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '6px' }}>
+                    {factor.name}
+                  </div>
+                  <div style={{
+                    fontSize: '20px',
+                    fontWeight: '600',
+                    color: factor.status === 'good' ? '#16A34A' : factor.status === 'warning' ? '#EAB308' : '#DC2626',
+                    marginBottom: '4px'
+                  }}>
+                    {percentage}%
+                  </div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+                    {factor.detail}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Recommendations */}
+          {deliveryConfidence.recommendations.length > 0 && (
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '12px' }}>
+                Top Recommendations
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {deliveryConfidence.recommendations.slice(0, 3).map((rec, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      padding: '10px 12px',
+                      background: 'white',
+                      borderRadius: '6px',
+                      borderLeft: `3px solid ${rec.priority === 'critical' ? '#DC2626' : rec.priority === 'high' ? '#F97316' : '#3B82F6'}`
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <span style={{
+                        fontSize: '10px',
+                        fontWeight: '700',
+                        textTransform: 'uppercase',
+                        color: rec.priority === 'critical' ? '#DC2626' : rec.priority === 'high' ? '#F97316' : '#3B82F6',
+                        letterSpacing: '0.5px'
+                      }}>
+                        {rec.priority}
+                      </span>
+                      <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                        {rec.title}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                      {rec.description}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-2" style={{ gap: '30px', marginBottom: '30px' }}>
         {/* Active Initiatives */}

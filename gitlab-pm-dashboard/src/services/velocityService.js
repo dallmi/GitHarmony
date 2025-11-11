@@ -436,6 +436,516 @@ export function predictCompletion(issues, averageVelocity) {
 }
 
 /**
+ * Calculate burnup chart data for scope tracking over time
+ * Shows total scope vs completed work, revealing scope creep
+ *
+ * @param {Array} issues - All project issues
+ * @param {String} startDate - Project/tracking start date (ISO string)
+ * @param {Number} maxDataPoints - Maximum data points to return (defaults to 26 for 6 months of biweekly sprints)
+ * @returns {Object} Burnup chart data with dates, scope, and completion lines
+ */
+export function calculateBurnupData(issues, startDate = null, maxDataPoints = 26) {
+  if (!issues || issues.length === 0) {
+    return {
+      dataPoints: [],
+      totalScope: 0,
+      completed: 0,
+      remaining: 0,
+      scopeGrowth: 0,
+      projectedCompletion: null
+    }
+  }
+
+  // Determine start date - either provided or earliest issue creation
+  let chartStartDate
+  if (startDate) {
+    chartStartDate = new Date(startDate)
+  } else {
+    // Find earliest issue creation date
+    const creationDates = issues
+      .map(i => i.created_at ? new Date(i.created_at) : null)
+      .filter(d => d !== null)
+      .sort((a, b) => a - b)
+
+    chartStartDate = creationDates.length > 0 ? creationDates[0] : new Date()
+  }
+
+  // Normalize to midnight
+  chartStartDate.setHours(0, 0, 0, 0)
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  // Calculate total time span and create data points
+  const totalDays = Math.floor((today - chartStartDate) / (24 * 60 * 60 * 1000))
+  const dataPointInterval = Math.max(1, Math.ceil(totalDays / maxDataPoints))
+
+  const dataPoints = []
+  let currentDate = new Date(chartStartDate)
+
+  // Track scope and completion for each data point
+  while (currentDate <= today) {
+    const scopeAtDate = issues.filter(i => {
+      const createdDate = i.created_at ? new Date(i.created_at) : null
+      return createdDate && createdDate <= currentDate
+    })
+
+    const completedAtDate = scopeAtDate.filter(i => {
+      if (i.state !== 'closed' || !i.closed_at) return false
+      const closedDate = new Date(i.closed_at)
+      return closedDate <= currentDate
+    })
+
+    // Calculate points (weight) as well
+    const scopePoints = scopeAtDate.reduce((sum, i) => sum + (i.weight || 0), 0)
+    const completedPoints = completedAtDate.reduce((sum, i) => sum + (i.weight || 0), 0)
+
+    dataPoints.push({
+      date: currentDate.toISOString().split('T')[0],
+      totalScope: scopeAtDate.length,
+      completed: completedAtDate.length,
+      remaining: scopeAtDate.length - completedAtDate.length,
+      scopePoints,
+      completedPoints,
+      remainingPoints: scopePoints - completedPoints
+    })
+
+    // Move to next interval
+    currentDate = new Date(currentDate.getTime() + dataPointInterval * 24 * 60 * 60 * 1000)
+  }
+
+  // Ensure we have a data point for today
+  if (dataPoints.length === 0 || dataPoints[dataPoints.length - 1].date !== today.toISOString().split('T')[0]) {
+    const allScope = issues
+    const allCompleted = issues.filter(i => i.state === 'closed')
+
+    dataPoints.push({
+      date: today.toISOString().split('T')[0],
+      totalScope: allScope.length,
+      completed: allCompleted.length,
+      remaining: allScope.length - allCompleted.length,
+      scopePoints: allScope.reduce((sum, i) => sum + (i.weight || 0), 0),
+      completedPoints: allCompleted.reduce((sum, i) => sum + (i.weight || 0), 0),
+      remainingPoints: allScope.reduce((sum, i) => sum + (i.weight || 0), 0) - allCompleted.reduce((sum, i) => sum + (i.weight || 0), 0)
+    })
+  }
+
+  // Calculate scope growth (difference between first and last data point)
+  const initialScope = dataPoints[0]?.totalScope || 0
+  const currentScope = dataPoints[dataPoints.length - 1]?.totalScope || 0
+  const scopeGrowth = currentScope - initialScope
+  const scopeGrowthPercent = initialScope > 0 ? Math.round((scopeGrowth / initialScope) * 100) : 0
+
+  // Calculate velocity from recent data points (last 6 for ~3 months)
+  const recentPoints = dataPoints.slice(-6)
+  let avgVelocity = 0
+  if (recentPoints.length >= 2) {
+    const completionDiff = recentPoints[recentPoints.length - 1].completed - recentPoints[0].completed
+    const timeDiff = recentPoints.length - 1
+    avgVelocity = timeDiff > 0 ? completionDiff / timeDiff : 0
+  }
+
+  // Project completion date based on current velocity
+  let projectedCompletion = null
+  const currentData = dataPoints[dataPoints.length - 1]
+  if (avgVelocity > 0 && currentData && currentData.remaining > 0) {
+    const intervalsRemaining = Math.ceil(currentData.remaining / avgVelocity)
+    const projectionDate = new Date(today.getTime() + intervalsRemaining * dataPointInterval * 24 * 60 * 60 * 1000)
+    projectedCompletion = projectionDate.toISOString().split('T')[0]
+  }
+
+  return {
+    dataPoints,
+    totalScope: currentData?.totalScope || 0,
+    completed: currentData?.completed || 0,
+    remaining: currentData?.remaining || 0,
+    scopeGrowth,
+    scopeGrowthPercent,
+    initialScope,
+    avgVelocity: Math.round(avgVelocity * 10) / 10,
+    projectedCompletion,
+    chartStartDate: chartStartDate.toISOString().split('T')[0]
+  }
+}
+
+/**
+ * Calculate 6-month velocity trend for executive dashboard
+ * Provides historical velocity view with moving averages
+ *
+ * @param {Array} issues - All project issues
+ * @param {Number} months - Number of months to look back (defaults to 6)
+ * @returns {Object} Velocity trend data with weekly/biweekly granularity
+ */
+export function calculateVelocityTrendHistory(issues, months = 6) {
+  if (!issues || issues.length === 0) {
+    return {
+      dataPoints: [],
+      avgVelocity: 0,
+      trend: 0,
+      peakVelocity: 0,
+      lowVelocity: 0
+    }
+  }
+
+  // Calculate cutoff date (N months ago)
+  const today = new Date()
+  const cutoffDate = new Date(today.getFullYear(), today.getMonth() - months, today.getDate())
+  cutoffDate.setHours(0, 0, 0, 0)
+
+  // Filter issues closed in the last N months
+  const recentIssues = issues.filter(i => {
+    if (i.state !== 'closed' || !i.closed_at) return false
+    const closedDate = new Date(i.closed_at)
+    return closedDate >= cutoffDate
+  })
+
+  // Group by 2-week intervals (sprint-like periods)
+  const dataPoints = []
+  let currentInterval = new Date(cutoffDate)
+
+  while (currentInterval <= today) {
+    const intervalEnd = new Date(currentInterval.getTime() + 14 * 24 * 60 * 60 * 1000)
+
+    const closedInInterval = recentIssues.filter(i => {
+      const closedDate = new Date(i.closed_at)
+      return closedDate >= currentInterval && closedDate < intervalEnd
+    })
+
+    const issueCount = closedInInterval.length
+    const pointsCount = closedInInterval.reduce((sum, i) => sum + (i.weight || 0), 0)
+
+    dataPoints.push({
+      startDate: currentInterval.toISOString().split('T')[0],
+      endDate: intervalEnd.toISOString().split('T')[0],
+      issueCount,
+      pointsCount
+    })
+
+    currentInterval = intervalEnd
+  }
+
+  // Calculate moving average (last 3 periods)
+  const movingAverages = dataPoints.map((point, index) => {
+    const start = Math.max(0, index - 2)
+    const relevantPoints = dataPoints.slice(start, index + 1)
+    const avgIssues = relevantPoints.reduce((sum, p) => sum + p.issueCount, 0) / relevantPoints.length
+    const avgPoints = relevantPoints.reduce((sum, p) => sum + p.pointsCount, 0) / relevantPoints.length
+
+    return {
+      ...point,
+      movingAvgIssues: Math.round(avgIssues * 10) / 10,
+      movingAvgPoints: Math.round(avgPoints * 10) / 10
+    }
+  })
+
+  // Calculate overall metrics
+  const totalIssues = dataPoints.reduce((sum, p) => sum + p.issueCount, 0)
+  const totalPoints = dataPoints.reduce((sum, p) => sum + p.pointsCount, 0)
+  const avgVelocityIssues = dataPoints.length > 0 ? totalIssues / dataPoints.length : 0
+  const avgVelocityPoints = dataPoints.length > 0 ? totalPoints / dataPoints.length : 0
+
+  // Calculate trend (compare first half vs second half)
+  const midpoint = Math.floor(dataPoints.length / 2)
+  const firstHalf = dataPoints.slice(0, midpoint)
+  const secondHalf = dataPoints.slice(midpoint)
+
+  let trendIssues = 0
+  let trendPoints = 0
+
+  if (firstHalf.length > 0 && secondHalf.length > 0) {
+    const firstHalfAvg = firstHalf.reduce((sum, p) => sum + p.issueCount, 0) / firstHalf.length
+    const secondHalfAvg = secondHalf.reduce((sum, p) => sum + p.issueCount, 0) / secondHalf.length
+
+    trendIssues = firstHalfAvg > 0 ? Math.round(((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100) : 0
+
+    const firstHalfAvgPoints = firstHalf.reduce((sum, p) => sum + p.pointsCount, 0) / firstHalf.length
+    const secondHalfAvgPoints = secondHalf.reduce((sum, p) => sum + p.pointsCount, 0) / secondHalf.length
+
+    trendPoints = firstHalfAvgPoints > 0 ? Math.round(((secondHalfAvgPoints - firstHalfAvgPoints) / firstHalfAvgPoints) * 100) : 0
+  }
+
+  // Find peak and low velocity
+  const peakVelocityIssues = Math.max(...dataPoints.map(p => p.issueCount), 0)
+  const lowVelocityIssues = Math.min(...dataPoints.map(p => p.issueCount), 0)
+  const peakVelocityPoints = Math.max(...dataPoints.map(p => p.pointsCount), 0)
+  const lowVelocityPoints = Math.min(...dataPoints.map(p => p.pointsCount), 0)
+
+  return {
+    dataPoints: movingAverages,
+    avgVelocityIssues: Math.round(avgVelocityIssues * 10) / 10,
+    avgVelocityPoints: Math.round(avgVelocityPoints * 10) / 10,
+    trendIssues,
+    trendPoints,
+    peakVelocityIssues,
+    lowVelocityIssues,
+    peakVelocityPoints,
+    lowVelocityPoints,
+    periodCount: dataPoints.length,
+    months
+  }
+}
+
+/**
+ * Calculate delivery confidence score - answers "Will we hit our target?"
+ * Combines velocity consistency, risk indicators, and capacity trends
+ *
+ * @param {Array} issues - All project issues
+ * @param {Object} targetDate - Optional target completion date (Date object)
+ * @param {Number} targetScope - Optional target scope (number of issues)
+ * @returns {Object} Confidence score with breakdown and recommendations
+ */
+export function calculateDeliveryConfidence(issues, targetDate = null, targetScope = null) {
+  if (!issues || issues.length === 0) {
+    return {
+      score: 0,
+      status: 'unknown',
+      factors: [],
+      recommendations: [],
+      breakdown: {}
+    }
+  }
+
+  const factors = []
+  let totalScore = 0
+  let maxScore = 0
+
+  // Factor 1: Velocity Consistency (30 points max)
+  // Stable velocity = higher confidence
+  const velocityData = calculateVelocity(issues)
+  if (velocityData.length >= 3) {
+    const recent3 = velocityData.slice(-3).map(v => v.velocity)
+    const avg = recent3.reduce((sum, v) => sum + v, 0) / recent3.length
+    const variance = recent3.reduce((sum, v) => sum + Math.pow(v - avg, 2), 0) / recent3.length
+    const stdDev = Math.sqrt(variance)
+    const coefficientOfVariation = avg > 0 ? (stdDev / avg) * 100 : 100
+
+    let velocityConsistencyScore = 0
+    if (coefficientOfVariation < 15) {
+      velocityConsistencyScore = 30 // Very consistent
+    } else if (coefficientOfVariation < 30) {
+      velocityConsistencyScore = 20 // Moderately consistent
+    } else if (coefficientOfVariation < 50) {
+      velocityConsistencyScore = 10 // Somewhat variable
+    } else {
+      velocityConsistencyScore = 0 // Highly variable
+    }
+
+    totalScore += velocityConsistencyScore
+    maxScore += 30
+
+    factors.push({
+      name: 'Velocity Consistency',
+      score: velocityConsistencyScore,
+      maxScore: 30,
+      status: velocityConsistencyScore >= 20 ? 'good' : velocityConsistencyScore >= 10 ? 'warning' : 'risk',
+      detail: `Coefficient of variation: ${Math.round(coefficientOfVariation)}%`
+    })
+  }
+
+  // Factor 2: Scope Stability (25 points max)
+  // Less scope creep = higher confidence
+  const burnupData = calculateBurnupData(issues)
+  let scopeStabilityScore = 0
+
+  if (burnupData.scopeGrowthPercent <= 5) {
+    scopeStabilityScore = 25 // Minimal scope growth
+  } else if (burnupData.scopeGrowthPercent <= 15) {
+    scopeStabilityScore = 20 // Manageable scope growth
+  } else if (burnupData.scopeGrowthPercent <= 30) {
+    scopeStabilityScore = 10 // Significant scope growth
+  } else {
+    scopeStabilityScore = 0 // Excessive scope creep
+  }
+
+  totalScore += scopeStabilityScore
+  maxScore += 25
+
+  factors.push({
+    name: 'Scope Stability',
+    score: scopeStabilityScore,
+    maxScore: 25,
+    status: scopeStabilityScore >= 20 ? 'good' : scopeStabilityScore >= 10 ? 'warning' : 'risk',
+    detail: `Scope growth: ${burnupData.scopeGrowthPercent}% (+${burnupData.scopeGrowth} items)`
+  })
+
+  // Factor 3: Completion Rate (20 points max)
+  // Higher completion rate = on track
+  const completionRate = burnupData.totalScope > 0
+    ? (burnupData.completed / burnupData.totalScope) * 100
+    : 0
+
+  let completionRateScore = 0
+  if (completionRate >= 80) {
+    completionRateScore = 20
+  } else if (completionRate >= 60) {
+    completionRateScore = 15
+  } else if (completionRate >= 40) {
+    completionRateScore = 10
+  } else if (completionRate >= 20) {
+    completionRateScore = 5
+  } else {
+    completionRateScore = 0
+  }
+
+  totalScore += completionRateScore
+  maxScore += 20
+
+  factors.push({
+    name: 'Completion Progress',
+    score: completionRateScore,
+    maxScore: 20,
+    status: completionRateScore >= 15 ? 'good' : completionRateScore >= 10 ? 'warning' : 'risk',
+    detail: `${Math.round(completionRate)}% complete (${burnupData.completed}/${burnupData.totalScope})`
+  })
+
+  // Factor 4: Blockers and Risks (15 points max)
+  // Fewer blockers = higher confidence
+  const openIssues = issues.filter(i => i.state === 'opened')
+  const blockers = openIssues.filter(i => {
+    const labels = i.labels?.map(l => l.toLowerCase()) || []
+    return labels.some(l => l.includes('blocker') || l.includes('blocked'))
+  })
+
+  const blockerPercentage = openIssues.length > 0
+    ? (blockers.length / openIssues.length) * 100
+    : 0
+
+  let riskScore = 0
+  if (blockerPercentage === 0) {
+    riskScore = 15
+  } else if (blockerPercentage < 5) {
+    riskScore = 10
+  } else if (blockerPercentage < 10) {
+    riskScore = 5
+  } else {
+    riskScore = 0
+  }
+
+  totalScore += riskScore
+  maxScore += 15
+
+  factors.push({
+    name: 'Risk Profile',
+    score: riskScore,
+    maxScore: 15,
+    status: riskScore >= 10 ? 'good' : riskScore >= 5 ? 'warning' : 'risk',
+    detail: `${blockers.length} blocker(s) (${Math.round(blockerPercentage)}% of open issues)`
+  })
+
+  // Factor 5: Velocity Trend (10 points max)
+  // Improving velocity = higher confidence
+  const currentSprint = getCurrentSprint(issues)
+  const trendData = calculateVelocityTrend(velocityData, currentSprint)
+  const trend = typeof trendData === 'object' ? trendData.longTerm : trendData
+
+  let trendScore = 0
+  if (trend > 10) {
+    trendScore = 10 // Strong improvement
+  } else if (trend > 0) {
+    trendScore = 8 // Slight improvement
+  } else if (trend >= -10) {
+    trendScore = 5 // Stable or slight decline
+  } else {
+    trendScore = 0 // Significant decline
+  }
+
+  totalScore += trendScore
+  maxScore += 10
+
+  factors.push({
+    name: 'Velocity Trend',
+    score: trendScore,
+    maxScore: 10,
+    status: trendScore >= 8 ? 'good' : trendScore >= 5 ? 'warning' : 'risk',
+    detail: `${trend >= 0 ? '+' : ''}${trend}% long-term trend`
+  })
+
+  // Calculate final confidence percentage
+  const confidencePercent = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0
+
+  // Determine status
+  let status = 'unknown'
+  let statusColor = '#6B7280'
+  if (confidencePercent >= 75) {
+    status = 'high'
+    statusColor = '#16A34A' // Green
+  } else if (confidencePercent >= 50) {
+    status = 'medium'
+    statusColor = '#EAB308' // Yellow
+  } else if (confidencePercent >= 25) {
+    status = 'low'
+    statusColor = '#F97316' // Orange
+  } else {
+    status = 'critical'
+    statusColor = '#DC2626' // Red
+  }
+
+  // Generate recommendations
+  const recommendations = []
+
+  if (factors[0].score < 20) {
+    recommendations.push({
+      priority: 'high',
+      category: 'velocity',
+      title: 'Stabilize velocity',
+      description: 'Velocity is inconsistent. Focus on predictable sprint planning and reducing interruptions.'
+    })
+  }
+
+  if (factors[1].score < 20) {
+    recommendations.push({
+      priority: 'high',
+      category: 'scope',
+      title: 'Control scope creep',
+      description: `Scope has grown by ${burnupData.scopeGrowthPercent}%. Implement stricter change control and prioritization.`
+    })
+  }
+
+  if (factors[3].score < 10) {
+    recommendations.push({
+      priority: 'critical',
+      category: 'blockers',
+      title: 'Address blockers immediately',
+      description: `${blockers.length} blocker(s) are impacting delivery. Escalate and resolve critical impediments.`
+    })
+  }
+
+  if (factors[4].score < 5) {
+    recommendations.push({
+      priority: 'high',
+      category: 'velocity',
+      title: 'Investigate velocity decline',
+      description: 'Velocity is declining. Review team capacity, technical debt, and process bottlenecks.'
+    })
+  }
+
+  if (completionRate < 50 && burnupData.remaining > 0) {
+    recommendations.push({
+      priority: 'medium',
+      category: 'progress',
+      title: 'Accelerate delivery pace',
+      description: `${burnupData.remaining} items remaining. Consider increasing team capacity or reducing scope.`
+    })
+  }
+
+  return {
+    score: confidencePercent,
+    status,
+    statusColor,
+    factors,
+    recommendations,
+    breakdown: {
+      totalScore,
+      maxScore,
+      completionRate: Math.round(completionRate),
+      blockerCount: blockers.length,
+      scopeGrowth: burnupData.scopeGrowthPercent,
+      velocityTrend: trend
+    }
+  }
+}
+
+/**
  * Get current active sprint based on today's date
  * Returns the iteration where today falls between start_date and due_date
  */
