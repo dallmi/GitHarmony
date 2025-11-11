@@ -6,7 +6,7 @@ import { exportExecutiveDashboardToPDF } from '../utils/pdfExportUtils'
 import { useIterationFilter } from '../contexts/IterationFilterContext'
 import HealthScoreConfigModal from './HealthScoreConfigModal'
 import { isBlocker } from '../services/metricsService'
-import { calculateBurnupData, calculateVelocityTrendHistory, calculateDeliveryConfidence, calculateMonthOverMonthMetrics } from '../services/velocityService'
+import { calculateBurnupData, calculateVelocity, calculateVelocityTrend, getCurrentSprint, calculateDeliveryConfidence, calculateMonthOverMonthMetrics } from '../services/velocityService'
 import { getCycleTimeStats } from '../services/cycleTimeService'
 import { getRecentDecisions, getDecisionsStats } from '../services/decisionsService'
 import { getTeamPerformanceSummary } from '../services/teamPerformanceService'
@@ -119,10 +119,38 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
     return calculateBurnupData(issues)
   }, [issues])
 
-  // Calculate 6-month velocity trend
+  // Calculate iteration-based velocity trend (last 6 iterations)
   const velocityTrend = useMemo(() => {
     if (!issues || issues.length === 0) return null
-    return calculateVelocityTrendHistory(issues, 6)
+
+    const velocityData = calculateVelocity(issues)
+    if (velocityData.length === 0) return null
+
+    const currentSprint = getCurrentSprint(issues)
+    const trend = calculateVelocityTrend(velocityData, currentSprint)
+
+    // Get last 6 sprints for display
+    let currentIndex = velocityData.length - 1
+    if (currentSprint) {
+      const foundIndex = velocityData.findIndex(s => s.sprint === currentSprint)
+      if (foundIndex >= 0) currentIndex = foundIndex
+    }
+
+    const startIndex = Math.max(0, currentIndex - 5)
+    const last6Sprints = velocityData.slice(startIndex, currentIndex + 1)
+
+    // Calculate averages and stats
+    const avgVelocity = last6Sprints.reduce((sum, s) => sum + s.velocity, 0) / last6Sprints.length
+    const peakVelocity = Math.max(...last6Sprints.map(s => s.velocity))
+    const lowVelocity = Math.min(...last6Sprints.map(s => s.velocity))
+
+    return {
+      avgVelocity: Math.round(avgVelocity),
+      trend: trend.longTerm,
+      peakVelocity,
+      lowVelocity,
+      last6Sprints
+    }
   }, [issues])
 
   // Calculate cycle time metrics
@@ -387,11 +415,11 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
           </div>
         )}
 
-        {/* 6-Month Velocity Trend */}
+        {/* Iteration-Based Velocity Trend */}
         {velocityTrend && (
           <div className="card">
             <h3 style={{ marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
-              Velocity Trend (6 Months)
+              Velocity Trend (6 Iterations)
             </h3>
             <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
               Historical delivery performance
@@ -403,43 +431,81 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                 Average Velocity
               </div>
               <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--primary)' }}>
-                {velocityTrend.avgVelocityIssues}
+                {velocityTrend.avgVelocity}
               </div>
               <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                issues per 2-week period
+                issues per iteration
               </div>
             </div>
+
+            {/* Mini Sprint Velocity Chart */}
+            {velocityTrend.last6Sprints && velocityTrend.last6Sprints.length > 0 && (
+              <div style={{ marginBottom: '16px', height: '80px', display: 'flex', alignItems: 'flex-end', gap: '4px' }}>
+                {velocityTrend.last6Sprints.map((sprint, idx) => {
+                  const maxVelocity = Math.max(...velocityTrend.last6Sprints.map(s => s.velocity))
+                  const heightPercent = maxVelocity > 0 ? (sprint.velocity / maxVelocity) * 100 : 0
+                  const isLatest = idx === velocityTrend.last6Sprints.length - 1
+
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        flex: 1,
+                        height: `${heightPercent}%`,
+                        minHeight: '8px',
+                        background: isLatest ? 'var(--primary)' : '#93C5FD',
+                        borderRadius: '4px 4px 0 0',
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'flex-end',
+                        justifyContent: 'center',
+                        paddingBottom: '4px'
+                      }}
+                      title={`${sprint.sprint}: ${sprint.velocity} issues`}
+                    >
+                      <span style={{
+                        fontSize: '10px',
+                        fontWeight: '600',
+                        color: isLatest ? 'white' : '#1E40AF'
+                      }}>
+                        {sprint.velocity}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
 
             {/* Trend Indicator */}
             <div style={{
               padding: '12px',
-              background: velocityTrend.trendIssues >= 0 ? '#DCFCE7' : '#FEE2E2',
+              background: velocityTrend.trend >= 0 ? '#DCFCE7' : '#FEE2E2',
               borderRadius: '8px',
               marginBottom: '12px'
             }}>
               <div style={{
                 fontSize: '11px',
                 fontWeight: '600',
-                color: velocityTrend.trendIssues >= 0 ? '#166534' : '#991B1B',
+                color: velocityTrend.trend >= 0 ? '#166534' : '#991B1B',
                 marginBottom: '4px'
               }}>
-                {velocityTrend.trendIssues >= 0 ? '▲' : '▼'} {Math.abs(velocityTrend.trendIssues)}% Trend
+                {velocityTrend.trend >= 0 ? '▲' : '▼'} {Math.abs(velocityTrend.trend)}% Trend
               </div>
               <div style={{
                 fontSize: '11px',
-                color: velocityTrend.trendIssues >= 0 ? '#15803D' : '#DC2626'
+                color: velocityTrend.trend >= 0 ? '#15803D' : '#DC2626'
               }}>
-                {velocityTrend.trendIssues >= 0 ? 'Improving' : 'Declining'} compared to previous 3 months
+                {velocityTrend.trend >= 0 ? 'Improving' : 'Declining'} compared to previous 3 iterations
               </div>
             </div>
 
             {/* Peak and Low */}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-tertiary)' }}>
               <div>
-                <span style={{ fontWeight: '600' }}>Peak:</span> {velocityTrend.peakVelocityIssues}
+                <span style={{ fontWeight: '600' }}>Peak:</span> {velocityTrend.peakVelocity}
               </div>
               <div>
-                <span style={{ fontWeight: '600' }}>Low:</span> {velocityTrend.lowVelocityIssues}
+                <span style={{ fontWeight: '600' }}>Low:</span> {velocityTrend.lowVelocity}
               </div>
             </div>
           </div>
