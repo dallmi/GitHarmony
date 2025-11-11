@@ -740,18 +740,55 @@ export function calculateDeliveryConfidence(issues, targetDate = null, targetSco
   }
 
   // Factor 2: Scope Stability (25 points max)
-  // Less scope creep = higher confidence
+  // Measures whether the gap between scope and completion is growing (bad) or shrinking (good)
   const burnupData = calculateBurnupData(issues)
   let scopeStabilityScore = 0
+  let scopeStabilityDetail = ''
 
-  if (burnupData.scopeGrowthPercent <= 5) {
-    scopeStabilityScore = 25 // Minimal scope growth
-  } else if (burnupData.scopeGrowthPercent <= 15) {
-    scopeStabilityScore = 20 // Manageable scope growth
-  } else if (burnupData.scopeGrowthPercent <= 30) {
-    scopeStabilityScore = 10 // Significant scope growth
+  // Calculate gap trend: are we getting closer to done or falling behind?
+  if (burnupData.dataPoints && burnupData.dataPoints.length >= 2) {
+    const firstPoint = burnupData.dataPoints[0]
+    const lastPoint = burnupData.dataPoints[burnupData.dataPoints.length - 1]
+
+    const initialGap = firstPoint.remaining
+    const currentGap = lastPoint.remaining
+
+    // Calculate gap change - negative means gap is shrinking (good!)
+    const gapChange = currentGap - initialGap
+    const gapChangePercent = initialGap > 0 ? Math.round((gapChange / initialGap) * 100) : 0
+
+    // Score based on gap trend
+    if (gapChangePercent <= -20) {
+      scopeStabilityScore = 25 // Gap shrinking fast (excellent)
+      scopeStabilityDetail = `Gap shrinking: ${Math.abs(gapChangePercent)}% (${Math.abs(gapChange)} fewer items)`
+    } else if (gapChangePercent <= 0) {
+      scopeStabilityScore = 22 // Gap shrinking (very good)
+      scopeStabilityDetail = `Gap shrinking: ${Math.abs(gapChangePercent)}% (${Math.abs(gapChange)} fewer items)`
+    } else if (gapChangePercent <= 10) {
+      scopeStabilityScore = 18 // Small gap growth (acceptable)
+      scopeStabilityDetail = `Gap growing slowly: +${gapChangePercent}% (+${gapChange} items)`
+    } else if (gapChangePercent <= 25) {
+      scopeStabilityScore = 12 // Moderate gap growth (concerning)
+      scopeStabilityDetail = `Gap growing: +${gapChangePercent}% (+${gapChange} items)`
+    } else if (gapChangePercent <= 50) {
+      scopeStabilityScore = 6 // Significant gap growth (risky)
+      scopeStabilityDetail = `Gap growing significantly: +${gapChangePercent}% (+${gapChange} items)`
+    } else {
+      scopeStabilityScore = 0 // Excessive gap growth (critical)
+      scopeStabilityDetail = `Gap growing rapidly: +${gapChangePercent}% (+${gapChange} items)`
+    }
   } else {
-    scopeStabilityScore = 0 // Excessive scope creep
+    // Fallback to old logic if insufficient data points
+    if (burnupData.scopeGrowthPercent <= 5) {
+      scopeStabilityScore = 25
+    } else if (burnupData.scopeGrowthPercent <= 15) {
+      scopeStabilityScore = 20
+    } else if (burnupData.scopeGrowthPercent <= 30) {
+      scopeStabilityScore = 10
+    } else {
+      scopeStabilityScore = 0
+    }
+    scopeStabilityDetail = `Scope growth: ${burnupData.scopeGrowthPercent}% (+${burnupData.scopeGrowth} items)`
   }
 
   totalScore += scopeStabilityScore
@@ -761,8 +798,8 @@ export function calculateDeliveryConfidence(issues, targetDate = null, targetSco
     name: 'Scope Stability',
     score: scopeStabilityScore,
     maxScore: 25,
-    status: scopeStabilityScore >= 20 ? 'good' : scopeStabilityScore >= 10 ? 'warning' : 'risk',
-    detail: `Scope growth: ${burnupData.scopeGrowthPercent}% (+${burnupData.scopeGrowth} items)`
+    status: scopeStabilityScore >= 20 ? 'good' : scopeStabilityScore >= 12 ? 'warning' : 'risk',
+    detail: scopeStabilityDetail
   })
 
   // Factor 3: Completion Rate (20 points max)
@@ -890,12 +927,25 @@ export function calculateDeliveryConfidence(issues, targetDate = null, targetSco
   }
 
   if (factors[1].score < 20) {
-    recommendations.push({
-      priority: 'high',
-      category: 'scope',
-      title: 'Control scope creep',
-      description: `Scope has grown by ${burnupData.scopeGrowthPercent}%. Implement stricter change control and prioritization.`
-    })
+    // Use the new gap-based detail for recommendations
+    const scopeFactor = factors[1]
+    const isGapGrowing = scopeFactor.detail.includes('growing')
+
+    if (isGapGrowing) {
+      recommendations.push({
+        priority: 'high',
+        category: 'scope',
+        title: 'Address growing backlog',
+        description: scopeFactor.detail + '. New work is being added faster than completion. Consider increasing capacity or reducing scope.'
+      })
+    } else {
+      recommendations.push({
+        priority: 'medium',
+        category: 'scope',
+        title: 'Monitor scope stability',
+        description: scopeFactor.detail + '. Keep monitoring to ensure the gap continues to shrink.'
+      })
+    }
   }
 
   if (factors[3].score < 10) {
