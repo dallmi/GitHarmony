@@ -475,53 +475,55 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
               </div>
             </div>
 
-            {/* Mini Sprint Velocity Chart */}
+            {/* Mini Sprint Velocity Chart - Expanded */}
             {velocityTrend.last6Sprints && velocityTrend.last6Sprints.length > 0 && (
-              <div style={{ marginBottom: '12px', height: '120px', display: 'flex', alignItems: 'flex-end', gap: '4px' }}>
-                {velocityTrend.last6Sprints.map((sprint, idx) => {
-                  const maxVelocity = Math.max(...velocityTrend.last6Sprints.map(s => s.velocity))
-                  const heightPercent = maxVelocity > 0 ? (sprint.velocity / maxVelocity) * 100 : 0
-                  const isLatest = idx === velocityTrend.last6Sprints.length - 1
+              <>
+                <div style={{ marginBottom: '12px', height: '180px', display: 'flex', alignItems: 'flex-end', gap: '4px' }}>
+                  {velocityTrend.last6Sprints.map((sprint, idx) => {
+                    const maxVelocity = Math.max(...velocityTrend.last6Sprints.map(s => s.velocity))
+                    const heightPercent = maxVelocity > 0 ? (sprint.velocity / maxVelocity) * 100 : 0
+                    const isLatest = idx === velocityTrend.last6Sprints.length - 1
 
-                  return (
-                    <div
-                      key={idx}
-                      style={{
-                        flex: 1,
-                        height: `${heightPercent}%`,
-                        minHeight: '12px',
-                        background: isLatest ? '#2563EB' : '#93C5FD',
-                        borderRadius: '4px 4px 0 0',
-                        position: 'relative',
-                        display: 'flex',
-                        alignItems: 'flex-end',
-                        justifyContent: 'center',
-                        paddingBottom: '4px'
-                      }}
-                      title={`${sprint.sprint}: ${sprint.velocity} issues`}
-                    >
-                      <span style={{
-                        fontSize: '10px',
-                        fontWeight: '600',
-                        color: isLatest ? 'white' : '#1E40AF'
-                      }}>
-                        {sprint.velocity}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
+                    return (
+                      <div
+                        key={idx}
+                        style={{
+                          flex: 1,
+                          height: `${heightPercent}%`,
+                          minHeight: '12px',
+                          background: isLatest ? '#2563EB' : '#93C5FD',
+                          borderRadius: '4px 4px 0 0',
+                          position: 'relative',
+                          display: 'flex',
+                          alignItems: 'flex-end',
+                          justifyContent: 'center',
+                          paddingBottom: '4px'
+                        }}
+                        title={`${sprint.sprint}: ${sprint.velocity} issues`}
+                      >
+                        <span style={{
+                          fontSize: '10px',
+                          fontWeight: '600',
+                          color: isLatest ? 'white' : '#1E40AF'
+                        }}>
+                          {sprint.velocity}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Peak and Low - Moved to bottom */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                  <div>
+                    <span style={{ fontWeight: '600' }}>Low:</span> {velocityTrend.lowVelocity}
+                  </div>
+                  <div>
+                    <span style={{ fontWeight: '600' }}>Peak:</span> {velocityTrend.peakVelocity}
+                  </div>
+                </div>
+              </>
             )}
-
-            {/* Peak and Low */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-tertiary)' }}>
-              <div>
-                <span style={{ fontWeight: '600' }}>Low:</span> {velocityTrend.lowVelocity}
-              </div>
-              <div>
-                <span style={{ fontWeight: '600' }}>Peak:</span> {velocityTrend.peakVelocity}
-              </div>
-            </div>
           </div>
         )}
 
