@@ -479,21 +479,21 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
             {/* Trend Indicator */}
             <div style={{
               padding: '12px',
-              background: velocityTrend.trend >= 0 ? '#DCFCE7' : '#FEE2E2',
+              background: velocityTrend.trend >= 0 ? '#DCFCE7' : '#F3F4F6',
               borderRadius: '8px',
               marginBottom: '12px'
             }}>
               <div style={{
                 fontSize: '11px',
                 fontWeight: '600',
-                color: velocityTrend.trend >= 0 ? '#166534' : '#991B1B',
+                color: velocityTrend.trend >= 0 ? '#166534' : '#374151',
                 marginBottom: '4px'
               }}>
                 {velocityTrend.trend >= 0 ? '▲' : '▼'} {Math.abs(velocityTrend.trend)}% Trend
               </div>
               <div style={{
                 fontSize: '11px',
-                color: velocityTrend.trend >= 0 ? '#15803D' : '#DC2626'
+                color: velocityTrend.trend >= 0 ? '#15803D' : '#6B7280'
               }}>
                 {velocityTrend.trend >= 0 ? 'Improving' : 'Declining'} compared to previous 3 iterations
               </div>
