@@ -41,7 +41,7 @@ export function exportExecutiveDashboardToPDF(data) {
     @media print {
       body { margin: 0; }
       .page-break { page-break-before: always; }
-      @page { margin: 0.5in; }
+      @page { margin: 0.75in; }
     }
 
     body {
@@ -50,13 +50,13 @@ export function exportExecutiveDashboardToPDF(data) {
       color: #111827;
       max-width: 100%;
       margin: 0;
-      padding: 0;
+      padding: 20px;
     }
 
     .content-wrapper {
-      width: 100%;
+      max-width: 100%;
       padding: 0;
-      margin: 0;
+      margin: 0 auto;
     }
 
     h1 {
