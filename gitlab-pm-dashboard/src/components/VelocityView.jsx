@@ -24,7 +24,7 @@ export default function VelocityView({ issues: allIssues }) {
   // Toggle between issue count and story points
   const [viewMode, setViewMode] = useState('issues') // 'issues' or 'points'
   // Get velocity root cause analysis
-  const getVelocityRootCause = (velocityData, trend, avgVelocity, currentSprintName, allIssues) => {
+  const getVelocityRootCause = (velocityData, trend, avgVelocity, currentSprintName, allIssues, viewMode) => {
     if (!velocityData || velocityData.length < 2) return { causes: [], actions: [] }
 
     const causes = []
@@ -45,6 +45,13 @@ export default function VelocityView({ issues: allIssues }) {
     // Need at least 2 data points (current and previous)
     if (!recent || !previous) return { causes: [], actions: [] }
 
+    // Determine unit labels and values based on view mode
+    const unit = viewMode === 'points' ? 'point' : 'issue'
+    const units = viewMode === 'points' ? 'points' : 'issues'
+    const recentValue = viewMode === 'points' ? recent.velocityPoints : recent.velocity
+    const previousValue = viewMode === 'points' ? previous.velocityPoints : previous.velocity
+    const avgVelocityValue = viewMode === 'points' ? avgVelocity.byPoints : avgVelocity.byIssues
+
     // Check for capacity impact due to absences
     let capacityImpact = null
     if (allIssues && currentSprintName) {
@@ -60,12 +67,13 @@ export default function VelocityView({ issues: allIssues }) {
     if (trend < -10) {
       // Significant decline
       const dropPercent = Math.abs(trend)
+      const dropAmount = previousValue - recentValue
 
       causes.push({
         severity: 'critical',
         category: 'velocity-decline',
-        description: `Velocity declined by ${dropPercent}% (from ${previous.velocity} to ${recent.velocity} issues/sprint)`,
-        impact: `${previous.velocity - recent.velocity} fewer issues completed per sprint`
+        description: `Velocity declined by ${dropPercent}% (from ${previousValue} to ${recentValue} ${units}/sprint)`,
+        impact: `${dropAmount} fewer ${dropAmount !== 1 ? units : unit} completed per sprint`
       })
 
       // Check if capacity reduction due to absences explains the decline
@@ -124,11 +132,13 @@ export default function VelocityView({ issues: allIssues }) {
       })
     } else if (trend > 10) {
       // Improving velocity
+      const increaseAmount = recentValue - previousValue
+
       causes.push({
         severity: 'info',
         category: 'velocity-improvement',
-        description: `Velocity improved by ${trend}% (from ${previous.velocity} to ${recent.velocity} issues/sprint)`,
-        impact: `${recent.velocity - previous.velocity} more issues completed per sprint`
+        description: `Velocity improved by ${trend}% (from ${previousValue} to ${recentValue} ${units}/sprint)`,
+        impact: `${increaseAmount} more ${increaseAmount !== 1 ? units : unit} completed per sprint`
       })
 
       if (recent.completionRate > 90) {
@@ -154,26 +164,27 @@ export default function VelocityView({ issues: allIssues }) {
       })
     } else {
       // Stable velocity
-      const avgVelocityValue = typeof avgVelocity === 'object' ? avgVelocity.byIssues : avgVelocity
-
       causes.push({
         severity: 'info',
         category: 'velocity-stable',
-        description: `Velocity stable at ~${avgVelocityValue} issues/sprint`,
+        description: `Velocity stable at ~${avgVelocityValue} ${units}/sprint`,
         impact: 'Predictable delivery rate'
       })
 
       if (avgVelocityValue < 5 && recent.totalIssues > 10) {
+        const totalItems = viewMode === 'points' ? recent.totalPoints : recent.totalIssues
         causes.push({
           severity: 'warning',
           category: 'low-velocity',
-          description: `Low velocity despite ${recent.totalIssues} issues in sprint`,
-          impact: 'Team may be overloaded or issues too large'
+          description: `Low velocity despite ${totalItems} ${totalItems !== 1 ? units : unit} in sprint`,
+          impact: 'Team may be overloaded or work items too large'
         })
         actions.push({
           priority: 'medium',
-          title: 'Break down issues',
-          description: 'Split large issues into smaller chunks (aim for 1-3 day issues)',
+          title: 'Break down work items',
+          description: viewMode === 'points'
+            ? 'Split large stories into smaller chunks (aim for 1-5 point stories)'
+            : 'Split large issues into smaller chunks (aim for 1-3 day issues)',
           estimatedImpact: 'Increase throughput and visibility'
         })
       }
@@ -373,7 +384,7 @@ export default function VelocityView({ issues: allIssues }) {
 
       {/* Velocity Root Cause Analysis */}
       {(() => {
-        const { causes, actions } = getVelocityRootCause(velocityData, trend, avgVelocity, currentSprint, issues)
+        const { causes, actions } = getVelocityRootCause(velocityData, trend, avgVelocity, currentSprint, issues, viewMode)
 
         if (causes.length === 0) return null
 
