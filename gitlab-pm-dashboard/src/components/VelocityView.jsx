@@ -52,6 +52,9 @@ export default function VelocityView({ issues: allIssues }) {
     const previousValue = viewMode === 'points' ? previous.velocityPoints : previous.velocity
     const avgVelocityValue = viewMode === 'points' ? avgVelocity.byPoints : avgVelocity.byIssues
 
+    // Extract short-term trend for analysis (handle both object and number)
+    const trendValue = typeof trend === 'object' ? trend.shortTerm : trend
+
     // Check for capacity impact due to absences
     let capacityImpact = null
     if (allIssues && currentSprintName) {
@@ -64,9 +67,9 @@ export default function VelocityView({ issues: allIssues }) {
     }
 
     // Analyze velocity drop
-    if (trend < -10) {
+    if (trendValue < -10) {
       // Significant decline
-      const dropPercent = Math.abs(trend)
+      const dropPercent = Math.abs(trendValue)
       const dropAmount = previousValue - recentValue
 
       causes.push({
@@ -130,14 +133,14 @@ export default function VelocityView({ issues: allIssues }) {
         description: 'Review issues for blockers, dependencies, or scope creep',
         estimatedImpact: 'Identify and remove impediments'
       })
-    } else if (trend > 10) {
+    } else if (trendValue > 10) {
       // Improving velocity
       const increaseAmount = recentValue - previousValue
 
       causes.push({
         severity: 'info',
         category: 'velocity-improvement',
-        description: `Velocity improved by ${trend}% (from ${previousValue} to ${recentValue} ${units}/sprint)`,
+        description: `Velocity improved by ${trendValue}% (from ${previousValue} to ${recentValue} ${units}/sprint)`,
         impact: `${increaseAmount} more ${increaseAmount !== 1 ? units : unit} completed per sprint`
       })
 
@@ -256,7 +259,13 @@ export default function VelocityView({ issues: allIssues }) {
     return { color: '#D97706', icon: '→', label: 'Stable' }
   }
 
-  const trendDisplay = getTrendDisplay(trend)
+  // Handle trend being either an object or a number (backwards compatibility)
+  const shortTerm = typeof trend === 'object' ? trend.shortTerm : trend
+  const longTerm = typeof trend === 'object' ? trend.longTerm : 0
+  const hasLongTerm = typeof trend === 'object' && velocityData.length >= 4
+
+  const shortTermDisplay = getTrendDisplay(shortTerm)
+  const longTermDisplay = getTrendDisplay(longTerm)
 
   // Calculate max values for chart scaling based on view mode
   const maxVelocity = Math.max(...velocityData.map((s) => viewMode === 'points' ? s.velocityPoints : s.velocity), 10)
@@ -360,13 +369,24 @@ export default function VelocityView({ issues: allIssues }) {
 
         <div className="card">
           <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>Velocity Trend</div>
-          <div style={{ fontSize: '32px', fontWeight: '600', color: trendDisplay.color, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>{trendDisplay.icon}</span>
-            <span>{Math.abs(trend)}%</span>
+          {/* Short-term trend (primary display) */}
+          <div style={{ fontSize: '32px', fontWeight: '600', color: shortTermDisplay.color, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>{shortTermDisplay.icon}</span>
+            <span>{Math.abs(shortTerm)}%</span>
           </div>
-          <div style={{ fontSize: '12px', color: trendDisplay.color, marginTop: '4px' }}>
-            {trendDisplay.label}
+          <div style={{ fontSize: '12px', color: shortTermDisplay.color, marginTop: '4px' }}>
+            {shortTermDisplay.label} (Sprint-to-Sprint)
           </div>
+          {/* Long-term trend (if available) */}
+          {hasLongTerm && (
+            <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #E5E7EB' }}>
+              <span style={{ fontWeight: '600' }}>Long-term: </span>
+              <span style={{ color: longTermDisplay.color, fontWeight: '600' }}>
+                {longTermDisplay.icon} {Math.abs(longTerm)}%
+              </span>
+              <span> ({longTermDisplay.label})</span>
+            </div>
+          )}
         </div>
 
         <div className="card">

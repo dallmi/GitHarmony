@@ -148,11 +148,15 @@ export function calculateAverageVelocityLegacy(velocityData, lastNSprints = 3) {
 
 /**
  * Calculate velocity trend (positive = improving, negative = declining)
+ * Returns both short-term (sprint-to-sprint) and long-term (moving average) trends
  * @param {Array} velocityData - Array of sprint velocity data
  * @param {string} currentSprintName - Optional: name of current sprint to use instead of most recent
+ * @returns {Object} { shortTerm, longTerm } - Both trend percentages
  */
 export function calculateVelocityTrend(velocityData, currentSprintName = null) {
-  if (!velocityData || velocityData.length < 2) return 0
+  if (!velocityData || velocityData.length < 2) {
+    return { shortTerm: 0, longTerm: 0 }
+  }
 
   // Find the current sprint index (to avoid using future sprints)
   let currentIndex = velocityData.length - 1
@@ -164,15 +168,53 @@ export function calculateVelocityTrend(velocityData, currentSprintName = null) {
   }
 
   // Need at least one previous sprint
-  if (currentIndex < 1) return 0
+  if (currentIndex < 1) {
+    return { shortTerm: 0, longTerm: 0 }
+  }
 
+  // SHORT-TERM TREND: Current sprint vs previous sprint
   const currentSprint = velocityData[currentIndex]
   const previousSprint = velocityData[currentIndex - 1]
 
-  // Calculate trend: (current - previous) / previous * 100
-  if (previousSprint.velocity === 0) return 0
+  let shortTerm = 0
+  if (previousSprint.velocity > 0) {
+    shortTerm = Math.round(((currentSprint.velocity - previousSprint.velocity) / previousSprint.velocity) * 100)
+  }
 
-  return Math.round(((currentSprint.velocity - previousSprint.velocity) / previousSprint.velocity) * 100)
+  // LONG-TERM TREND: Average of last 3 sprints vs average of 3 sprints before that
+  let longTerm = 0
+
+  // Need at least 4 sprints for long-term trend (2 groups of 2+ sprints)
+  if (currentIndex >= 3) {
+    // Recent 3 sprints (including current)
+    const recentStart = Math.max(0, currentIndex - 2)
+    const recentSprints = velocityData.slice(recentStart, currentIndex + 1)
+    const recentAvg = recentSprints.reduce((sum, s) => sum + s.velocity, 0) / recentSprints.length
+
+    // Previous 3 sprints (before the recent group)
+    const previousStart = Math.max(0, recentStart - 3)
+    const previousEnd = recentStart
+    const previousSprints = velocityData.slice(previousStart, previousEnd)
+
+    if (previousSprints.length > 0) {
+      const previousAvg = previousSprints.reduce((sum, s) => sum + s.velocity, 0) / previousSprints.length
+
+      if (previousAvg > 0) {
+        longTerm = Math.round(((recentAvg - previousAvg) / previousAvg) * 100)
+      }
+    }
+  }
+
+  return { shortTerm, longTerm }
+}
+
+/**
+ * Legacy function for backwards compatibility
+ * Returns only the short-term trend as a number
+ */
+export function calculateVelocityTrendLegacy(velocityData, currentSprintName = null) {
+  const result = calculateVelocityTrend(velocityData, currentSprintName)
+  return typeof result === 'object' ? result.shortTerm : result
 }
 
 /**
