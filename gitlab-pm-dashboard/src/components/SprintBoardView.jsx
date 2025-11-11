@@ -12,14 +12,6 @@ import {
 export default function SprintBoardView({ issues }) {
   const [expandedSprint, setExpandedSprint] = useState(null)
   const sprints = useMemo(() => {
-    // Debug: Log total issues received
-    console.log('SprintBoardView: Received issues:', {
-      total: issues.length,
-      withIteration: issues.filter(i => i.iteration).length,
-      withSprintLabel: issues.filter(i => getSprintFromLabels(i.labels, null)).length,
-      projects: [...new Set(issues.map(i => i._projectName || 'unknown'))]
-    })
-
     // Build map of iteration name to start date for sorting
     const iterationDates = new Map()
     issues.forEach(issue => {
@@ -35,11 +27,8 @@ export default function SprintBoardView({ issues }) {
       issues.map(i => getSprintFromLabels(i.labels, i.iteration))
     )
 
-    const sprints = Array.from(sprintSet).filter(Boolean)
-    console.log('SprintBoardView: Found sprints:', sprints)
-
     // Sort by start date if available, otherwise alphabetically
-    return sprints.sort((a, b) => {
+    return Array.from(sprintSet).filter(Boolean).sort((a, b) => {
       const dateA = iterationDates.get(a)
       const dateB = iterationDates.get(b)
 
