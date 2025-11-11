@@ -1,11 +1,13 @@
-import React from 'react'
+import React, { useState } from 'react'
 
 /**
- * Lightweight SVG-based Burnup Chart
- * Shows total scope vs completed work over time
+ * Interactive SVG-based Burnup Chart
+ * Shows total scope vs completed work over time with tooltips
  * No external chart library required
  */
 export default function BurnupChart({ burnupData, width = 600, height = 300 }) {
+  const [hoveredPoint, setHoveredPoint] = useState(null)
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
   if (!burnupData || !burnupData.dataPoints || burnupData.dataPoints.length === 0) {
     return (
       <div style={{
@@ -198,6 +200,119 @@ export default function BurnupChart({ burnupData, width = 600, height = 300 }) {
       >
         Issue Count
       </text>
+
+      {/* Interactive Data Points */}
+      {dataPoints.map((point, i) => {
+        const x = xScale(i)
+        const yScope = yScale(point.totalScope)
+        const yCompleted = yScale(point.completed)
+        const isHovered = hoveredPoint === i
+
+        return (
+          <g key={`point-${i}`}>
+            {/* Invisible larger hit area for easier hovering */}
+            <rect
+              x={x - 10}
+              y={padding.top}
+              width={20}
+              height={chartHeight}
+              fill="transparent"
+              style={{ cursor: 'pointer' }}
+              onMouseEnter={(e) => {
+                setHoveredPoint(i)
+                const rect = e.currentTarget.getBoundingClientRect()
+                setTooltipPos({ x: rect.left + 10, y: rect.top })
+              }}
+              onMouseLeave={() => setHoveredPoint(null)}
+            />
+
+            {/* Hover highlight line */}
+            {isHovered && (
+              <line
+                x1={x}
+                y1={padding.top}
+                x2={x}
+                y2={padding.top + chartHeight}
+                stroke="#94A3B8"
+                strokeWidth="1"
+                strokeDasharray="4,4"
+                pointerEvents="none"
+              />
+            )}
+
+            {/* Scope point */}
+            <circle
+              cx={x}
+              cy={yScope}
+              r={isHovered ? 5 : 3}
+              fill="#EF4444"
+              stroke="white"
+              strokeWidth="2"
+              style={{
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                pointerEvents: 'none'
+              }}
+            />
+
+            {/* Completed point */}
+            <circle
+              cx={x}
+              cy={yCompleted}
+              r={isHovered ? 5 : 3}
+              fill="#10B981"
+              stroke="white"
+              strokeWidth="2"
+              style={{
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                pointerEvents: 'none'
+              }}
+            />
+          </g>
+        )
+      })}
+
+      {/* Tooltip */}
+      {hoveredPoint !== null && (
+        <g>
+          <foreignObject
+            x={xScale(hoveredPoint) + 10}
+            y={padding.top + 10}
+            width={150}
+            height={100}
+          >
+            <div
+              style={{
+                background: 'rgba(17, 24, 39, 0.95)',
+                color: 'white',
+                padding: '10px 12px',
+                borderRadius: '6px',
+                fontSize: '11px',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.2)',
+                pointerEvents: 'none'
+              }}
+            >
+              <div style={{ fontWeight: '600', marginBottom: '6px', fontSize: '12px' }}>
+                {new Date(dataPoints[hoveredPoint].date).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </div>
+              <div style={{ marginBottom: '4px', color: '#FCA5A5' }}>
+                <strong>Total Scope:</strong> {dataPoints[hoveredPoint].totalScope}
+              </div>
+              <div style={{ marginBottom: '4px', color: '#6EE7B7' }}>
+                <strong>Completed:</strong> {dataPoints[hoveredPoint].completed}
+              </div>
+              <div style={{ color: '#D1D5DB' }}>
+                <strong>Remaining:</strong> {dataPoints[hoveredPoint].totalScope - dataPoints[hoveredPoint].completed}
+              </div>
+            </div>
+          </foreignObject>
+        </g>
+      )}
     </svg>
   )
 }

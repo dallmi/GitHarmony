@@ -10,6 +10,8 @@ import { isBlocker } from '../services/metricsService'
 import { calculateBurnupData, calculateVelocityTrendHistory, calculateDeliveryConfidence, calculateMonthOverMonthMetrics } from '../services/velocityService'
 import { getCycleTimeStats } from '../services/cycleTimeService'
 import { getRecentDecisions, getDecisionsStats } from '../services/decisionsService'
+import { getTeamPerformanceSummary } from '../services/teamPerformanceService'
+import { getForecastAccuracyStats, getForecastAccuracyTrends, calculateForecastReliability, getRecentForecasts } from '../services/forecastAccuracyService'
 import BurnupChart from './BurnupChart'
 
 /**
@@ -149,6 +151,21 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
 
   const decisionsStats = useMemo(() => {
     return getDecisionsStats()
+  }, [])
+
+  // Get team performance summary
+  const teamPerformance = useMemo(() => {
+    if (!issues || issues.length === 0) return null
+    return getTeamPerformanceSummary(issues, 30)
+  }, [issues])
+
+  // Get forecast accuracy data
+  const forecastAccuracy = useMemo(() => {
+    const stats = getForecastAccuracyStats()
+    const trends = getForecastAccuracyTrends(6)
+    const reliability = calculateForecastReliability()
+    const recent = getRecentForecasts(5)
+    return { stats, trends, reliability, recent }
   }, [])
 
   const handleExportCSV = () => {
@@ -612,6 +629,167 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
         </div>
       )}
 
+      {/* Forecast Accuracy Tracking */}
+      {forecastAccuracy.reliability.score !== null && (
+        <div className="card" style={{ marginBottom: '30px', background: 'linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%)', border: '2px solid #BFDBFE' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '4px' }}>
+                Forecast Accuracy Tracking
+              </h3>
+              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                How reliable are our predictions? Historical performance
+              </div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                fontSize: '48px',
+                fontWeight: '700',
+                color: forecastAccuracy.reliability.score >= 80 ? '#16A34A' : forecastAccuracy.reliability.score >= 60 ? '#EAB308' : '#DC2626'
+              }}>
+                {forecastAccuracy.reliability.score}
+              </div>
+              <div style={{
+                fontSize: '12px',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                color: forecastAccuracy.reliability.score >= 80 ? '#16A34A' : forecastAccuracy.reliability.score >= 60 ? '#EAB308' : '#DC2626',
+                letterSpacing: '0.5px'
+              }}>
+                Reliability Score
+              </div>
+            </div>
+          </div>
+
+          {/* Key Stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '20px' }}>
+            <div style={{ padding: '12px', background: 'white', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                Total Forecasts
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--primary)' }}>
+                {forecastAccuracy.stats.completedForecasts}
+              </div>
+            </div>
+            <div style={{ padding: '12px', background: 'white', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                On Time
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: '#16A34A' }}>
+                {forecastAccuracy.stats.onTimePercentage}%
+              </div>
+            </div>
+            <div style={{ padding: '12px', background: 'white', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                Avg Days Off
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--warning)' }}>
+                {forecastAccuracy.stats.avgDaysOff}
+              </div>
+            </div>
+            <div style={{ padding: '12px', background: 'white', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                Early
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: '#3B82F6' }}>
+                {forecastAccuracy.stats.earlyCount}
+              </div>
+            </div>
+            <div style={{ padding: '12px', background: 'white', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                Late
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: '#DC2626' }}>
+                {forecastAccuracy.stats.lateCount}
+              </div>
+            </div>
+          </div>
+
+          {/* Reliability Factors */}
+          <div style={{ marginBottom: '20px' }}>
+            <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>
+              Reliability Factors
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+              {forecastAccuracy.reliability.factors.map((factor, index) => {
+                const percentage = Math.round((factor.points / factor.maxPoints) * 100)
+                return (
+                  <div
+                    key={index}
+                    style={{
+                      padding: '12px',
+                      background: 'white',
+                      borderRadius: '8px',
+                      border: '1px solid #E5E7EB'
+                    }}
+                  >
+                    <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '6px' }}>
+                      {factor.name}
+                    </div>
+                    <div style={{
+                      fontSize: '20px',
+                      fontWeight: '600',
+                      color: percentage >= 80 ? '#16A34A' : percentage >= 60 ? '#EAB308' : '#DC2626',
+                      marginBottom: '4px'
+                    }}>
+                      {percentage}%
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+                      {factor.detail}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Recommendation */}
+          <div style={{
+            padding: '12px 16px',
+            background: 'white',
+            borderRadius: '8px',
+            border: '1px solid #BFDBFE'
+          }}>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: '#1E40AF', marginBottom: '4px' }}>
+              Recommendation
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+              {forecastAccuracy.reliability.recommendation}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Forecast Accuracy - Insufficient Data State */}
+      {forecastAccuracy.reliability.score === null && (
+        <div className="card" style={{ marginBottom: '30px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '4px' }}>
+                Forecast Accuracy Tracking
+              </h3>
+              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                Track prediction accuracy to build confidence in forecasting
+              </div>
+            </div>
+          </div>
+          <div style={{
+            padding: '40px',
+            textAlign: 'center',
+            background: 'var(--bg-secondary)',
+            borderRadius: '8px'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.3 }}>📊</div>
+            <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              {forecastAccuracy.reliability.reason}
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
+              {forecastAccuracy.reliability.recommendation}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Month-over-Month Comparison & Recent Decisions */}
       <div className="grid grid-2" style={{ gap: '30px', marginBottom: '30px' }}>
         {/* Month-over-Month Metrics */}
@@ -821,6 +999,261 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
           )}
         </div>
       </div>
+
+      {/* Team Performance Section */}
+      {teamPerformance && (
+        <div className="card" style={{ marginBottom: '30px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '4px' }}>
+                Team Performance & Workload
+              </h3>
+              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                Individual contributions, workload distribution, and burnout risks
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--primary)' }}>
+                {teamPerformance.summary.activeMembers}
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                active members
+              </div>
+            </div>
+          </div>
+
+          {/* Summary Stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
+            <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                Completed (30d)
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--success)' }}>
+                {teamPerformance.summary.totalCompleted}
+              </div>
+            </div>
+            <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                Story Points
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--primary)' }}>
+                {teamPerformance.summary.totalStoryPoints}
+              </div>
+            </div>
+            <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                Avg per Member
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--info)' }}>
+                {teamPerformance.summary.avgVelocityPerMember}
+              </div>
+            </div>
+            <div style={{ padding: '12px', background: teamPerformance.summary.membersAtRisk > 0 ? '#FEE2E2' : 'var(--bg-secondary)', borderRadius: '8px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                At Risk
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: teamPerformance.summary.membersAtRisk > 0 ? '#DC2626' : 'var(--success)' }}>
+                {teamPerformance.summary.membersAtRisk}
+              </div>
+            </div>
+          </div>
+
+          {/* Top Contributors */}
+          <div style={{ marginBottom: '24px' }}>
+            <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: 'var(--text-primary)' }}>
+              Top Contributors (Last 30 Days)
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
+              {teamPerformance.topContributors.slice(0, 5).map((contributor, index) => (
+                <div
+                  key={contributor.name}
+                  style={{
+                    padding: '12px',
+                    background: index === 0 ? 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)' : 'var(--bg-secondary)',
+                    borderRadius: '8px',
+                    border: index === 0 ? '2px solid #F59E0B' : '1px solid var(--border-light)',
+                    position: 'relative'
+                  }}
+                >
+                  {index === 0 && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-8px',
+                      right: '-8px',
+                      width: '24px',
+                      height: '24px',
+                      background: '#F59E0B',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '14px'
+                    }}>
+                      🏆
+                    </div>
+                  )}
+                  <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
+                    {contributor.name}
+                  </div>
+                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#16A34A', marginBottom: '4px' }}>
+                    {contributor.issuesCompleted}
+                  </div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginBottom: '6px' }}>
+                    issues completed
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    {contributor.storyPoints} pts · {contributor.avgCycleTime}d avg
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Burnout Risks Alert */}
+          {teamPerformance.burnoutRisks.length > 0 && (
+            <div style={{
+              padding: '16px',
+              background: 'linear-gradient(135deg, #FEE2E2 0%, #FEF2F2 100%)',
+              border: '2px solid #DC2626',
+              borderRadius: '8px',
+              marginBottom: '24px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                <div style={{
+                  fontSize: '24px',
+                  width: '40px',
+                  height: '40px',
+                  background: '#DC2626',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  ⚠️
+                </div>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#991B1B' }}>
+                    Burnout Risk Alert
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#DC2626' }}>
+                    {teamPerformance.burnoutRisks.length} team member{teamPerformance.burnoutRisks.length !== 1 ? 's' : ''} at risk
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {teamPerformance.burnoutRisks.map(risk => (
+                  <div
+                    key={risk.name}
+                    style={{
+                      padding: '12px',
+                      background: 'white',
+                      borderRadius: '6px',
+                      borderLeft: `4px solid ${risk.riskLevel === 'high' ? '#DC2626' : risk.riskLevel === 'medium' ? '#F97316' : '#EAB308'}`
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                        {risk.name}
+                      </div>
+                      <div style={{
+                        fontSize: '10px',
+                        fontWeight: '700',
+                        textTransform: 'uppercase',
+                        color: risk.riskLevel === 'high' ? '#DC2626' : risk.riskLevel === 'medium' ? '#F97316' : '#EAB308',
+                        padding: '2px 8px',
+                        background: risk.riskLevel === 'high' ? '#FEE2E2' : risk.riskLevel === 'medium' ? '#FFEDD5' : '#FEF3C7',
+                        borderRadius: '4px'
+                      }}>
+                        {risk.riskLevel} risk
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                      {risk.role} · {risk.openIssues} open · {risk.storyPoints} pts
+                      {risk.overdueIssues > 0 && ` · ${risk.overdueIssues} overdue`}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#DC2626' }}>
+                      <strong>Factors:</strong> {risk.riskFactors.join(', ')}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Workload Distribution */}
+          <div>
+            <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: 'var(--text-primary)' }}>
+              Current Workload Distribution
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {teamPerformance.workloadDistribution.slice(0, 8).map(member => {
+                const isOverloaded = member.openIssues > 10 || member.storyPoints > 30
+                return (
+                  <div
+                    key={member.name}
+                    style={{
+                      padding: '10px 12px',
+                      background: member.isOnLeave ? '#F3F4F6' : isOverloaded ? '#FEF3C7' : 'var(--bg-secondary)',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      opacity: member.isOnLeave ? 0.6 : 1
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                        {member.name} {member.isOnLeave && '(On Leave)'}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                        {member.role}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '18px', fontWeight: '600', color: isOverloaded ? '#D97706' : 'var(--primary)' }}>
+                          {member.openIssues}
+                        </div>
+                        <div style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>
+                          open
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--info)' }}>
+                          {member.storyPoints}
+                        </div>
+                        <div style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>
+                          points
+                        </div>
+                      </div>
+                      {member.overdueIssues > 0 && (
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '18px', fontWeight: '600', color: '#DC2626' }}>
+                            {member.overdueIssues}
+                          </div>
+                          <div style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>
+                            overdue
+                          </div>
+                        </div>
+                      )}
+                      {member.avgIssueAge > 0 && (
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                            {member.avgIssueAge}d
+                          </div>
+                          <div style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>
+                            avg age
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-2" style={{ gap: '30px', marginBottom: '30px' }}>
         {/* Active Initiatives */}
