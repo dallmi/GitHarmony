@@ -21,15 +21,28 @@ export default function VelocityView({ issues: allIssues }) {
   // Toggle between issue count and story points
   const [viewMode, setViewMode] = useState('issues') // 'issues' or 'points'
   // Get velocity root cause analysis
-  const getVelocityRootCause = (velocityData, trend, avgVelocity) => {
+  const getVelocityRootCause = (velocityData, trend, avgVelocity, currentSprintName) => {
     if (!velocityData || velocityData.length < 2) return { causes: [], actions: [] }
 
     const causes = []
     const actions = []
 
     const recent3 = velocityData.slice(-3)
-    const recent = velocityData[velocityData.length - 1]
-    const previous = velocityData[velocityData.length - 2]
+
+    // Use current sprint if specified, otherwise fall back to most recent
+    let recentIndex = velocityData.length - 1
+    if (currentSprintName) {
+      const currentIndex = velocityData.findIndex(s => s.sprint === currentSprintName)
+      if (currentIndex >= 0) {
+        recentIndex = currentIndex
+      }
+    }
+
+    const recent = velocityData[recentIndex]
+    const previous = velocityData[recentIndex - 1]
+
+    // Need at least 2 data points (current and previous)
+    if (!recent || !previous) return { causes: [], actions: [] }
 
     // Analyze velocity drop
     if (trend < -10) {
@@ -327,7 +340,7 @@ export default function VelocityView({ issues: allIssues }) {
 
       {/* Velocity Root Cause Analysis */}
       {(() => {
-        const { causes, actions } = getVelocityRootCause(velocityData, trend, avgVelocity)
+        const { causes, actions } = getVelocityRootCause(velocityData, trend, avgVelocity, currentSprint)
 
         if (causes.length === 0) return null
 
