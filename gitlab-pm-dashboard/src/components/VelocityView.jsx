@@ -634,11 +634,14 @@ export default function VelocityView({ issues: allIssues }) {
                                 const idealCompleted = burndown.total - (idealAtSameDay ? idealAtSameDay.remaining : 0)
                                 const idealPercentComplete = ((idealCompleted / burndown.total) * 100).toFixed(0)
 
+                                const unit = viewMode === 'points' ? 'point' : 'issue'
+                                const units = viewMode === 'points' ? 'points' : 'issues'
+
                                 let statusText = ''
                                 if (diff > 0) {
-                                  statusText = `Behind by ${diff} issue${diff > 1 ? 's' : ''}`
+                                  statusText = `Behind by ${diff} ${diff > 1 ? units : unit}`
                                 } else if (diff < 0) {
-                                  statusText = `Ahead by ${Math.abs(diff)} issue${Math.abs(diff) > 1 ? 's' : ''}`
+                                  statusText = `Ahead by ${Math.abs(diff)} ${Math.abs(diff) > 1 ? units : unit}`
                                 } else {
                                   statusText = 'On track'
                                 }
@@ -646,7 +649,7 @@ export default function VelocityView({ issues: allIssues }) {
                                 const tooltip = [
                                   `${dayName}, ${dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`,
                                   ``,
-                                  `Remaining: ${point.remaining} of ${burndown.total} issues (${percentComplete}% complete)`,
+                                  `Remaining: ${point.remaining} of ${burndown.total} ${units} (${percentComplete}% complete)`,
                                   `Ideal: ${idealAtSameDay ? idealAtSameDay.remaining : 0} remaining (${idealPercentComplete}% complete)`,
                                   ``,
                                   `Status: ${statusText}`
@@ -921,10 +924,27 @@ export default function VelocityView({ issues: allIssues }) {
             <thead>
               <tr style={{ borderBottom: '2px solid #E5E7EB' }}>
                 <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>Sprint</th>
-                <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>Total Issues</th>
-                <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>Completed</th>
-                <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>Open</th>
-                <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>Velocity</th>
+                <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>
+                  Total<br/>Issues
+                </th>
+                <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>
+                  Completed<br/>Issues
+                </th>
+                <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>
+                  Open<br/>Issues
+                </th>
+                <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>
+                  Velocity<br/>(Issues)
+                </th>
+                <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>
+                  Total<br/>Points
+                </th>
+                <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>
+                  Completed<br/>Points
+                </th>
+                <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>
+                  Velocity<br/>(Points)
+                </th>
                 <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>Completion Rate</th>
               </tr>
             </thead>
@@ -936,18 +956,37 @@ export default function VelocityView({ issues: allIssues }) {
                   <td style={{ padding: '12px', textAlign: 'center', color: '#059669' }}>{sprint.completedIssues}</td>
                   <td style={{ padding: '12px', textAlign: 'center', color: '#DC2626' }}>{sprint.openIssues}</td>
                   <td style={{ padding: '12px', textAlign: 'center', fontWeight: '600', color: '#2563EB' }}>{sprint.velocity}</td>
+                  <td style={{ padding: '12px', textAlign: 'center', color: '#6B7280' }}>{sprint.totalPoints}</td>
+                  <td style={{ padding: '12px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{sprint.completedPoints}</td>
+                  <td style={{ padding: '12px', textAlign: 'center', fontWeight: '600', color: '#8B5CF6' }}>{sprint.velocityPoints}</td>
                   <td style={{ padding: '12px', textAlign: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
-                      <div style={{ flex: 1, maxWidth: '100px', height: '8px', background: '#E5E7EB', borderRadius: '4px', overflow: 'hidden' }}>
-                        <div
-                          style={{
-                            width: `${sprint.completionRate}%`,
-                            height: '100%',
-                            background: sprint.completionRate >= 80 ? '#059669' : sprint.completionRate >= 50 ? '#D97706' : '#DC2626'
-                          }}
-                        />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {/* Issues completion rate */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                        <div style={{ flex: 1, maxWidth: '100px', height: '6px', background: '#E5E7EB', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              width: `${sprint.completionRate}%`,
+                              height: '100%',
+                              background: sprint.completionRate >= 80 ? '#059669' : sprint.completionRate >= 50 ? '#D97706' : '#DC2626'
+                            }}
+                          />
+                        </div>
+                        <span style={{ fontSize: '12px', fontWeight: '600', minWidth: '40px', color: '#2563EB' }}>{sprint.completionRate}%</span>
                       </div>
-                      <span style={{ fontSize: '14px', fontWeight: '600', minWidth: '40px' }}>{sprint.completionRate}%</span>
+                      {/* Points completion rate */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                        <div style={{ flex: 1, maxWidth: '100px', height: '6px', background: '#E5E7EB', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              width: `${sprint.completionRatePoints}%`,
+                              height: '100%',
+                              background: sprint.completionRatePoints >= 80 ? '#059669' : sprint.completionRatePoints >= 50 ? '#D97706' : '#DC2626'
+                            }}
+                          />
+                        </div>
+                        <span style={{ fontSize: '12px', fontWeight: '600', minWidth: '40px', color: '#8B5CF6' }}>{sprint.completionRatePoints}%</span>
+                      </div>
                     </div>
                   </td>
                 </tr>
