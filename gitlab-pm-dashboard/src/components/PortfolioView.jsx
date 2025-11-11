@@ -300,7 +300,7 @@ export default function PortfolioView({ onProjectSwitch }) {
                     </div>
                   )}
                   <div style={{ marginTop: '8px', fontSize: '11px' }}>
-                    Added: {new Date(project.addedAt).toLocaleDateString()}
+                    Added: {new Date(project.addedAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                   </div>
                 </div>
 

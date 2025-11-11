@@ -3243,7 +3243,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                                     padding: '2px 0',
                                     fontSize: '9px'
                                   }}
-                                  title={week.toLocaleDateString()}
+                                  title={week.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                 >
                                   {week.getDate()}/{week.getMonth() + 1}
                                 </div>
@@ -3306,7 +3306,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                         background: '#EF4444',
                         zIndex: 5
                       }}
-                      title={`Today: ${today.toLocaleDateString()}`}
+                      title={`Today: ${today.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}`}
                     >
                       <div style={{
                         position: 'absolute',

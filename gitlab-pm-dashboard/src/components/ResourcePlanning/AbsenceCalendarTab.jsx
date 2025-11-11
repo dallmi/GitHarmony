@@ -764,7 +764,7 @@ export default function AbsenceCalendarTab({ issues, isCrossProject, refreshKey,
               <strong>Team Member:</strong> {selectedAbsence.username}
             </div>
             <div style={{ marginBottom: '12px' }}>
-              <strong>Period:</strong> {selectedAbsence.startDate.toLocaleDateString()} - {selectedAbsence.endDate.toLocaleDateString()}
+              <strong>Period:</strong> {selectedAbsence.startDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })} - {selectedAbsence.endDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
             </div>
             <div style={{ marginBottom: '12px' }}>
               <strong>Type:</strong> {selectedAbsence.type}

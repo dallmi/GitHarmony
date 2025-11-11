@@ -188,7 +188,7 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
     if (!currentRelease) return ''
 
     let notes = `# Release ${currentRelease.version}\n\n`
-    notes += `**Release Date:** ${new Date(currentRelease.targetDate).toLocaleDateString()}\n`
+    notes += `**Release Date:** ${new Date(currentRelease.targetDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}\n`
     notes += `**Status:** ${currentRelease.status}\n\n`
 
     if (currentRelease.description) {
@@ -495,7 +495,7 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
                     </div>
 
                     <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>
-                      {new Date(release.targetDate).toLocaleDateString()}
+                      {new Date(release.targetDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </div>
 
                     <div style={{ fontSize: '11px', color: '#6B7280' }}>
@@ -602,7 +602,7 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
           {currentRelease && (
             <div style={{ display: 'flex', gap: '12px', fontSize: '13px' }}>
               <span style={{ color: '#6B7280' }}>
-                Target: {new Date(currentRelease.targetDate).toLocaleDateString()}
+                Target: {new Date(currentRelease.targetDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
               </span>
               <span style={{
                 padding: '2px 8px',

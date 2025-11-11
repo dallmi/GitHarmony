@@ -686,7 +686,7 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
               zIndex: 5,
               cursor: 'help'
             }}
-            title={`Today: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}
+            title={`Today: ${new Date().toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}
           >
             <div style={{
               position: 'absolute',
@@ -782,7 +782,7 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
                           padding: '2px 0',
                           fontSize: '9px'
                         }}
-                        title={week.toLocaleDateString()}
+                        title={week.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                       >
                         {week.getDate()}/{week.getMonth() + 1}
                       </div>
@@ -823,7 +823,7 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
                           padding: '2px 0'
                         }}
                       >
-                        {week.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {week.toLocaleDateString('de-DE', { month: 'short', day: 'numeric' })}
                       </div>
                     ))}
                   </div>
@@ -1294,7 +1294,7 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
                         📈 Projection: {analysis.projection.onTime ? 'On time' : `${Math.abs(Math.round(analysis.projection.daysVariance))} days late`}
                       </div>
                       <div style={{ fontSize: '11px', color: analysis.projection.onTime ? '#065F46' : '#991B1B', marginTop: '2px' }}>
-                        Expected completion: {analysis.projection.date.toLocaleDateString()} ({analysis.projection.iterationsNeeded} iterations at current velocity)
+                        Expected completion: {analysis.projection.date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })} ({analysis.projection.iterationsNeeded} iterations at current velocity)
                       </div>
                     </div>
                   )}

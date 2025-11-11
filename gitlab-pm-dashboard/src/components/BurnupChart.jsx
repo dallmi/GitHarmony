@@ -69,7 +69,7 @@ export default function BurnupChart({ burnupData, width = 600, height = 300 }) {
       const actualIndex = originalIndex * xAxisInterval
       if (actualIndex >= dataPoints.length) return null
       return {
-        label: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        label: new Date(d.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }),
         x: xScale(actualIndex)
       }
     })
@@ -274,45 +274,53 @@ export default function BurnupChart({ burnupData, width = 600, height = 300 }) {
       })}
 
       {/* Tooltip */}
-      {hoveredPoint !== null && (
-        <g>
-          <foreignObject
-            x={xScale(hoveredPoint) + 10}
-            y={padding.top + 10}
-            width={150}
-            height={100}
-          >
-            <div
-              style={{
-                background: 'rgba(17, 24, 39, 0.95)',
-                color: 'white',
-                padding: '10px 12px',
-                borderRadius: '6px',
-                fontSize: '11px',
-                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.2)',
-                pointerEvents: 'none'
-              }}
+      {hoveredPoint !== null && (() => {
+        const tooltipWidth = 150
+        const xPos = xScale(hoveredPoint)
+        // Flip tooltip to left side if it would overflow on the right
+        const shouldFlipLeft = xPos + tooltipWidth + 20 > width
+        const tooltipX = shouldFlipLeft ? xPos - tooltipWidth - 10 : xPos + 10
+
+        return (
+          <g>
+            <foreignObject
+              x={tooltipX}
+              y={padding.top + 10}
+              width={tooltipWidth}
+              height={100}
             >
-              <div style={{ fontWeight: '600', marginBottom: '6px', fontSize: '12px' }}>
-                {new Date(dataPoints[hoveredPoint].date).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric'
-                })}
+              <div
+                style={{
+                  background: 'rgba(17, 24, 39, 0.95)',
+                  color: 'white',
+                  padding: '10px 12px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.2)',
+                  pointerEvents: 'none'
+                }}
+              >
+                <div style={{ fontWeight: '600', marginBottom: '6px', fontSize: '12px' }}>
+                  {new Date(dataPoints[hoveredPoint].date).toLocaleDateString('de-DE', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                  })}
+                </div>
+                <div style={{ marginBottom: '4px', color: '#FCA5A5' }}>
+                  <strong>Total Scope:</strong> {dataPoints[hoveredPoint].totalScope}
+                </div>
+                <div style={{ marginBottom: '4px', color: '#6EE7B7' }}>
+                  <strong>Completed:</strong> {dataPoints[hoveredPoint].completed}
+                </div>
+                <div style={{ color: '#D1D5DB' }}>
+                  <strong>Remaining:</strong> {dataPoints[hoveredPoint].totalScope - dataPoints[hoveredPoint].completed}
+                </div>
               </div>
-              <div style={{ marginBottom: '4px', color: '#FCA5A5' }}>
-                <strong>Total Scope:</strong> {dataPoints[hoveredPoint].totalScope}
-              </div>
-              <div style={{ marginBottom: '4px', color: '#6EE7B7' }}>
-                <strong>Completed:</strong> {dataPoints[hoveredPoint].completed}
-              </div>
-              <div style={{ color: '#D1D5DB' }}>
-                <strong>Remaining:</strong> {dataPoints[hoveredPoint].totalScope - dataPoints[hoveredPoint].completed}
-              </div>
-            </div>
-          </foreignObject>
-        </g>
-      )}
+            </foreignObject>
+          </g>
+        )
+      })()}
     </svg>
   )
 }

@@ -288,13 +288,13 @@ export default function SprintPlanningView({ issues: allIssues, onNavigate }) {
               <div style={{ display: 'flex', gap: '24px', marginBottom: dueDate ? '12px' : '0' }}>
                 <div>
                   <span style={{ color: '#6B7280' }}>Start:</span>{' '}
-                  <strong style={{ color: '#1F2937' }}>{startDate.toLocaleDateString()}</strong>
+                  <strong style={{ color: '#1F2937' }}>{startDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</strong>
                 </div>
                 {dueDate && (
                   <>
                     <div>
                       <span style={{ color: '#6B7280' }}>End:</span>{' '}
-                      <strong style={{ color: '#1F2937' }}>{dueDate.toLocaleDateString()}</strong>
+                      <strong style={{ color: '#1F2937' }}>{dueDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</strong>
                     </div>
                     <div>
                       <span style={{ color: '#6B7280' }}>Duration:</span>{' '}

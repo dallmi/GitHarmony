@@ -120,7 +120,7 @@ export default function IssueComplianceView({ issues: allIssues }) {
     const toEmail = scrumMaster?.email || ''
 
     // Create email subject and body
-    const subject = `Issue Quality Compliance Report - ${new Date().toLocaleDateString()}`
+    const subject = `Issue Quality Compliance Report - ${new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
     const totalIssues = filteredIssues.length
     const highSeverity = filteredIssues.filter(i => i.violations.some(v => v.severity === 'high')).length
     const mediumSeverity = filteredIssues.filter(i => i.violations.some(v => v.severity === 'medium')).length
@@ -794,14 +794,14 @@ Best regards`
                   <div>
                     <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '4px' }}>CREATED</div>
                     <div style={{ fontSize: '13px', color: '#1F2937' }}>
-                      {new Date(issue.createdAt).toLocaleDateString()}
+                      {new Date(issue.createdAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </div>
                   </div>
 
                   <div>
                     <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '4px' }}>UPDATED</div>
                     <div style={{ fontSize: '13px', color: '#1F2937' }}>
-                      {new Date(issue.updatedAt).toLocaleDateString()}
+                      {new Date(issue.updatedAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </div>
                   </div>
 
@@ -845,7 +845,7 @@ Best regards`
                   <div>
                     <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '4px' }}>DUE DATE</div>
                     <div style={{ fontSize: '13px', color: '#1F2937' }}>
-                      {issue.dueDate ? new Date(issue.dueDate).toLocaleDateString() : 'Not set'}
+                      {issue.dueDate ? new Date(issue.dueDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Not set'}
                     </div>
                   </div>
                 </div>

@@ -220,7 +220,7 @@ export default function SprintCapacityTab({ issues, isCrossProject, refreshKey }
         >
           {sprints.map(sprint => (
             <option key={sprint.id} value={sprint.id}>
-              {sprint.name} ({sprint.startDate.toLocaleDateString()} - {sprint.dueDate.toLocaleDateString()})
+              {sprint.name} ({sprint.startDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })} - {sprint.dueDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })})
             </option>
           ))}
         </select>

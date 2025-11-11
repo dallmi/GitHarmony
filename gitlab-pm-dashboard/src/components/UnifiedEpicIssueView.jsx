@@ -412,7 +412,7 @@ export default function UnifiedEpicIssueView({ data, onIssueClick, onEpicClick }
                                   borderRadius: '12px',
                                   fontSize: '11px'
                                 }}>
-                                  Due: {new Date(issue.due_date).toLocaleDateString()}
+                                  Due: {new Date(issue.due_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                 </span>
                               )}
                             </div>

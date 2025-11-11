@@ -404,7 +404,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
             {/* Projection */}
             {burnupData.projectedCompletion && (
               <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                Projected completion: {new Date(burnupData.projectedCompletion).toLocaleDateString()}
+                Projected completion: {new Date(burnupData.projectedCompletion).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
               </div>
             )}
           </div>
@@ -972,7 +972,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                         {decision.category}
                       </span>
                       <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>
-                        {decision.date.toLocaleDateString()}
+                        {decision.date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                       </span>
                     </div>
                   </div>

@@ -227,7 +227,7 @@ export default function SprintCapacityModal({ isOpen, onClose, issues }) {
                 >
                   {sprints.map(sprint => (
                     <option key={sprint.id} value={sprint.name}>
-                      {sprint.name} {sprint.startDate && `(${new Date(sprint.startDate).toLocaleDateString()})`}
+                      {sprint.name} {sprint.startDate && `(${new Date(sprint.startDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })})`}
                     </option>
                   ))}
                 </select>

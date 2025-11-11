@@ -1193,7 +1193,7 @@ export default function ResourceCapacityView({ issues: allIssues }) {
                                           color: isOverdue ? '#DC2626' : isDueSoon ? '#D97706' : '#6B7280',
                                           fontWeight: isOverdue || isDueSoon ? '600' : '400'
                                         }}>
-                                          {new Date(issue.due_date).toLocaleDateString()}
+                                          {new Date(issue.due_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                           {isOverdue && ' ⚠️'}
                                         </span>
                                       ) : (

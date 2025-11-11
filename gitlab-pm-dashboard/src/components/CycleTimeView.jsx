@@ -684,7 +684,7 @@ export default function CycleTimeView({ issues: allIssues }) {
                         whiteSpace: 'nowrap'
                       }}
                     >
-                      {dataPoints[0].date.toLocaleDateString('en-US', dateFormat)}
+                      {dataPoints[0].date.toLocaleDateString('de-DE', dateFormat)}
                     </div>
                   )
 
@@ -703,7 +703,7 @@ export default function CycleTimeView({ issues: allIssues }) {
                           whiteSpace: 'nowrap'
                         }}
                       >
-                        {dataPoints[i].date.toLocaleDateString('en-US', dateFormat)}
+                        {dataPoints[i].date.toLocaleDateString('de-DE', dateFormat)}
                       </div>
                     )
                   }
@@ -722,7 +722,7 @@ export default function CycleTimeView({ issues: allIssues }) {
                         textAlign: 'right'
                       }}
                     >
-                      {dataPoints[dataPoints.length - 1].date.toLocaleDateString('en-US', dateFormat)}
+                      {dataPoints[dataPoints.length - 1].date.toLocaleDateString('de-DE', dateFormat)}
                     </div>
                   )
 
@@ -907,7 +907,7 @@ export default function CycleTimeView({ issues: allIssues }) {
                         : 'Unassigned'}
                     </td>
                     <td style={{ padding: '12px', fontSize: '12px', color: '#6B7280' }}>
-                      {new Date(lifecycle.updatedAt).toLocaleDateString()}
+                      {new Date(lifecycle.updatedAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </td>
                   </tr>
                 )

@@ -47,8 +47,8 @@ export default function IterationFilterDropdown() {
     const start = new Date(iteration.startDate)
     const end = new Date(iteration.dueDate)
 
-    const startFormatted = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    const endFormatted = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    const startFormatted = start.toLocaleDateString('de-DE', { month: 'short', day: 'numeric' })
+    const endFormatted = end.toLocaleDateString('de-DE', { month: 'short', day: 'numeric', year: 'numeric' })
 
     return `${startFormatted} - ${endFormatted}`
   }

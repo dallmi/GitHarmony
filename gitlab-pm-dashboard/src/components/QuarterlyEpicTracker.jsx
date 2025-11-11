@@ -344,12 +344,12 @@ export default function QuarterlyEpicTracker({ epics, issues }) {
                     )}
                     {epic.start_date && (
                       <div>
-                        <strong>Start:</strong> {new Date(epic.start_date).toLocaleDateString()}
+                        <strong>Start:</strong> {new Date(epic.start_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                       </div>
                     )}
                     {(epic.due_date || epic.end_date) && (
                       <div>
-                        <strong>Due:</strong> {new Date(epic.due_date || epic.end_date).toLocaleDateString()}
+                        <strong>Due:</strong> {new Date(epic.due_date || epic.end_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                       </div>
                     )}
                     {epic.web_url && (

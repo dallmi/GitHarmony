@@ -173,12 +173,12 @@ export default function EpicDashboardView({ epics, issues }) {
                 <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#6B7280', marginTop: '8px' }}>
                   {epic.start_date && (
                     <div>
-                      <strong>Start:</strong> {new Date(epic.start_date).toLocaleDateString()}
+                      <strong>Start:</strong> {new Date(epic.start_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </div>
                   )}
                   {epic.end_date && (
                     <div>
-                      <strong>Due:</strong> {new Date(epic.end_date).toLocaleDateString()}
+                      <strong>Due:</strong> {new Date(epic.end_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </div>
                   )}
                   {epic.web_url && (

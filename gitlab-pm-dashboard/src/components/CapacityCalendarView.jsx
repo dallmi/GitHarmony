@@ -205,7 +205,7 @@ export default function CapacityCalendarView({ issues }) {
         groups.push({
           year: day.getFullYear(),
           month: day.getMonth(),
-          monthName: day.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          monthName: day.toLocaleDateString('de-DE', { month: 'short', year: 'numeric' }),
           dayCount: 0
         })
       } else {
@@ -785,7 +785,7 @@ export default function CapacityCalendarView({ issues }) {
               <strong>Team Member:</strong> {selectedAbsence.username}
             </div>
             <div style={{ marginBottom: '12px' }}>
-              <strong>Period:</strong> {selectedAbsence.startDate.toLocaleDateString()} - {selectedAbsence.endDate.toLocaleDateString()}
+              <strong>Period:</strong> {selectedAbsence.startDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })} - {selectedAbsence.endDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
             </div>
             <div style={{ marginBottom: '12px' }}>
               <strong>Type:</strong> {selectedAbsence.type}

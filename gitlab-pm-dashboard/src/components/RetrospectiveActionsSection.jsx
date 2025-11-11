@@ -469,11 +469,11 @@ export default function RetrospectiveActionsSection({ sprintId = 'current', spri
                       )}
                       {action.dueDate && (
                         <div>
-                          <strong>Due:</strong> {new Date(action.dueDate).toLocaleDateString()}
+                          <strong>Due:</strong> {new Date(action.dueDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                         </div>
                       )}
                       <div>
-                        <strong>Created:</strong> {new Date(action.createdAt).toLocaleDateString()}
+                        <strong>Created:</strong> {new Date(action.createdAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                       </div>
                     </div>
                   </div>

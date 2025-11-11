@@ -359,7 +359,7 @@ export default function RiskAnalysisView({ epics, issues }) {
                             📈 Completion Projection
                           </div>
                           <div style={{ fontSize: '13px', color: analysis.projection.onTime ? '#065F46' : '#991B1B' }}>
-                            <div>Expected completion: <strong>{analysis.projection.date.toLocaleDateString()}</strong></div>
+                            <div>Expected completion: <strong>{analysis.projection.date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</strong></div>
                             <div>At current velocity: <strong>{analysis.projection.iterationsNeeded} iterations</strong> ({analysis.projection.weeksNeeded} weeks)</div>
                             {analysis.projection.daysVariance !== null && (
                               <div style={{ marginTop: '8px', fontSize: '14px', fontWeight: '600' }}>
@@ -388,7 +388,7 @@ export default function RiskAnalysisView({ epics, issues }) {
                       </div>
                       {analysis.projection && (
                         <div style={{ marginTop: '8px', fontSize: '13px', color: '#065F46' }}>
-                          Projected completion: <strong>{analysis.projection.date.toLocaleDateString()}</strong>
+                          Projected completion: <strong>{analysis.projection.date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</strong>
                           {analysis.projection.daysVariance < 0 && ` (${Math.abs(Math.round(analysis.projection.daysVariance))} days ahead of schedule)`}
                         </div>
                       )}

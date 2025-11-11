@@ -786,7 +786,7 @@ export default function VelocityView({ issues: allIssues }) {
                                 const x = dateToXPos(point.date)
                                 const y = remainingToYPos(point.remaining)
                                 const dateObj = new Date(point.date)
-                                const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' })
+                                const dayName = dateObj.toLocaleDateString('de-DE', { weekday: 'long' })
 
                                 // Find ideal point for same date (not same index!)
                                 const idealAtSameDay = burndown.ideal.find(ip => ip.date === point.date)
@@ -809,7 +809,7 @@ export default function VelocityView({ issues: allIssues }) {
                                 }
 
                                 const tooltip = [
-                                  `${dayName}, ${dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`,
+                                  `${dayName}, ${dateObj.toLocaleDateString('de-DE', { month: 'long', day: 'numeric', year: 'numeric' })}`,
                                   ``,
                                   `Remaining: ${point.remaining} of ${burndown.total} ${units} (${percentComplete}% complete)`,
                                   `Ideal: ${idealAtSameDay ? idealAtSameDay.remaining : 0} remaining (${idealPercentComplete}% complete)`,
@@ -904,7 +904,7 @@ export default function VelocityView({ issues: allIssues }) {
                                     strokeWidth="2"
                                     style={{ cursor: 'default' }}
                                   >
-                                    <title>{`Today: ${today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}</title>
+                                    <title>{`Today: ${today.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}</title>
                                   </line>
                                   {/* Today label */}
                                   <text
@@ -916,7 +916,7 @@ export default function VelocityView({ issues: allIssues }) {
                                     fontWeight="600"
                                     style={{ cursor: 'default' }}
                                   >
-                                    <title>{`Today: ${today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}</title>
+                                    <title>{`Today: ${today.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}</title>
                                     TODAY
                                   </text>
                                 </g>
@@ -960,8 +960,8 @@ export default function VelocityView({ issues: allIssues }) {
                       // Start date
                       labels.push(
                         <div key="start" style={{ position: 'absolute', left: '0%', fontSize: '11px', color: '#1F2937', textAlign: 'left', transform: 'translateX(0)', fontWeight: '600' }}>
-                          <div>{start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                          <div style={{ fontSize: '9px', color: '#9CA3AF', fontWeight: '400' }}>{start.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                          <div>{start.toLocaleDateString('de-DE', { month: 'short', day: 'numeric' })}</div>
+                          <div style={{ fontSize: '9px', color: '#9CA3AF', fontWeight: '400' }}>{start.toLocaleDateString('de-DE', { weekday: 'short' })}</div>
                         </div>
                       )
 
@@ -981,8 +981,8 @@ export default function VelocityView({ issues: allIssues }) {
                         if (!tooCloseToToday) {
                           labels.push(
                             <div key={`day-${day}`} style={{ position: 'absolute', left: `${xPos}%`, fontSize: '10px', color: '#6B7280', textAlign: 'center', transform: 'translateX(-50%)' }}>
-                              <div>{date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                              <div style={{ fontSize: '8px', color: '#9CA3AF' }}>{date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                              <div>{date.toLocaleDateString('de-DE', { month: 'short', day: 'numeric' })}</div>
+                              <div style={{ fontSize: '8px', color: '#9CA3AF' }}>{date.toLocaleDateString('de-DE', { weekday: 'short' })}</div>
                             </div>
                           )
                         }
@@ -996,7 +996,7 @@ export default function VelocityView({ issues: allIssues }) {
                         labels.push(
                           <div key="today" style={{ position: 'absolute', left: `${todayXPos}%`, fontSize: '11px', color: '#EF4444', fontWeight: '700', textAlign: 'center', transform: 'translateX(-50%)', zIndex: 10 }}>
                             <div>Today</div>
-                            <div style={{ fontSize: '9px', fontWeight: '600' }}>{today.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                            <div style={{ fontSize: '9px', fontWeight: '600' }}>{today.toLocaleDateString('de-DE', { weekday: 'short' })}</div>
                           </div>
                         )
                       }
@@ -1004,8 +1004,8 @@ export default function VelocityView({ issues: allIssues }) {
                       // End date
                       labels.push(
                         <div key="end" style={{ position: 'absolute', right: '0%', fontSize: '11px', color: '#1F2937', textAlign: 'right', transform: 'translateX(0)', fontWeight: '600' }}>
-                          <div>{end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                          <div style={{ fontSize: '9px', color: '#9CA3AF', fontWeight: '400' }}>{end.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                          <div>{end.toLocaleDateString('de-DE', { month: 'short', day: 'numeric' })}</div>
+                          <div style={{ fontSize: '9px', color: '#9CA3AF', fontWeight: '400' }}>{end.toLocaleDateString('de-DE', { weekday: 'short' })}</div>
                         </div>
                       )
 
