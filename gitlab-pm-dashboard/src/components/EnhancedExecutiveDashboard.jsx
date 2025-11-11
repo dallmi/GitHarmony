@@ -3,11 +3,14 @@ import { getInitiatives, getStatusBadge, formatDate } from '../services/initiati
 import { getUpcomingMilestones, getMilestoneStatusBadge } from '../services/milestoneTimelineService'
 import { calculateCommunicationsMetrics } from '../services/communicationsMetricsService'
 import { exportExecutiveSummaryToCSV, downloadCSV } from '../utils/csvExportUtils'
+import { exportExecutiveDashboardToPDF } from '../utils/pdfExportUtils'
 import { useIterationFilter } from '../contexts/IterationFilterContext'
 import HealthScoreConfigModal from './HealthScoreConfigModal'
 import { isBlocker } from '../services/metricsService'
-import { calculateBurnupData, calculateVelocityTrendHistory, calculateDeliveryConfidence } from '../services/velocityService'
+import { calculateBurnupData, calculateVelocityTrendHistory, calculateDeliveryConfidence, calculateMonthOverMonthMetrics } from '../services/velocityService'
 import { getCycleTimeStats } from '../services/cycleTimeService'
+import { getRecentDecisions, getDecisionsStats } from '../services/decisionsService'
+import BurnupChart from './BurnupChart'
 
 /**
  * Enhanced Executive Dashboard
@@ -133,6 +136,21 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
     return calculateDeliveryConfidence(issues)
   }, [issues])
 
+  // Calculate month-over-month metrics
+  const monthOverMonthMetrics = useMemo(() => {
+    if (!issues || issues.length === 0) return null
+    return calculateMonthOverMonthMetrics(issues)
+  }, [issues])
+
+  // Get recent decisions
+  const recentDecisions = useMemo(() => {
+    return getRecentDecisions(30) // Last 30 days
+  }, [])
+
+  const decisionsStats = useMemo(() => {
+    return getDecisionsStats()
+  }, [])
+
   const handleExportCSV = () => {
     const exportData = {
       initiatives,
@@ -144,6 +162,22 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
     const csvContent = exportExecutiveSummaryToCSV(exportData)
     const date = new Date().toISOString().split('T')[0]
     downloadCSV(csvContent, `executive-summary-${date}.csv`)
+  }
+
+  const handleExportPDF = () => {
+    const exportData = {
+      initiatives,
+      healthScore,
+      burnupData,
+      velocityTrend,
+      cycleTimeMetrics,
+      deliveryConfidence,
+      monthOverMonthMetrics,
+      recentDecisions,
+      upcomingMilestones,
+      stats
+    }
+    exportExecutiveDashboardToPDF(exportData)
   }
 
   const handleConfigSave = (newConfig) => {
@@ -178,15 +212,27 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
             <span>Health Score Settings</span>
           </button>
           <button
-            className="btn btn-primary"
+            className="btn"
             onClick={handleExportCSV}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: 'var(--bg-secondary)'
+            }}
+          >
+            <span>📊 Export CSV</span>
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={handleExportPDF}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '8px'
             }}
           >
-            <span>Export Summary CSV</span>
+            <span>📄 Export PDF</span>
           </button>
         </div>
       </div>
@@ -293,6 +339,11 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                   {burnupData.remaining}
                 </div>
               </div>
+            </div>
+
+            {/* Visual Burnup Chart */}
+            <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+              <BurnupChart burnupData={burnupData} width={450} height={200} />
             </div>
 
             {/* Progress Bar */}
@@ -560,6 +611,216 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
           )}
         </div>
       )}
+
+      {/* Month-over-Month Comparison & Recent Decisions */}
+      <div className="grid grid-2" style={{ gap: '30px', marginBottom: '30px' }}>
+        {/* Month-over-Month Metrics */}
+        {monthOverMonthMetrics && (
+          <div className="card">
+            <h3 style={{ marginBottom: '16px', fontSize: '18px', fontWeight: '600' }}>
+              Month-over-Month Trends
+            </h3>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+              Comparing {monthOverMonthMetrics.currentMonth.name} vs {monthOverMonthMetrics.previousMonth.name}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+              {/* Issues Created */}
+              <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '6px' }}>
+                  Issues Created
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--primary)' }}>
+                    {monthOverMonthMetrics.currentMonth.issues}
+                  </div>
+                  <div style={{
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    color: monthOverMonthMetrics.changes.issues >= 0 ? '#16A34A' : '#DC2626'
+                  }}>
+                    {monthOverMonthMetrics.changes.issues >= 0 ? '↑' : '↓'} {Math.abs(monthOverMonthMetrics.percentChanges.issues)}%
+                  </div>
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                  vs {monthOverMonthMetrics.previousMonth.issues} last month
+                </div>
+              </div>
+
+              {/* Issues Completed */}
+              <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '6px' }}>
+                  Issues Completed
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--success)' }}>
+                    {monthOverMonthMetrics.currentMonth.completed}
+                  </div>
+                  <div style={{
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    color: monthOverMonthMetrics.changes.completed >= 0 ? '#16A34A' : '#DC2626'
+                  }}>
+                    {monthOverMonthMetrics.changes.completed >= 0 ? '↑' : '↓'} {Math.abs(monthOverMonthMetrics.percentChanges.completed)}%
+                  </div>
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                  vs {monthOverMonthMetrics.previousMonth.completed} last month
+                </div>
+              </div>
+
+              {/* Story Points */}
+              <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '6px' }}>
+                  Story Points
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--primary)' }}>
+                    {monthOverMonthMetrics.currentMonth.points}
+                  </div>
+                  <div style={{
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    color: monthOverMonthMetrics.changes.points >= 0 ? '#16A34A' : '#DC2626'
+                  }}>
+                    {monthOverMonthMetrics.changes.points >= 0 ? '↑' : '↓'} {Math.abs(monthOverMonthMetrics.percentChanges.points)}%
+                  </div>
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                  vs {monthOverMonthMetrics.previousMonth.points} last month
+                </div>
+              </div>
+            </div>
+
+            {/* Trend Summary */}
+            <div style={{ marginTop: '16px', padding: '12px', background: '#F9FAFB', borderRadius: '8px' }}>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '6px' }}>
+                Monthly Trend Summary
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                {monthOverMonthMetrics.changes.completed > 0
+                  ? `Delivery velocity increased by ${Math.abs(monthOverMonthMetrics.changes.completed)} issues this month.`
+                  : monthOverMonthMetrics.changes.completed < 0
+                  ? `Delivery velocity decreased by ${Math.abs(monthOverMonthMetrics.changes.completed)} issues this month.`
+                  : 'Delivery velocity remained stable this month.'}
+                {' '}
+                {monthOverMonthMetrics.changes.issues > 0 && `New scope increased by ${Math.abs(monthOverMonthMetrics.changes.issues)} issues.`}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Recent Decisions */}
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600' }}>
+              Recent Decisions
+            </h3>
+            <div style={{
+              padding: '4px 12px',
+              background: '#DBEAFE',
+              borderRadius: '12px',
+              fontSize: '12px',
+              fontWeight: '600',
+              color: '#1E40AF'
+            }}>
+              {decisionsStats.recent30Days} this month
+            </div>
+          </div>
+          <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+            Key strategic and technical decisions
+          </div>
+
+          {recentDecisions.length === 0 ? (
+            <div style={{
+              padding: '40px',
+              textAlign: 'center',
+              background: 'var(--bg-secondary)',
+              borderRadius: '8px'
+            }}>
+              <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                No decisions recorded
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
+                Track strategic decisions for better transparency
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {recentDecisions.slice(0, 5).map((decision, index) => {
+                const impactColors = {
+                  critical: '#DC2626',
+                  high: '#F97316',
+                  medium: '#EAB308',
+                  low: '#10B981'
+                }
+                const impactColor = impactColors[decision.impact] || '#6B7280'
+
+                return (
+                  <div
+                    key={decision.id}
+                    style={{
+                      padding: '12px',
+                      background: 'var(--bg-secondary)',
+                      borderRadius: '8px',
+                      borderLeft: `3px solid ${impactColor}`
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '6px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)', flex: 1 }}>
+                        {decision.title}
+                      </div>
+                      <div style={{
+                        fontSize: '10px',
+                        fontWeight: '600',
+                        textTransform: 'uppercase',
+                        color: impactColor,
+                        marginLeft: '12px'
+                      }}>
+                        {decision.impact}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                      {decision.description}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{
+                        fontSize: '10px',
+                        padding: '2px 8px',
+                        background: '#E5E7EB',
+                        borderRadius: '4px',
+                        color: '#6B7280'
+                      }}>
+                        {decision.category}
+                      </span>
+                      <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>
+                        {decision.date.toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Decision Stats */}
+          {decisionsStats.total > 0 && (
+            <div style={{ marginTop: '16px', padding: '12px', background: '#F9FAFB', borderRadius: '8px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', display: 'flex', gap: '16px' }}>
+                <div>
+                  <span style={{ fontWeight: '600' }}>Total:</span> {decisionsStats.total}
+                </div>
+                <div>
+                  <span style={{ fontWeight: '600' }}>Active:</span> {decisionsStats.byStatus.active}
+                </div>
+                <div>
+                  <span style={{ fontWeight: '600' }}>Implemented:</span> {decisionsStats.byStatus.implemented}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className="grid grid-2" style={{ gap: '30px', marginBottom: '30px' }}>
         {/* Active Initiatives */}

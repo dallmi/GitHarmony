@@ -946,6 +946,120 @@ export function calculateDeliveryConfidence(issues, targetDate = null, targetSco
 }
 
 /**
+ * Calculate month-over-month comparison metrics for executive reporting
+ * Compares current month vs previous month across key metrics
+ *
+ * @param {Array} issues - All project issues
+ * @returns {Object} Month-over-month comparison data
+ */
+export function calculateMonthOverMonthMetrics(issues) {
+  if (!issues || issues.length === 0) {
+    return {
+      currentMonth: { name: '', issues: 0, completed: 0, velocity: 0, points: 0 },
+      previousMonth: { name: '', issues: 0, completed: 0, velocity: 0, points: 0 },
+      changes: { issues: 0, completed: 0, velocity: 0, points: 0 },
+      percentChanges: { issues: 0, completed: 0, velocity: 0, points: 0 }
+    }
+  }
+
+  const today = new Date()
+
+  // Current month boundaries
+  const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+  currentMonthStart.setHours(0, 0, 0, 0)
+  const currentMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+  currentMonthEnd.setHours(23, 59, 59, 999)
+
+  // Previous month boundaries
+  const previousMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+  previousMonthStart.setHours(0, 0, 0, 0)
+  const previousMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0)
+  previousMonthEnd.setHours(23, 59, 59, 999)
+
+  // Get month names
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const currentMonthName = monthNames[currentMonthStart.getMonth()]
+  const previousMonthName = monthNames[previousMonthStart.getMonth()]
+
+  // Current month metrics
+  const currentMonthIssues = issues.filter(i => {
+    const created = i.created_at ? new Date(i.created_at) : null
+    return created && created >= currentMonthStart && created <= currentMonthEnd
+  })
+
+  const currentMonthCompleted = issues.filter(i => {
+    if (i.state !== 'closed' || !i.closed_at) return false
+    const closed = new Date(i.closed_at)
+    return closed >= currentMonthStart && closed <= currentMonthEnd
+  })
+
+  const currentMonthPoints = currentMonthCompleted.reduce((sum, i) => sum + (i.weight || 0), 0)
+  const currentMonthVelocity = currentMonthCompleted.length
+
+  // Previous month metrics
+  const previousMonthIssues = issues.filter(i => {
+    const created = i.created_at ? new Date(i.created_at) : null
+    return created && created >= previousMonthStart && created <= previousMonthEnd
+  })
+
+  const previousMonthCompleted = issues.filter(i => {
+    if (i.state !== 'closed' || !i.closed_at) return false
+    const closed = new Date(i.closed_at)
+    return closed >= previousMonthStart && closed <= previousMonthEnd
+  })
+
+  const previousMonthPoints = previousMonthCompleted.reduce((sum, i) => sum + (i.weight || 0), 0)
+  const previousMonthVelocity = previousMonthCompleted.length
+
+  // Calculate changes
+  const issuesChange = currentMonthIssues.length - previousMonthIssues.length
+  const completedChange = currentMonthVelocity - previousMonthVelocity
+  const pointsChange = currentMonthPoints - previousMonthPoints
+
+  // Calculate percentage changes
+  const issuesPercentChange = previousMonthIssues.length > 0
+    ? Math.round((issuesChange / previousMonthIssues.length) * 100)
+    : 0
+
+  const completedPercentChange = previousMonthVelocity > 0
+    ? Math.round((completedChange / previousMonthVelocity) * 100)
+    : 0
+
+  const pointsPercentChange = previousMonthPoints > 0
+    ? Math.round((pointsChange / previousMonthPoints) * 100)
+    : 0
+
+  return {
+    currentMonth: {
+      name: currentMonthName,
+      issues: currentMonthIssues.length,
+      completed: currentMonthVelocity,
+      velocity: currentMonthVelocity,
+      points: currentMonthPoints
+    },
+    previousMonth: {
+      name: previousMonthName,
+      issues: previousMonthIssues.length,
+      completed: previousMonthVelocity,
+      velocity: previousMonthVelocity,
+      points: previousMonthPoints
+    },
+    changes: {
+      issues: issuesChange,
+      completed: completedChange,
+      velocity: completedChange,
+      points: pointsChange
+    },
+    percentChanges: {
+      issues: issuesPercentChange,
+      completed: completedPercentChange,
+      velocity: completedPercentChange,
+      points: pointsPercentChange
+    }
+  }
+}
+
+/**
  * Get current active sprint based on today's date
  * Returns the iteration where today falls between start_date and due_date
  */
