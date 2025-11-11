@@ -361,8 +361,8 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
             </div>
 
             {/* Visual Burnup Chart */}
-            <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
-              <BurnupChart burnupData={burnupData} width={450} height={200} />
+            <div style={{ marginBottom: '16px', width: '100%' }}>
+              <BurnupChart burnupData={burnupData} width={undefined} height={200} />
             </div>
 
             {/* Progress Bar */}

@@ -1,33 +1,56 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 
 /**
  * Interactive SVG-based Burnup Chart
  * Shows total scope vs completed work over time with tooltips
  * No external chart library required
  */
-export default function BurnupChart({ burnupData, width = 600, height = 300 }) {
+export default function BurnupChart({ burnupData, width, height = 300 }) {
   const [hoveredPoint, setHoveredPoint] = useState(null)
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
+  const [containerWidth, setContainerWidth] = useState(width || 600)
+  const containerRef = useRef(null)
+
+  // Handle responsive width
+  useEffect(() => {
+    if (width) {
+      setContainerWidth(width)
+      return
+    }
+
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth)
+      }
+    }
+
+    updateWidth()
+    window.addEventListener('resize', updateWidth)
+    return () => window.removeEventListener('resize', updateWidth)
+  }, [width])
+
   if (!burnupData || !burnupData.dataPoints || burnupData.dataPoints.length === 0) {
     return (
-      <div style={{
-        width: `${width}px`,
-        height: `${height}px`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--bg-secondary)',
-        borderRadius: '8px',
-        color: 'var(--text-tertiary)',
-        fontSize: '14px'
-      }}>
+      <div
+        ref={containerRef}
+        style={{
+          width: width ? `${width}px` : '100%',
+          height: `${height}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--bg-secondary)',
+          borderRadius: '8px',
+          color: 'var(--text-tertiary)',
+          fontSize: '14px'
+        }}>
         No data available
       </div>
     )
   }
 
   const padding = { top: 20, right: 20, bottom: 40, left: 50 }
-  const chartWidth = width - padding.left - padding.right
+  const chartWidth = containerWidth - padding.left - padding.right
   const chartHeight = height - padding.top - padding.bottom
 
   const dataPoints = burnupData.dataPoints
@@ -94,7 +117,8 @@ export default function BurnupChart({ burnupData, width = 600, height = 300 }) {
   })
 
   return (
-    <svg width={width} height={height} style={{ fontFamily: 'system-ui, sans-serif' }}>
+    <div ref={containerRef} style={{ width: width ? `${width}px` : '100%' }}>
+      <svg width={containerWidth} height={height} style={{ fontFamily: 'system-ui, sans-serif' }}>
       {/* Background grid */}
       {yAxisTicks.map((tick, i) => (
         <line
@@ -324,7 +348,7 @@ export default function BurnupChart({ burnupData, width = 600, height = 300 }) {
         const tooltipWidth = 150
         const xPos = xScale(hoveredPoint)
         // Flip tooltip to left side if it would overflow on the right
-        const shouldFlipLeft = xPos + tooltipWidth + 20 > width
+        const shouldFlipLeft = xPos + tooltipWidth + 20 > containerWidth
         const tooltipX = shouldFlipLeft ? xPos - tooltipWidth - 10 : xPos + 10
 
         return (
@@ -368,5 +392,6 @@ export default function BurnupChart({ burnupData, width = 600, height = 300 }) {
         )
       })()}
     </svg>
+    </div>
   )
 }
