@@ -484,10 +484,10 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                 Avg Cycle Time
               </div>
               <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--primary)' }}>
-                {cycleTimeMetrics.averageCycleTime}
+                {cycleTimeMetrics.count > 0 ? cycleTimeMetrics.avgCycleTime : '-'}
               </div>
               <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                days from start to done
+                {cycleTimeMetrics.count > 0 ? 'days from start to done' : 'No closed issues yet'}
               </div>
             </div>
 
@@ -497,27 +497,50 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                 Avg Lead Time
               </div>
               <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                {cycleTimeMetrics.averageLeadTime} days
+                {cycleTimeMetrics.count > 0 ? `${cycleTimeMetrics.avgLeadTime} days` : '-'}
               </div>
+              {cycleTimeMetrics.count > 0 && (
+                <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginTop: '2px' }}>
+                  from {cycleTimeMetrics.count} closed {cycleTimeMetrics.count === 1 ? 'issue' : 'issues'}
+                </div>
+              )}
             </div>
 
             {/* Efficiency Indicator */}
-            <div style={{
-              padding: '8px 12px',
-              background: cycleTimeMetrics.averageCycleTime < 7 ? '#DCFCE7' :
-                         cycleTimeMetrics.averageCycleTime < 14 ? '#FEF3C7' : '#FEE2E2',
-              borderRadius: '6px'
-            }}>
+            {cycleTimeMetrics.count > 0 ? (
               <div style={{
-                fontSize: '11px',
-                fontWeight: '600',
-                color: cycleTimeMetrics.averageCycleTime < 7 ? '#166534' :
-                       cycleTimeMetrics.averageCycleTime < 14 ? '#92400E' : '#991B1B'
+                padding: '8px 12px',
+                background: cycleTimeMetrics.avgCycleTime < 7 ? '#DCFCE7' :
+                           cycleTimeMetrics.avgCycleTime < 14 ? '#FEF3C7' : '#FEE2E2',
+                borderRadius: '6px'
               }}>
-                {cycleTimeMetrics.averageCycleTime < 7 ? '✓ Excellent' :
-                 cycleTimeMetrics.averageCycleTime < 14 ? '⚠ Good' : '⚠ Needs Improvement'}
+                <div style={{
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  color: cycleTimeMetrics.avgCycleTime < 7 ? '#166534' :
+                         cycleTimeMetrics.avgCycleTime < 14 ? '#92400E' : '#991B1B'
+                }}>
+                  {cycleTimeMetrics.avgCycleTime < 7 ? '✓ Excellent (<7 days)' :
+                   cycleTimeMetrics.avgCycleTime < 14 ? '⚠ Good (7-14 days)' : `⚠ Needs Improvement (${cycleTimeMetrics.avgCycleTime} days)`}
+                </div>
+                {cycleTimeMetrics.avgCycleTime >= 14 && (
+                  <div style={{ fontSize: '10px', color: '#991B1B', marginTop: '4px' }}>
+                    Target: Keep cycle time under 14 days
+                  </div>
+                )}
               </div>
-            </div>
+            ) : (
+              <div style={{
+                padding: '8px 12px',
+                background: '#F3F4F6',
+                borderRadius: '6px',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '11px', color: '#6B7280' }}>
+                  Complete some issues to see metrics
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
