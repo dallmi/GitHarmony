@@ -5,6 +5,7 @@ import {
   getAverageTimePerPhase,
   identifyBottlenecks,
   getLeadTimeDistribution,
+  getControlChartData,
   getDetectedLabels,
   getIssueLifecycleData,
   exportCycleTimeToCSV,
@@ -30,6 +31,7 @@ export default function CycleTimeView({ issues: allIssues }) {
   const [premiumFeatures, setPremiumFeatures] = useState(null)
   const [checkingPremium, setCheckingPremium] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [controlChartMetric, setControlChartMetric] = useState('leadTime') // 'leadTime' or 'cycleTime'
 
   // Collapsible bottleneck analysis with persistent state
   const [isBottleneckCollapsed, setIsBottleneckCollapsed] = useState(() => {
@@ -83,9 +85,10 @@ export default function CycleTimeView({ issues: allIssues }) {
       avgTimePerPhase: getAverageTimePerPhase(issues),
       bottlenecks: identifyBottlenecks(issues),
       leadTimeDistribution: getLeadTimeDistribution(issues),
+      controlChartData: getControlChartData(issues, controlChartMetric),
       detectedLabels: getDetectedLabels(issues)
     }
-  }, [issues])
+  }, [issues, controlChartMetric])
 
   const filteredIssues = useMemo(() => {
     if (!issues || selectedPhase === 'all') return issues
@@ -199,9 +202,39 @@ export default function CycleTimeView({ issues: allIssues }) {
         </div>
 
         <div className="card">
+          <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>Avg Cycle Time</div>
+          <div style={{ fontSize: '32px', fontWeight: '600', color: '#8B5CF6' }}>
+            {analytics.cycleTimeStats.avgCycleTime}
+          </div>
+          <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
+            days (work started → closed)
+          </div>
+        </div>
+
+        <div className="card">
+          <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>Avg Wait Time</div>
+          <div style={{ fontSize: '32px', fontWeight: '600', color: '#F59E0B' }}>
+            {analytics.cycleTimeStats.avgWaitTime}
+          </div>
+          <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
+            days in backlog
+          </div>
+        </div>
+
+        <div className="card">
           <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>Median Lead Time</div>
           <div style={{ fontSize: '32px', fontWeight: '600', color: '#3B82F6' }}>
             {analytics.cycleTimeStats.medianLeadTime}
+          </div>
+          <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
+            days (50th percentile)
+          </div>
+        </div>
+
+        <div className="card">
+          <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>Median Cycle Time</div>
+          <div style={{ fontSize: '32px', fontWeight: '600', color: '#8B5CF6' }}>
+            {analytics.cycleTimeStats.medianCycleTime}
           </div>
           <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
             days (50th percentile)
@@ -214,7 +247,7 @@ export default function CycleTimeView({ issues: allIssues }) {
             {analytics.cycleTimeStats.count}
           </div>
           <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
-            closed & analyzed
+            closed
           </div>
         </div>
 
@@ -448,6 +481,200 @@ export default function CycleTimeView({ issues: allIssues }) {
         </div>
       </div>
 
+      {/* Control Chart (Run Chart) */}
+      <div className="card" style={{ marginBottom: '30px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: '600' }}>
+            Control Chart - {controlChartMetric === 'leadTime' ? 'Lead Time' : 'Cycle Time'} Trends
+          </h3>
+          <div style={{ display: 'flex', background: '#F3F4F6', borderRadius: '8px', padding: '4px' }}>
+            <button
+              onClick={() => setControlChartMetric('leadTime')}
+              style={{
+                padding: '6px 16px',
+                background: controlChartMetric === 'leadTime' ? 'white' : 'transparent',
+                color: controlChartMetric === 'leadTime' ? '#1F2937' : '#6B7280',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '13px',
+                fontWeight: controlChartMetric === 'leadTime' ? '600' : '400',
+                cursor: 'pointer',
+                boxShadow: controlChartMetric === 'leadTime' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              Lead Time
+            </button>
+            <button
+              onClick={() => setControlChartMetric('cycleTime')}
+              style={{
+                padding: '6px 16px',
+                background: controlChartMetric === 'cycleTime' ? 'white' : 'transparent',
+                color: controlChartMetric === 'cycleTime' ? '#1F2937' : '#6B7280',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '13px',
+                fontWeight: controlChartMetric === 'cycleTime' ? '600' : '400',
+                cursor: 'pointer',
+                boxShadow: controlChartMetric === 'cycleTime' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              Cycle Time
+            </button>
+          </div>
+        </div>
+
+        {analytics.controlChartData.dataPoints.length > 0 ? (
+          <>
+            {/* Chart Statistics */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px', marginBottom: '20px', padding: '16px', background: '#F9FAFB', borderRadius: '8px' }}>
+              <div>
+                <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '4px' }}>Average</div>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: '#1F2937' }}>{analytics.controlChartData.average}d</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '4px' }}>Median (50th)</div>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: '#3B82F6' }}>{analytics.controlChartData.median}d</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '4px' }}>85th Percentile</div>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: '#8B5CF6' }}>{analytics.controlChartData.percentile85}d</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '4px' }}>95th Percentile</div>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: '#EF4444' }}>{analytics.controlChartData.percentile95}d</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '4px' }}>Std Dev</div>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: '#6B7280' }}>{analytics.controlChartData.stdDev}d</div>
+              </div>
+            </div>
+
+            {/* Control Chart Visualization */}
+            <div style={{ position: 'relative', height: '400px', background: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '20px' }}>
+              {/* Y-axis labels and horizontal grid lines */}
+              <div style={{ position: 'absolute', left: '0', top: '20px', bottom: '40px', width: '50px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                {[analytics.controlChartData.upperControlLimit, analytics.controlChartData.percentile95, analytics.controlChartData.average, analytics.controlChartData.lowerControlLimit].map((value, i) => (
+                  <div key={i} style={{ fontSize: '11px', color: '#6B7280', textAlign: 'right', paddingRight: '8px' }}>
+                    {value}d
+                  </div>
+                ))}
+              </div>
+
+              {/* Chart area */}
+              <div style={{ position: 'absolute', left: '60px', right: '20px', top: '20px', bottom: '40px' }}>
+                {/* Control limits and percentile lines */}
+                {[
+                  { value: analytics.controlChartData.upperControlLimit, color: '#EF4444', label: 'Upper Control Limit', dash: true },
+                  { value: analytics.controlChartData.percentile95, color: '#F59E0B', label: '95th %ile', dash: false },
+                  { value: analytics.controlChartData.percentile85, color: '#8B5CF6', label: '85th %ile', dash: false },
+                  { value: analytics.controlChartData.median, color: '#3B82F6', label: 'Median', dash: false },
+                  { value: analytics.controlChartData.average, color: '#10B981', label: 'Average', dash: false },
+                  { value: analytics.controlChartData.lowerControlLimit, color: '#EF4444', label: 'Lower Control Limit', dash: true }
+                ].map((line, i) => {
+                  const maxValue = Math.max(analytics.controlChartData.upperControlLimit, ...analytics.controlChartData.dataPoints.map(dp => dp.value))
+                  const yPosition = 100 - ((line.value / maxValue) * 100)
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        top: `${yPosition}%`,
+                        height: '1px',
+                        background: line.color,
+                        borderTop: line.dash ? `2px dashed ${line.color}` : `1px solid ${line.color}`,
+                        opacity: 0.6
+                      }}
+                      title={`${line.label}: ${line.value} days`}
+                    />
+                  )
+                })}
+
+                {/* Data points */}
+                {analytics.controlChartData.dataPoints.map((point, index) => {
+                  const maxValue = Math.max(analytics.controlChartData.upperControlLimit, ...analytics.controlChartData.dataPoints.map(dp => dp.value))
+                  const xPosition = (index / (analytics.controlChartData.dataPoints.length - 1)) * 100
+                  const yPosition = 100 - ((point.value / maxValue) * 100)
+                  const isOutlier = point.value > analytics.controlChartData.upperControlLimit || point.value < analytics.controlChartData.lowerControlLimit
+
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => window.open(point.issue.web_url, '_blank')}
+                      style={{
+                        position: 'absolute',
+                        left: `${xPosition}%`,
+                        top: `${yPosition}%`,
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        background: isOutlier ? '#EF4444' : '#3B82F6',
+                        border: '2px solid white',
+                        cursor: 'pointer',
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: 10,
+                        transition: 'transform 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1.5)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translate(-50%, -50%)'
+                      }}
+                      title={`#${point.issue.iid}: ${point.issue.title}\n${point.value} days (${point.dateStr})`}
+                    />
+                  )
+                })}
+              </div>
+
+              {/* X-axis label */}
+              <div style={{ position: 'absolute', left: '60px', right: '20px', bottom: '10px', fontSize: '11px', color: '#6B7280', textAlign: 'center' }}>
+                Issues Completed Over Time (oldest → newest)
+              </div>
+            </div>
+
+            {/* Legend */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '16px', padding: '12px', background: '#F9FAFB', borderRadius: '8px', fontSize: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#3B82F6' }} />
+                <span style={{ color: '#6B7280' }}>Normal Issue</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#EF4444' }} />
+                <span style={{ color: '#6B7280' }}>Outlier (Outside Control Limits)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '20px', height: '2px', background: '#10B981' }} />
+                <span style={{ color: '#6B7280' }}>Average</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '20px', height: '2px', background: '#3B82F6' }} />
+                <span style={{ color: '#6B7280' }}>Median</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '20px', height: '2px', background: '#8B5CF6' }} />
+                <span style={{ color: '#6B7280' }}>85th Percentile</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '20px', height: '2px', background: '#F59E0B' }} />
+                <span style={{ color: '#6B7280' }}>95th Percentile</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '20px', height: '2px', borderTop: '2px dashed #EF4444' }} />
+                <span style={{ color: '#6B7280' }}>Control Limits (±3σ)</span>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#6B7280' }}>
+            Not enough closed issues to generate control chart
+          </div>
+        )}
+      </div>
+
       {/* Lead Time Distribution */}
       <div className="card" style={{ marginBottom: '30px' }}>
         <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
@@ -511,6 +738,9 @@ export default function CycleTimeView({ issues: allIssues }) {
                   Lead Time
                 </th>
                 <th style={{ padding: '12px', textAlign: 'center', fontSize: '11px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase' }}>
+                  Cycle Time
+                </th>
+                <th style={{ padding: '12px', textAlign: 'center', fontSize: '11px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase' }}>
                   Time in Phase
                 </th>
                 <th style={{ padding: '12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase' }}>
@@ -560,6 +790,9 @@ export default function CycleTimeView({ issues: allIssues }) {
                     </td>
                     <td style={{ padding: '12px', textAlign: 'center', fontSize: '13px', fontWeight: '600', color: '#1F2937' }}>
                       {lifecycle.leadTime}d
+                    </td>
+                    <td style={{ padding: '12px', textAlign: 'center', fontSize: '13px', fontWeight: '600', color: '#8B5CF6' }}>
+                      {lifecycle.cycleTime !== null ? `${lifecycle.cycleTime}d` : '-'}
                     </td>
                     <td style={{ padding: '12px', textAlign: 'center', fontSize: '13px', color: '#6B7280' }}>
                       {lifecycle.timeInCurrentPhase}d

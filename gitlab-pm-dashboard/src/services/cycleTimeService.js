@@ -97,11 +97,13 @@ export function getLeadTime(issue) {
 /**
  * Estimate cycle time (assuming started when moved from backlog)
  * This is approximate without full label history
+ * Cycle time includes: analysis, in progress, review, testing, etc.
+ * Excludes only: backlog (work not yet started)
  */
 export function estimateCycleTime(issue) {
   const phase = detectIssuePhase(issue)
 
-  if (phase === 'backlog' || phase === 'analysis') {
+  if (phase === 'backlog') {
     return null // Not started yet
   }
 
@@ -115,7 +117,8 @@ export function estimateCycleTime(issue) {
 }
 
 /**
- * Get cycle time statistics for closed issues
+ * Get lead time statistics for closed issues
+ * Lead Time = Created → Closed (total time in system)
  */
 export function getCycleTimeStats(issues) {
   const closedIssues = issues.filter(i => i.state === 'closed')
@@ -127,7 +130,13 @@ export function getCycleTimeStats(issues) {
       medianLeadTime: 0,
       minLeadTime: 0,
       maxLeadTime: 0,
-      leadTimes: []
+      leadTimes: [],
+      avgCycleTime: 0,
+      medianCycleTime: 0,
+      minCycleTime: 0,
+      maxCycleTime: 0,
+      cycleTimes: [],
+      avgWaitTime: 0
     }
   }
 
@@ -135,13 +144,44 @@ export function getCycleTimeStats(issues) {
   const avgLeadTime = Math.round(leadTimes.reduce((sum, t) => sum + t, 0) / leadTimes.length)
   const medianLeadTime = leadTimes[Math.floor(leadTimes.length / 2)]
 
+  // Calculate cycle times (excludes backlog wait time)
+  const cycleTimesWithIssues = closedIssues
+    .map(i => ({ issue: i, cycleTime: estimateCycleTime(i) }))
+    .filter(({ cycleTime }) => cycleTime !== null)
+
+  const cycleTimes = cycleTimesWithIssues
+    .map(({ cycleTime }) => cycleTime)
+    .sort((a, b) => a - b)
+
+  let avgCycleTime = 0
+  let medianCycleTime = 0
+  let minCycleTime = 0
+  let maxCycleTime = 0
+  let avgWaitTime = 0
+
+  if (cycleTimes.length > 0) {
+    avgCycleTime = Math.round(cycleTimes.reduce((sum, t) => sum + t, 0) / cycleTimes.length)
+    medianCycleTime = cycleTimes[Math.floor(cycleTimes.length / 2)]
+    minCycleTime = cycleTimes[0]
+    maxCycleTime = cycleTimes[cycleTimes.length - 1]
+
+    // Average wait time = Lead Time - Cycle Time
+    avgWaitTime = Math.max(0, avgLeadTime - avgCycleTime)
+  }
+
   return {
     count: closedIssues.length,
     avgLeadTime,
     medianLeadTime,
     minLeadTime: leadTimes[0],
     maxLeadTime: leadTimes[leadTimes.length - 1],
-    leadTimes
+    leadTimes,
+    avgCycleTime,
+    medianCycleTime,
+    minCycleTime,
+    maxCycleTime,
+    cycleTimes,
+    avgWaitTime
   }
 }
 
@@ -380,6 +420,79 @@ export function getLeadTimeDistribution(issues) {
   })
 
   return buckets
+}
+
+/**
+ * Get control chart data for lead time and cycle time analysis
+ * Returns data points for run chart with percentiles and trends
+ */
+export function getControlChartData(issues, metric = 'leadTime') {
+  const closedIssues = issues
+    .filter(i => i.state === 'closed' && i.closed_at)
+    .sort((a, b) => new Date(a.closed_at) - new Date(b.closed_at))
+
+  if (closedIssues.length === 0) {
+    return {
+      dataPoints: [],
+      average: 0,
+      median: 0,
+      percentile85: 0,
+      percentile95: 0,
+      upperControlLimit: 0,
+      lowerControlLimit: 0
+    }
+  }
+
+  // Prepare data points with date and value
+  const dataPoints = closedIssues.map(issue => {
+    const value = metric === 'cycleTime' ? estimateCycleTime(issue) : getLeadTime(issue)
+    return {
+      date: new Date(issue.closed_at),
+      dateStr: new Date(issue.closed_at).toLocaleDateString(),
+      value: value || 0,
+      issue: {
+        iid: issue.iid,
+        title: issue.title,
+        web_url: issue.web_url
+      }
+    }
+  }).filter(dp => dp.value > 0) // Filter out null cycle times
+
+  if (dataPoints.length === 0) {
+    return {
+      dataPoints: [],
+      average: 0,
+      median: 0,
+      percentile85: 0,
+      percentile95: 0,
+      upperControlLimit: 0,
+      lowerControlLimit: 0
+    }
+  }
+
+  // Calculate statistics
+  const values = dataPoints.map(dp => dp.value).sort((a, b) => a - b)
+  const average = Math.round(values.reduce((sum, v) => sum + v, 0) / values.length)
+  const median = values[Math.floor(values.length * 0.5)]
+  const percentile85 = values[Math.floor(values.length * 0.85)]
+  const percentile95 = values[Math.floor(values.length * 0.95)]
+
+  // Calculate control limits (±3 standard deviations)
+  const variance = values.reduce((sum, val) => sum + Math.pow(val - average, 2), 0) / values.length
+  const stdDev = Math.sqrt(variance)
+  const upperControlLimit = Math.round(average + (3 * stdDev))
+  const lowerControlLimit = Math.max(0, Math.round(average - (3 * stdDev)))
+
+  return {
+    dataPoints,
+    average,
+    median,
+    percentile85,
+    percentile95,
+    upperControlLimit,
+    lowerControlLimit,
+    stdDev: Math.round(stdDev)
+  }
 }
 
 /**
