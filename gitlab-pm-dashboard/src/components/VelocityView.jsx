@@ -888,6 +888,10 @@ export default function VelocityView({ issues: allIssues }) {
                 const percentComplete = ((burndown.total - remaining) / burndown.total) * 100
                 const idealPercentComplete = ((burndown.total - idealRemaining) / burndown.total) * 100
 
+                // Determine unit based on view mode
+                const unit = viewMode === 'points' ? 'point' : 'issue'
+                const units = viewMode === 'points' ? 'points' : 'issues'
+
                 return (
                   <div style={{
                     padding: '16px 20px',
@@ -901,7 +905,7 @@ export default function VelocityView({ issues: allIssues }) {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: '8px', marginBottom: '8px' }}>
                       <span style={{ fontSize: '32px', fontWeight: '700', color: '#1F2937' }}>{remaining}</span>
-                      <span style={{ fontSize: '16px', color: '#6B7280' }}>/ {burndown.total} issues remaining</span>
+                      <span style={{ fontSize: '16px', color: '#6B7280' }}>/ {burndown.total} {units} remaining</span>
                     </div>
                     <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
                       {percentComplete.toFixed(0)}% complete · Ideal: {idealPercentComplete.toFixed(0)}%
@@ -912,7 +916,7 @@ export default function VelocityView({ issues: allIssues }) {
                         fontWeight: '600',
                         color: diff > 0 ? '#DC2626' : '#059669'
                       }}>
-                        {diff > 0 ? `${diff} issue${diff !== 1 ? 's' : ''} behind schedule` : `${Math.abs(diff)} issue${Math.abs(diff) !== 1 ? 's' : ''} ahead of schedule`}
+                        {diff > 0 ? `${diff} ${diff !== 1 ? units : unit} behind schedule` : `${Math.abs(diff)} ${Math.abs(diff) !== 1 ? units : unit} ahead of schedule`}
                       </div>
                     )}
                     {diff === 0 && (
