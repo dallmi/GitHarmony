@@ -13,6 +13,8 @@ import {
   getPhaseLabel,
   getPhaseColor
 } from '../services/cycleTimeService'
+import { getEnhancedCycleTimeStats } from '../services/enhancedCycleTimeService'
+import useLabelEvents from '../hooks/useLabelEvents'
 import { useIterationFilter } from '../contexts/IterationFilterContext'
 import { checkPremiumFeatures } from '../services/gitlabApi'
 import { loadConfig } from '../services/storageService'
@@ -53,6 +55,9 @@ export default function CycleTimeView({ issues: allIssues }) {
     return searchIssues(issuesFromIteration, searchTerm)
   }, [issuesFromIteration, searchTerm])
 
+  // Fetch label events for enhanced cycle time tracking (GitLab Premium/Ultimate)
+  const { labelEventsMap, loading: labelEventsLoading, hasData: hasLabelEvents } = useLabelEvents(issues)
+
   // Check for GitLab Premium features on mount
   useEffect(() => {
     async function checkPremium() {
@@ -79,8 +84,20 @@ export default function CycleTimeView({ issues: allIssues }) {
       return null
     }
 
+    // Use enhanced cycle time if label events are available
+    let cycleTimeStats
+    if (hasLabelEvents && labelEventsMap) {
+      cycleTimeStats = getEnhancedCycleTimeStats(issues, labelEventsMap)
+      console.log('CycleTimeView: Using enhanced cycle time with label events:', {
+        accurateCount: cycleTimeStats.accurateCount,
+        estimatedCount: cycleTimeStats.estimatedCount
+      })
+    } else {
+      cycleTimeStats = getCycleTimeStats(issues)
+    }
+
     return {
-      cycleTimeStats: getCycleTimeStats(issues),
+      cycleTimeStats,
       phaseDistribution: getPhaseDistribution(issues),
       avgTimePerPhase: getAverageTimePerPhase(issues),
       bottlenecks: identifyBottlenecks(issues),
@@ -88,7 +105,7 @@ export default function CycleTimeView({ issues: allIssues }) {
       controlChartData: getControlChartData(issues, controlChartMetric),
       detectedLabels: getDetectedLabels(issues)
     }
-  }, [issues, controlChartMetric])
+  }, [issues, controlChartMetric, hasLabelEvents, labelEventsMap])
 
   const filteredIssues = useMemo(() => {
     if (!issues || selectedPhase === 'all') return issues

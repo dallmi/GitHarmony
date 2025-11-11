@@ -4,7 +4,7 @@
  */
 
 import { fetchIssueLabelHistory } from './gitlabApi.js'
-import { DEFAULT_PHASE_PATTERNS } from './cycleTimeService.js'
+import { DEFAULT_PHASE_PATTERNS, estimateCycleTime } from './cycleTimeService.js'
 
 /**
  * Calculate accurate cycle time using label event history
@@ -41,6 +41,12 @@ export function calculateAccurateCycleTime(issue, labelEvents) {
 
   // Process each label event
   sortedEvents.forEach(event => {
+    // Skip events with null/undefined labels (data quality issue from GitLab API)
+    if (!event.label || !event.label.name) {
+      console.warn('Skipping label event with null label:', event)
+      return
+    }
+
     const labelLower = event.label.name.toLowerCase()
 
     if (event.action === 'add') {
@@ -88,14 +94,45 @@ export function calculateAccurateCycleTime(issue, labelEvents) {
     }
   }
 
-  // If no work start found in events, fall back to created_at
+  // If no work start found in label events, we cannot accurately determine cycle time
+  // Return null to indicate this is not an accurate measurement
   if (!workStartedAt) {
-    workStartedAt = new Date(issue.created_at)
+    return {
+      cycleTime: null,
+      workStartedAt: null,
+      workEndedAt: new Date(issue.closed_at),
+      timeline,
+      method: 'no_work_start_found'
+    }
   }
 
   const workEndedAt = new Date(issue.closed_at)
   const cycleTimeMs = workEndedAt - workStartedAt
   const cycleTimeDays = Math.ceil(cycleTimeMs / (1000 * 60 * 60 * 24))
+
+  // Validate: Cycle time must be positive and work start must be >= created
+  const createdAt = new Date(issue.created_at)
+  if (cycleTimeDays < 0) {
+    console.warn(`Issue #${issue.iid}: Invalid cycle time (${cycleTimeDays} days). Work started after closed. Falling back to estimation.`)
+    return {
+      cycleTime: null,
+      workStartedAt: null,
+      workEndedAt,
+      timeline,
+      method: 'invalid_negative_cycle_time'
+    }
+  }
+
+  if (workStartedAt < createdAt) {
+    console.warn(`Issue #${issue.iid}: Work started before issue created. This shouldn't happen. Falling back to estimation.`)
+    return {
+      cycleTime: null,
+      workStartedAt: null,
+      workEndedAt,
+      timeline,
+      method: 'invalid_work_before_creation'
+    }
+  }
 
   return {
     cycleTime: cycleTimeDays,
@@ -187,6 +224,18 @@ export function getEnhancedCycleTimeStats(issues, labelEventsMap) {
     const labelEvents = labelEventsMap.get(issue.iid)
     const result = calculateAccurateCycleTime(issue, labelEvents)
 
+    // If accurate cycle time couldn't be determined, fall back to estimation
+    if (result.cycleTime === null) {
+      const estimatedCycleTime = estimateCycleTime(issue)
+      return {
+        issue,
+        cycleTime: estimatedCycleTime,
+        workStartedAt: estimatedCycleTime ? new Date(issue.created_at) : null,
+        workEndedAt: new Date(issue.closed_at),
+        method: 'estimated'
+      }
+    }
+
     return {
       issue,
       cycleTime: result.cycleTime,
@@ -232,10 +281,11 @@ export function getEnhancedCycleTimeStats(issues, labelEventsMap) {
   const accurateCount = cycleTimeData.filter(d => d.method === 'label_events').length
   const estimatedCount = cycleTimeData.filter(d => d.method !== 'label_events').length
 
-  // Calculate lead times for comparison
-  const leadTimes = closedIssues.map(issue => {
-    const created = new Date(issue.created_at)
-    const closed = new Date(issue.closed_at)
+  // Calculate lead times for comparison - IMPORTANT: Use same issues as cycle time!
+  // We only calculate lead time for issues that have cycle time data
+  const leadTimes = cycleTimeData.map(data => {
+    const created = new Date(data.issue.created_at)
+    const closed = new Date(data.issue.closed_at)
     const diffMs = closed - created
     return Math.ceil(diffMs / (1000 * 60 * 60 * 24))
   }).sort((a, b) => a - b)
@@ -251,8 +301,49 @@ export function getEnhancedCycleTimeStats(issues, labelEventsMap) {
     medianLeadTime = leadTimes[Math.floor(leadTimes.length / 2)]
   }
 
+  // Debug logging - detailed analysis
+  console.log('=== Enhanced Cycle Time Stats ===')
+  console.log('Sample Size:', cycleTimeData.length)
+  console.log('Accurate (label events):', accurateCount)
+  console.log('Estimated (fallback):', estimatedCount)
+  console.log('')
+  console.log('Avg Cycle Time:', avgCycleTime, 'days')
+  console.log('Avg Lead Time:', avgLeadTime, 'days')
+  console.log('Avg Wait Time:', avgLeadTime - avgCycleTime, 'days')
+  console.log('')
+  console.log('Median Cycle Time:', medianCycleTime, 'days')
+  console.log('Median Lead Time:', medianLeadTime, 'days')
+  console.log('')
+  console.log('First 10 Cycle Times:', cycleTimes.slice(0, 10))
+  console.log('First 10 Lead Times:', leadTimes.slice(0, 10))
+  console.log('')
+
+  // Show sample issue details to understand the data
+  console.log('Sample Issue Analysis (first 5):')
+  cycleTimeData.slice(0, 5).forEach((data, idx) => {
+    const leadTime = Math.ceil((new Date(data.issue.closed_at) - new Date(data.issue.created_at)) / (1000 * 60 * 60 * 24))
+    console.log(`  #${data.issue.iid}:`, {
+      cycleTime: data.cycleTime,
+      leadTime: leadTime,
+      method: data.method,
+      created: new Date(data.issue.created_at).toLocaleDateString('de-DE'),
+      workStarted: data.workStartedAt ? new Date(data.workStartedAt).toLocaleDateString('de-DE') : 'N/A',
+      closed: new Date(data.issue.closed_at).toLocaleDateString('de-DE')
+    })
+  })
+  console.log('================================')
+
+  // Validation check
+  if (avgCycleTime > avgLeadTime) {
+    console.error('⚠️ DATA INCONSISTENCY: Avg Cycle Time > Avg Lead Time!', {
+      avgCycleTime,
+      avgLeadTime,
+      diff: avgCycleTime - avgLeadTime
+    })
+  }
+
   return {
-    count: closedIssues.length,
+    count: cycleTimeData.length, // Count of issues with valid cycle time data
     avgCycleTime,
     medianCycleTime,
     minCycleTime,

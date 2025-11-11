@@ -192,8 +192,22 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
 
   // Calculate delivery confidence score
   const deliveryConfidence = useMemo(() => {
-    if (!issues || issues.length === 0) return null
-    return calculateDeliveryConfidence(issues)
+    if (!issues || issues.length === 0) {
+      console.log('[DeliveryConfidence] No issues, returning null')
+      return null
+    }
+
+    console.log('[DeliveryConfidence] Calculating with', issues.length, 'issues')
+    const result = calculateDeliveryConfidence(issues)
+    console.log('[DeliveryConfidence] Result:', result)
+
+    // Ensure result has required properties
+    if (!result || typeof result.score === 'undefined') {
+      console.warn('[DeliveryConfidence] Invalid result, returning null:', result)
+      return null
+    }
+
+    return result
   }, [issues])
 
   // Calculate month-over-month metrics
@@ -219,11 +233,16 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
 
   // Get forecast accuracy data
   const forecastAccuracy = useMemo(() => {
-    const stats = getForecastAccuracyStats()
-    const trends = getForecastAccuracyTrends(6)
-    const reliability = calculateForecastReliability()
-    const recent = getRecentForecasts(5)
-    return { stats, trends, reliability, recent }
+    try {
+      const stats = getForecastAccuracyStats()
+      const trends = getForecastAccuracyTrends(6)
+      const reliability = calculateForecastReliability()
+      const recent = getRecentForecasts(5)
+      return { stats, trends, reliability, recent }
+    } catch (error) {
+      console.error('Error loading forecast accuracy data:', error)
+      return { stats: null, trends: [], reliability: { score: null }, recent: [] }
+    }
   }, [])
 
 
@@ -317,7 +336,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
             color: healthScore?.status === 'green' ? 'var(--success)' :
                    healthScore?.status === 'amber' ? 'var(--warning)' : 'var(--danger)'
           }}>
-            {healthScore?.score || 0}
+            {healthScore?.score ?? 0}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
             Overall project health
@@ -558,7 +577,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                 </div>
               </div>
               {/* Data quality indicator */}
-              {cycleTimeMetrics.dataQuality && (
+              {cycleTimeMetrics && (
                 <div style={{
                   fontSize: '10px',
                   padding: '4px 8px',
@@ -567,13 +586,19 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                   color: hasLabelEvents ? '#1E40AF' : '#6B7280',
                   fontWeight: '600'
                 }}
-                title={hasLabelEvents ? 'Using accurate cycle time from label history' : 'Using estimated cycle time'}>
-                  {hasLabelEvents ? `✓ ${cycleTimeMetrics.dataQuality}` : 'Estimated'}
+                title={
+                  hasLabelEvents
+                    ? `${cycleTimeMetrics.accurateCount || 0} issues with accurate work start labels, ${cycleTimeMetrics.estimatedCount || 0} estimated from created_at`
+                    : 'All cycle times estimated from created_at (label events not available)'
+                }>
+                  {hasLabelEvents
+                    ? `✓ ${cycleTimeMetrics.accurateCount || 0}/${cycleTimeMetrics.count} accurate`
+                    : 'Estimated'}
                 </div>
               )}
             </div>
 
-            {cycleTimeMetrics.count > 0 ? (
+            {cycleTimeMetrics && cycleTimeMetrics.count > 0 ? (
               <>
                 {/* Metrics Grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
@@ -670,25 +695,25 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
               <div style={{
                 fontSize: '48px',
                 fontWeight: '700',
-                color: deliveryConfidence.statusColor
+                color: deliveryConfidence?.statusColor || '#6B7280'
               }}>
-                {deliveryConfidence.score}%
+                {deliveryConfidence?.score ?? 0}%
               </div>
               <div style={{
                 fontSize: '12px',
                 fontWeight: '600',
                 textTransform: 'uppercase',
-                color: deliveryConfidence.statusColor,
+                color: deliveryConfidence?.statusColor || '#6B7280',
                 letterSpacing: '0.5px'
               }}>
-                {deliveryConfidence.status} Confidence
+                {deliveryConfidence?.status || 'Unknown'} Confidence
               </div>
             </div>
           </div>
 
           {/* Confidence Factors Breakdown */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '20px' }}>
-            {deliveryConfidence.factors.map((factor, index) => {
+            {deliveryConfidence?.factors?.map((factor, index) => {
               const percentage = Math.round((factor.score / factor.maxScore) * 100)
               return (
                 <div
@@ -720,7 +745,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
           </div>
 
           {/* Recommendations */}
-          {deliveryConfidence.recommendations.length > 0 && (
+          {deliveryConfidence?.recommendations?.length > 0 && (
             <div>
               <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '12px' }}>
                 Top Recommendations
@@ -762,7 +787,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
       )}
 
       {/* Forecast Accuracy Tracking */}
-      {forecastAccuracy.reliability.score !== null && (
+      {forecastAccuracy?.reliability?.score !== null && (
         <div className="card" style={{ marginBottom: '30px', background: 'linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%)', border: '2px solid #BFDBFE' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <div>
@@ -893,7 +918,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
       )}
 
       {/* Forecast Accuracy - Insufficient Data State */}
-      {forecastAccuracy.reliability.score === null && (
+      {forecastAccuracy?.reliability?.score === null && (
         <div className="card" style={{ marginBottom: '30px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div>
