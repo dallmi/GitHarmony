@@ -511,7 +511,18 @@ export default function VelocityView({ issues: allIssues }) {
                   {velocityData.map((sprint, index) => {
                     const value = viewMode === 'points' ? sprint.velocityPoints : sprint.velocity
                     const barHeightPercent = (value / maxVelocity) * 100
-                    const isRecent = index >= velocityData.length - 3
+
+                    // Find the current sprint index to avoid highlighting future sprints
+                    let currentSprintIndex = velocityData.length - 1
+                    if (currentSprint) {
+                      const foundIndex = velocityData.findIndex(s => s.sprint === currentSprint)
+                      if (foundIndex >= 0) {
+                        currentSprintIndex = foundIndex
+                      }
+                    }
+
+                    // Only highlight the last 3 sprints up to and including the current sprint
+                    const isRecent = index >= Math.max(0, currentSprintIndex - 2) && index <= currentSprintIndex
 
                     // Calculate actual pixel height from the container (300px total - 40px for x-axis - 20px padding = 240px chart area)
                     const chartHeightPx = 240
