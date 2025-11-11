@@ -535,66 +535,80 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
               How quickly work flows through the system
             </div>
 
-            {/* Average Cycle Time */}
-            <div style={{ marginBottom: '16px' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
-                Avg Cycle Time
-              </div>
-              <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--primary)' }}>
-                {cycleTimeMetrics.count > 0 ? cycleTimeMetrics.avgCycleTime : '-'}
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                {cycleTimeMetrics.count > 0 ? 'days from start to done' : 'No closed issues yet'}
-              </div>
-            </div>
-
-            {/* Lead Time */}
-            <div style={{ marginBottom: '12px' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
-                Avg Lead Time
-              </div>
-              <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                {cycleTimeMetrics.count > 0 ? `${cycleTimeMetrics.avgLeadTime} days` : '-'}
-              </div>
-              {cycleTimeMetrics.count > 0 && (
-                <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginTop: '2px' }}>
-                  from {cycleTimeMetrics.count} closed {cycleTimeMetrics.count === 1 ? 'issue' : 'issues'}
-                </div>
-              )}
-            </div>
-
-            {/* Efficiency Indicator */}
             {cycleTimeMetrics.count > 0 ? (
-              <div style={{
-                padding: '8px 12px',
-                background: cycleTimeMetrics.avgCycleTime < 7 ? '#DCFCE7' :
-                           cycleTimeMetrics.avgCycleTime < 14 ? '#FEF3C7' : '#FEE2E2',
-                borderRadius: '6px'
-              }}>
-                <div style={{
-                  fontSize: '11px',
-                  fontWeight: '600',
-                  color: cycleTimeMetrics.avgCycleTime < 7 ? '#166534' :
-                         cycleTimeMetrics.avgCycleTime < 14 ? '#92400E' : '#991B1B'
-                }}>
-                  {cycleTimeMetrics.avgCycleTime < 7 ? '✓ Excellent (<7 days)' :
-                   cycleTimeMetrics.avgCycleTime < 14 ? '⚠ Good (7-14 days)' : `⚠ Needs Improvement (${cycleTimeMetrics.avgCycleTime} days)`}
-                </div>
-                {cycleTimeMetrics.avgCycleTime >= 14 && (
-                  <div style={{ fontSize: '10px', color: '#991B1B', marginTop: '4px' }}>
-                    Target: Keep cycle time under 14 days
+              <>
+                {/* Metrics Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                  <div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                      Avg Cycle Time
+                    </div>
+                    <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--primary)' }}>
+                      {cycleTimeMetrics.avgCycleTime}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                      days (start to done)
+                    </div>
                   </div>
-                )}
-              </div>
+
+                  <div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                      Avg Lead Time
+                    </div>
+                    <div style={{ fontSize: '24px', fontWeight: '600', color: '#374151' }}>
+                      {cycleTimeMetrics.avgLeadTime}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                      days (created to done)
+                    </div>
+                  </div>
+                </div>
+
+                {/* Additional Metrics */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                  <div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                      Median Cycle Time
+                    </div>
+                    <div style={{ fontSize: '18px', fontWeight: '600', color: '#6B7280' }}>
+                      {cycleTimeMetrics.medianCycleTime} days
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                      Issues Closed
+                    </div>
+                    <div style={{ fontSize: '18px', fontWeight: '600', color: '#6B7280' }}>
+                      {cycleTimeMetrics.count}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status Indicator - Subtle colored text without box */}
+                <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: '12px' }}>
+                  <div style={{
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    color: cycleTimeMetrics.avgCycleTime < 7 ? '#059669' :
+                           cycleTimeMetrics.avgCycleTime < 14 ? '#D97706' : '#6B7280'
+                  }}>
+                    {cycleTimeMetrics.avgCycleTime < 7 ? 'Excellent efficiency (<7 days)' :
+                     cycleTimeMetrics.avgCycleTime < 14 ? 'Good efficiency (7-14 days)' : 'Target: <14 days for optimal flow'}
+                  </div>
+                </div>
+              </>
             ) : (
               <div style={{
-                padding: '8px 12px',
-                background: '#F3F4F6',
-                borderRadius: '6px',
-                textAlign: 'center'
+                padding: '40px 20px',
+                textAlign: 'center',
+                color: '#9CA3AF'
               }}>
-                <div style={{ fontSize: '11px', color: '#6B7280' }}>
-                  Complete some issues to see metrics
+                <div style={{ fontSize: '13px' }}>
+                  No closed issues yet
+                </div>
+                <div style={{ fontSize: '11px', marginTop: '4px' }}>
+                  Complete some issues to see delivery metrics
                 </div>
               </div>
             )}
