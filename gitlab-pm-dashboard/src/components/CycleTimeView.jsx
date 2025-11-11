@@ -428,7 +428,7 @@ export default function CycleTimeView({ issues: allIssues }) {
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
           {Object.entries(analytics.phaseDistribution)
-            .filter(([phase]) => phase !== 'done')
+            .filter(([phase]) => phase !== 'done' && phase !== 'cancelled')
             .map(([phase, issuesList]) => (
               <div
                 key={phase}
@@ -449,7 +449,7 @@ export default function CycleTimeView({ issues: allIssues }) {
                   {issuesList.length}
                 </div>
                 <div style={{ fontSize: '10px', color: '#6B7280', marginTop: '4px' }}>
-                  {openIssues.length > 0 ? Math.round((issuesList.length / openIssues.length) * 100) : 0}% of open
+                  {totalInProgress > 0 ? Math.round((issuesList.length / totalInProgress) * 100) : 0}% of open
                 </div>
               </div>
             ))}
