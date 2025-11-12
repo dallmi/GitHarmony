@@ -90,8 +90,10 @@ export default function ResourceCapacityView({ issues: allIssues }) {
     const memberMap = new Map()
     let unassignedCount = 0
 
-    // Build member issue map from assignees in issues
-    issues.forEach((issue) => {
+    // Build member issue map from assignees in issues (OPEN ISSUES ONLY for capacity planning)
+    const openIssues = issues.filter(issue => issue.state === 'opened')
+
+    openIssues.forEach((issue) => {
       const assignees = issue.assignees || []
 
       if (assignees.length === 0) {
@@ -114,7 +116,6 @@ export default function ResourceCapacityView({ issues: allIssues }) {
             role: teamMember?.role || 'Unknown',
             defaultCapacity: teamMember?.defaultCapacity || capacitySettings.defaultWeeklyCapacity,
             openIssues: 0,
-            closedIssues: 0,
             totalIssues: 0,
             totalWeight: 0,
             issues: []
@@ -123,14 +124,9 @@ export default function ResourceCapacityView({ issues: allIssues }) {
 
         const member = memberMap.get(key)
         member.totalIssues++
+        member.openIssues++
         member.issues.push(issue)
         member.totalWeight += (issue.weight || 0)
-
-        if (issue.state === 'opened') {
-          member.openIssues++
-        } else {
-          member.closedIssues++
-        }
       })
     })
 
@@ -1085,19 +1081,11 @@ export default function ResourceCapacityView({ issues: allIssues }) {
                     </div>
 
                     <div>
-                      <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '4px' }}>REMAINING ISSUES</div>
+                      <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '4px' }}>OPEN ISSUES</div>
                       <div style={{ fontSize: '24px', fontWeight: '700', color: '#1F2937' }}>
                         {member.openIssues}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#6B7280' }}>of {member.totalIssues} total</div>
-                    </div>
-
-                    <div>
-                      <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '4px' }}>COMPLETION RATE</div>
-                      <div style={{ fontSize: '24px', fontWeight: '700', color: '#059669' }}>
-                        {Math.round((member.closedIssues / member.totalIssues) * 100)}%
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#6B7280' }}>{member.closedIssues} closed</div>
+                      <div style={{ fontSize: '11px', color: '#6B7280' }}>{member.totalWeight} story points</div>
                     </div>
 
                     {/* Show absence impact if sprint is selected and member has absences */}
