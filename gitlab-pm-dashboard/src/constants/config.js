@@ -83,11 +83,7 @@ export const VIEW_GROUPS = [
     label: 'Execution',
     views: [
       { id: 'sprintmanagement', label: 'Sprints', roles: ['manager', 'team'] },
-      { id: 'resources', label: 'Sprint Capacity', roles: ['manager', 'team'] },
-      { id: 'teamsetup', label: 'Team Setup', roles: ['manager', 'team'] },
-      { id: 'absencecalendar', label: 'Absence Calendar', roles: ['manager', 'team'] },
-      { id: 'capacityforecast', label: 'Capacity Forecast', roles: ['manager', 'team'] },
-      { id: 'scenarioplanning', label: 'Scenario Planning', roles: ['manager', 'team'] },
+      { id: 'resources', label: 'Current Capacity', roles: ['manager', 'team'] },
       { id: 'teammanagement', label: 'Team Management', roles: ['manager', 'team'] }
     ]
   },

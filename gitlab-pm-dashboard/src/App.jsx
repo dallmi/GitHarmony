@@ -117,10 +117,6 @@ function App() {
             'compliance',
             'cycletime',
             'resources',
-            'teamsetup',
-            'absencecalendar',
-            'capacityforecast',
-            'scenarioplanning',
             'resourceplanning',
             'teammanagement',
             'velocity',
@@ -219,19 +215,8 @@ function App() {
             {activeView === 'sprintmanagement' && <SprintManagementView issues={issues} onNavigate={setActiveView} />}
             {activeView === 'velocity' && <VelocityView issues={issues} />}
             {activeView === 'resources' && <ResourceCapacityView issues={issues} />}
-            {activeView === 'teamsetup' && <ResourcePlanningView issues={issues} initialTab="team" />}
-            {activeView === 'absencecalendar' && <ResourcePlanningView issues={issues} initialTab="absences" />}
-            {activeView === 'capacityforecast' && <ResourcePlanningView issues={issues} initialTab="capacity" />}
-            {activeView === 'scenarioplanning' && (
-              <div className="container" style={{ padding: '20px' }}>
-                <div className="card">
-                  <h2>Scenario Planning</h2>
-                  <p>Coming soon: What-if scenario planning for resource allocation and capacity forecasting.</p>
-                </div>
-              </div>
-            )}
             {activeView === 'resourceplanning' && <ResourcePlanningView issues={issues} />}
-            {activeView === 'teammanagement' && <TeamManagementView issues={issues} milestones={milestones} crossProjectMode={getActiveProjectId() === 'cross-project'} />}
+            {activeView === 'teammanagement' && <ResourcePlanningView issues={issues} />}
             {activeView === 'stakeholders' && <StakeholderHubView stats={stats} healthScore={healthScore} />}
             {activeView === 'crossteam' && <CrossTeamCoordinationView issues={issues} epics={epics} milestones={milestones} />}
             {activeView === 'dependencies' && <DependencyManagementView issues={issues} epics={epics} milestones={milestones} />}
