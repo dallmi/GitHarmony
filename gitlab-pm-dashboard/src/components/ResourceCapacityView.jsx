@@ -1128,7 +1128,7 @@ export default function ResourceCapacityView({ issues: allIssues }) {
                   {member.openIssues > 0 && (
                     <div style={{ marginTop: '16px' }}>
                       <div style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937', marginBottom: '12px' }}>
-                        Open Issues ({member.openIssues}) - {member.totalWeight} story points
+                        Remaining Work ({member.openIssues} open issues) - {member.issues.filter(i => i.state === 'opened').reduce((sum, i) => sum + (i.weight || 0), 0)} story points
                       </div>
                       <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
