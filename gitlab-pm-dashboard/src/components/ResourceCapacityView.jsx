@@ -12,6 +12,7 @@ import {
   getCompatibleRoles,
   getSprintMemberCapacity
 } from '../services/teamConfigService'
+import { calculateSprintCapacityWithAbsences } from '../services/absenceService'
 import { getUniqueIterations } from '../services/velocityService'
 import { getIterationName } from '../utils/labelUtils'
 import {
@@ -135,12 +136,40 @@ export default function ResourceCapacityView({ issues: allIssues }) {
 
     // Calculate capacity metrics for each member using hours estimation
     const members = Array.from(memberMap.values()).map((member) => {
-      // Use sprint-specific capacity if available, otherwise use default
-      // This accounts for holidays, PTO, part-time during sprint, etc.
-      // Now also automatically considers absences from Capacity Calendar
-      const weeklyCapacity = selectedSprint
-        ? getSprintMemberCapacity(selectedSprint.id, member.username, member.defaultCapacity, selectedSprint)
-        : member.defaultCapacity
+      // Calculate sprint-based capacity with absence tracking
+      let weeklyCapacity = member.defaultCapacity
+      let absenceInfo = null
+
+      if (selectedSprint && selectedSprint.startDate && selectedSprint.dueDate) {
+        // Calculate sprint duration and default capacity
+        const sprintDays = Math.ceil((new Date(selectedSprint.dueDate) - new Date(selectedSprint.startDate)) / (1000 * 60 * 60 * 24))
+        const workingDays = Math.floor(sprintDays * (5/7))
+        const sprintWeeks = workingDays / 5
+        const sprintDefaultCapacity = Math.round(sprintWeeks * member.defaultCapacity)
+
+        // Get absence impact for this sprint
+        const absenceCalc = calculateSprintCapacityWithAbsences(member.username, selectedSprint, member.defaultCapacity)
+        const hoursLost = absenceCalc.hoursLost || 0
+        const autoAdjustedCapacity = Math.max(0, sprintDefaultCapacity - hoursLost)
+
+        // Check for manual override via getSprintMemberCapacity
+        const finalCapacity = getSprintMemberCapacity(selectedSprint.id, member.username, member.defaultCapacity, selectedSprint)
+
+        // Convert sprint capacity back to weekly for consistency
+        weeklyCapacity = sprintWeeks > 0 ? Math.round(finalCapacity / sprintWeeks) : member.defaultCapacity
+
+        // Store absence information for display
+        if (hoursLost > 0 || finalCapacity !== sprintDefaultCapacity) {
+          absenceInfo = {
+            sprintDefaultCapacity,
+            hoursLost,
+            daysLost: absenceCalc.workingDaysLost || 0,
+            autoAdjustedCapacity,
+            finalCapacity,
+            absences: absenceCalc.absences || []
+          }
+        }
+      }
 
       // Calculate allocated hours using story points and estimation
       const allocatedHours = member.issues
@@ -183,7 +212,8 @@ export default function ResourceCapacityView({ issues: allIssues }) {
           weeksToComplete,
           status,
           statusColor,
-          isSprintAdjusted: weeklyCapacity !== member.defaultCapacity // Track if sprint-specific
+          isSprintAdjusted: weeklyCapacity !== member.defaultCapacity, // Track if sprint-specific
+          absenceInfo // Add absence details
         }
       }
     }).sort((a, b) => b.capacity.utilization - a.capacity.utilization)
@@ -900,7 +930,40 @@ export default function ResourceCapacityView({ issues: allIssues }) {
 
       {/* Team Members Capacity */}
       <div className="card">
-        <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>Team Capacity Planning</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0 }}>Team Capacity Planning</h2>
+
+          {/* Sprint Selector Dropdown */}
+          {sprints.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '500', color: '#6B7280' }}>
+                Sprint:
+              </label>
+              <select
+                value={selectedSprint?.id || ''}
+                onChange={(e) => {
+                  const sprint = sprints.find(s => s.id === e.target.value)
+                  setSelectedSprint(sprint)
+                }}
+                style={{
+                  padding: '8px 32px 8px 12px',
+                  fontSize: '14px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '6px',
+                  background: 'white',
+                  cursor: 'pointer',
+                  minWidth: '250px'
+                }}
+              >
+                {sprints.map(sprint => (
+                  <option key={sprint.id} value={sprint.id}>
+                    {sprint.name} {sprint.startDate && sprint.dueDate && `(${new Date(sprint.startDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })} - ${new Date(sprint.dueDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })})`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
 
         {members.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px', color: '#6B7280' }}>
@@ -1036,6 +1099,32 @@ export default function ResourceCapacityView({ issues: allIssues }) {
                       </div>
                       <div style={{ fontSize: '11px', color: '#6B7280' }}>{member.closedIssues} closed</div>
                     </div>
+
+                    {/* Show absence impact if sprint is selected and member has absences */}
+                    {cap.absenceInfo && cap.absenceInfo.hoursLost > 0 && (
+                      <div>
+                        <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '4px' }}>ABSENCE IMPACT</div>
+                        <div style={{ fontSize: '24px', fontWeight: '700', color: '#D97706' }}>
+                          -{cap.absenceInfo.hoursLost}h
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#6B7280' }}>
+                          {cap.absenceInfo.daysLost} day{cap.absenceInfo.daysLost !== 1 ? 's' : ''} off
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Show sprint capacity if sprint is selected */}
+                    {cap.absenceInfo && (
+                      <div>
+                        <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '4px' }}>SPRINT CAPACITY</div>
+                        <div style={{ fontSize: '24px', fontWeight: '700', color: '#2563EB' }}>
+                          {cap.absenceInfo.finalCapacity}h
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#6B7280' }}>
+                          of {cap.absenceInfo.sprintDefaultCapacity}h planned
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Utilization Bar */}
@@ -1125,6 +1214,23 @@ export default function ResourceCapacityView({ issues: allIssues }) {
                       </div>
                     )
                   })()}
+
+                  {/* Sprint Capacity Summary (when sprint is selected) */}
+                  {cap.absenceInfo && cap.absenceInfo.absences.length > 0 && (
+                    <div style={{ marginTop: '16px', padding: '12px', background: '#FEF3C7', borderRadius: '6px', border: '1px solid #F59E0B' }}>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#92400E', marginBottom: '8px' }}>
+                        📅 Absences in Sprint:
+                      </div>
+                      {cap.absenceInfo.absences.map((absence, idx) => (
+                        <div key={idx} style={{ fontSize: '12px', color: '#92400E', marginBottom: '4px' }}>
+                          • {absence.reason || absence.type}: {new Date(absence.startDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })} - {new Date(absence.endDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
+                        </div>
+                      ))}
+                      <div style={{ fontSize: '12px', color: '#92400E', marginTop: '8px', fontWeight: '600' }}>
+                        Total capacity reduction: {cap.absenceInfo.hoursLost}h ({cap.absenceInfo.daysLost} working days)
+                      </div>
+                    </div>
+                  )}
 
                   {/* Detailed Issue Breakdown */}
                   {member.openIssues > 0 && (
