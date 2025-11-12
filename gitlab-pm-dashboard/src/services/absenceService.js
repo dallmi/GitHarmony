@@ -2,19 +2,29 @@
  * Absence Management Service
  * Handles team member absences, holidays, and capacity impact calculations
  * Integrates with sprint capacity planning for enterprise-grade resource management
- * Now project-aware: stores separate absence data per project
+ * Now pod-aware: stores absence data at pod level (shared across projects in a pod)
+ * Falls back to project-specific storage for backwards compatibility
  */
 
-import { getActiveProjectId } from './storageService'
+import { getActiveProjectId, getActiveGroupId } from './storageService'
 
 const STORAGE_KEY = 'gitlab-pm-absences'
 
 /**
- * Get project-specific key for localStorage
+ * Get context-specific key for localStorage
+ * Priority: Pod-level > Project-level > Global
  * @param {string} baseKey - Base key name
- * @returns {string} Project-specific key
+ * @returns {string} Context-specific key
  */
 function getProjectKey(baseKey) {
+  // Check if we're in pod mode (highest priority)
+  const groupId = getActiveGroupId()
+  if (groupId) {
+    console.log(`absenceService: Using pod-level key for groupId: ${groupId}`)
+    return `${baseKey}_pod_${groupId}`
+  }
+
+  // Fall back to project-specific
   const projectId = getActiveProjectId()
 
   // If no active project or cross-project view, use global key
@@ -22,6 +32,7 @@ function getProjectKey(baseKey) {
     return baseKey
   }
 
+  console.log(`absenceService: Using project-level key for projectId: ${projectId}`)
   return `${baseKey}_${projectId}`
 }
 

@@ -1,21 +1,31 @@
 /**
  * Team Configuration Service
  * Manages team member roles, capacities, and sprint planning
- * Now project-aware: stores separate configurations per project
+ * Now pod-aware: stores configurations at pod level (shared across projects in a pod)
+ * Falls back to project-specific storage for backwards compatibility
  */
 
-import { getActiveProjectId } from './storageService'
+import { getActiveProjectId, getActiveGroupId } from './storageService'
 
 const TEAM_CONFIG_KEY = 'gitlab_team_config'
 const SPRINT_CAPACITY_KEY = 'gitlab_sprint_capacity'
 const CAPACITY_SETTINGS_KEY = 'gitlab_capacity_settings'
 
 /**
- * Get project-specific key for localStorage
+ * Get context-specific key for localStorage
+ * Priority: Pod-level > Project-level > Global
  * @param {string} baseKey - Base key name
- * @returns {string} Project-specific key
+ * @returns {string} Context-specific key
  */
 function getProjectKey(baseKey) {
+  // Check if we're in pod mode (highest priority)
+  const groupId = getActiveGroupId()
+  if (groupId) {
+    console.log(`teamConfigService: Using pod-level key for groupId: ${groupId}`)
+    return `${baseKey}_pod_${groupId}`
+  }
+
+  // Fall back to project-specific
   const projectId = getActiveProjectId()
 
   // If no active project or cross-project view, use global key
@@ -23,6 +33,7 @@ function getProjectKey(baseKey) {
     return baseKey
   }
 
+  console.log(`teamConfigService: Using project-level key for projectId: ${projectId}`)
   return `${baseKey}_${projectId}`
 }
 

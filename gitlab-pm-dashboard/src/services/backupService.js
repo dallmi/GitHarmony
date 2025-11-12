@@ -75,28 +75,38 @@ function getAllStorageKeys() {
 }
 
 /**
- * Get all per-project keys for a base key pattern
+ * Get all per-project and per-pod keys for a base key pattern
  * @param {string} baseKey - Base key pattern (e.g., 'gitlab_team_config')
- * @returns {Object} Map of project IDs to localStorage keys
+ * @returns {Object} Map with project and pod keys separated
  */
 function getPerProjectKeys(baseKey) {
-  const projectKeys = {}
+  const result = {
+    projectKeys: {},
+    podKeys: {}
+  }
 
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i)
     if (key && key.startsWith(baseKey)) {
       if (key === baseKey) {
-        // Base key without project suffix (default/global)
-        projectKeys['default'] = key
+        // Base key without suffix (default/global)
+        result.projectKeys['default'] = key
+      } else if (key.startsWith(`${baseKey}_pod_`)) {
+        // Pod-level key
+        const podId = key.substring(`${baseKey}_pod_`.length)
+        result.podKeys[podId] = key
       } else if (key.startsWith(`${baseKey}_`)) {
-        // Extract project ID from key
+        // Project-level key (but not pod)
         const projectId = key.substring(baseKey.length + 1)
-        projectKeys[projectId] = key
+        // Skip if it's actually a pod key that we already captured
+        if (!projectId.startsWith('pod_')) {
+          result.projectKeys[projectId] = key
+        }
       }
     }
   }
 
-  return projectKeys
+  return result
 }
 
 /**
@@ -217,65 +227,132 @@ export function createBackup(options = {}) {
   // 5. Risk Management
   addIfExists('risks', keys.risks)
 
-  // 6. Team Configuration (per-project)
+  // 6. Team Configuration (per-project and per-pod)
   const teamConfigKeys = getPerProjectKeys(keys.teamConfigBase)
   const sprintCapacityKeys = getPerProjectKeys(keys.sprintCapacityBase)
   const capacitySettingsKeys = getPerProjectKeys(keys.capacitySettingsBase)
 
-  if (Object.keys(teamConfigKeys).length > 0 || Object.keys(sprintCapacityKeys).length > 0 || Object.keys(capacitySettingsKeys).length > 0) {
+  const hasTeamData =
+    Object.keys(teamConfigKeys.projectKeys).length > 0 ||
+    Object.keys(teamConfigKeys.podKeys).length > 0 ||
+    Object.keys(sprintCapacityKeys.projectKeys).length > 0 ||
+    Object.keys(sprintCapacityKeys.podKeys).length > 0 ||
+    Object.keys(capacitySettingsKeys.projectKeys).length > 0 ||
+    Object.keys(capacitySettingsKeys.podKeys).length > 0
+
+  if (hasTeamData) {
     data.teamConfiguration = {
-      teamConfigs: {},
-      sprintCapacities: {},
-      capacitySettings: {}
+      projectLevel: {
+        teamConfigs: {},
+        sprintCapacities: {},
+        capacitySettings: {}
+      },
+      podLevel: {
+        teamConfigs: {},
+        sprintCapacities: {},
+        capacitySettings: {}
+      }
     }
 
-    // Load all project-specific team configs
-    Object.entries(teamConfigKeys).forEach(([projectId, key]) => {
+    // Load project-level team configs
+    Object.entries(teamConfigKeys.projectKeys).forEach(([projectId, key]) => {
       const config = loadFromStorage(key)
       if (config) {
-        data.teamConfiguration.teamConfigs[projectId] = config
+        data.teamConfiguration.projectLevel.teamConfigs[projectId] = config
       }
     })
 
-    // Load all project-specific sprint capacities
-    Object.entries(sprintCapacityKeys).forEach(([projectId, key]) => {
+    // Load pod-level team configs
+    Object.entries(teamConfigKeys.podKeys).forEach(([podId, key]) => {
+      const config = loadFromStorage(key)
+      if (config) {
+        data.teamConfiguration.podLevel.teamConfigs[podId] = config
+      }
+    })
+
+    // Load project-level sprint capacities
+    Object.entries(sprintCapacityKeys.projectKeys).forEach(([projectId, key]) => {
       const capacity = loadFromStorage(key)
       if (capacity) {
-        data.teamConfiguration.sprintCapacities[projectId] = capacity
+        data.teamConfiguration.projectLevel.sprintCapacities[projectId] = capacity
       }
     })
 
-    // Load all project-specific capacity settings
-    Object.entries(capacitySettingsKeys).forEach(([projectId, key]) => {
+    // Load pod-level sprint capacities
+    Object.entries(sprintCapacityKeys.podKeys).forEach(([podId, key]) => {
+      const capacity = loadFromStorage(key)
+      if (capacity) {
+        data.teamConfiguration.podLevel.sprintCapacities[podId] = capacity
+      }
+    })
+
+    // Load project-level capacity settings
+    Object.entries(capacitySettingsKeys.projectKeys).forEach(([projectId, key]) => {
       const settings = loadFromStorage(key)
       if (settings) {
-        data.teamConfiguration.capacitySettings[projectId] = settings
+        data.teamConfiguration.projectLevel.capacitySettings[projectId] = settings
       }
     })
 
-    if (Object.keys(data.teamConfiguration.teamConfigs).length > 0 ||
-        Object.keys(data.teamConfiguration.sprintCapacities).length > 0 ||
-        Object.keys(data.teamConfiguration.capacitySettings).length > 0) {
+    // Load pod-level capacity settings
+    Object.entries(capacitySettingsKeys.podKeys).forEach(([podId, key]) => {
+      const settings = loadFromStorage(key)
+      if (settings) {
+        data.teamConfiguration.podLevel.capacitySettings[podId] = settings
+      }
+    })
+
+    // Check if we actually have data
+    const hasProjectData =
+      Object.keys(data.teamConfiguration.projectLevel.teamConfigs).length > 0 ||
+      Object.keys(data.teamConfiguration.projectLevel.sprintCapacities).length > 0 ||
+      Object.keys(data.teamConfiguration.projectLevel.capacitySettings).length > 0
+
+    const hasPodData =
+      Object.keys(data.teamConfiguration.podLevel.teamConfigs).length > 0 ||
+      Object.keys(data.teamConfiguration.podLevel.sprintCapacities).length > 0 ||
+      Object.keys(data.teamConfiguration.podLevel.capacitySettings).length > 0
+
+    if (hasProjectData || hasPodData) {
       includedData.push('teamConfiguration')
     } else {
       delete data.teamConfiguration
     }
   }
 
-  // 7. Absences (per-project)
+  // 7. Absences (per-project and per-pod)
   const absenceKeys = getPerProjectKeys(keys.absencesBase)
 
-  if (Object.keys(absenceKeys).length > 0) {
-    data.absences = {}
+  const hasAbsenceData =
+    Object.keys(absenceKeys.projectKeys).length > 0 ||
+    Object.keys(absenceKeys.podKeys).length > 0
 
-    Object.entries(absenceKeys).forEach(([projectId, key]) => {
+  if (hasAbsenceData) {
+    data.absences = {
+      projectLevel: {},
+      podLevel: {}
+    }
+
+    // Load project-level absences
+    Object.entries(absenceKeys.projectKeys).forEach(([projectId, key]) => {
       const absenceData = loadFromStorage(key)
       if (absenceData) {
-        data.absences[projectId] = absenceData
+        data.absences.projectLevel[projectId] = absenceData
       }
     })
 
-    if (Object.keys(data.absences).length > 0) {
+    // Load pod-level absences
+    Object.entries(absenceKeys.podKeys).forEach(([podId, key]) => {
+      const absenceData = loadFromStorage(key)
+      if (absenceData) {
+        data.absences.podLevel[podId] = absenceData
+      }
+    })
+
+    const hasProjectAbsences = Object.keys(data.absences.projectLevel).length > 0
+    const hasPodAbsences = Object.keys(data.absences.podLevel).length > 0
+
+    if (hasProjectAbsences || hasPodAbsences) {
       includedData.push('absences')
     } else {
       delete data.absences
@@ -594,46 +671,129 @@ export function restoreFromBackup(backup, options = {}) {
           break
 
         case 'teamConfiguration':
-          // Restore per-project team configurations
+          // Restore project and pod-level team configurations
           let teamConfigCount = 0
 
-          if (data.teamConfigs) {
-            Object.entries(data.teamConfigs).forEach(([projectId, config]) => {
-              const key = projectId === 'default'
-                ? keys.teamConfigBase
-                : `${keys.teamConfigBase}_${projectId}`
+          // Handle new structure (projectLevel/podLevel)
+          if (data.projectLevel || data.podLevel) {
+            // Restore project-level configs
+            if (data.projectLevel) {
+              if (data.projectLevel.teamConfigs) {
+                Object.entries(data.projectLevel.teamConfigs).forEach(([projectId, config]) => {
+                  const key = projectId === 'default'
+                    ? keys.teamConfigBase
+                    : `${keys.teamConfigBase}_${projectId}`
 
-              if (overwrite || !loadFromStorage(key)) {
-                saveToStorage(key, config)
-                teamConfigCount++
+                  if (overwrite || !loadFromStorage(key)) {
+                    saveToStorage(key, config)
+                    teamConfigCount++
+                  }
+                })
               }
-            })
+
+              if (data.projectLevel.sprintCapacities) {
+                Object.entries(data.projectLevel.sprintCapacities).forEach(([projectId, capacity]) => {
+                  const key = projectId === 'default'
+                    ? keys.sprintCapacityBase
+                    : `${keys.sprintCapacityBase}_${projectId}`
+
+                  if (overwrite || !loadFromStorage(key)) {
+                    saveToStorage(key, capacity)
+                    teamConfigCount++
+                  }
+                })
+              }
+
+              if (data.projectLevel.capacitySettings) {
+                Object.entries(data.projectLevel.capacitySettings).forEach(([projectId, settings]) => {
+                  const key = projectId === 'default'
+                    ? keys.capacitySettingsBase
+                    : `${keys.capacitySettingsBase}_${projectId}`
+
+                  if (overwrite || !loadFromStorage(key)) {
+                    saveToStorage(key, settings)
+                    teamConfigCount++
+                  }
+                })
+              }
+            }
+
+            // Restore pod-level configs
+            if (data.podLevel) {
+              if (data.podLevel.teamConfigs) {
+                Object.entries(data.podLevel.teamConfigs).forEach(([podId, config]) => {
+                  const key = `${keys.teamConfigBase}_pod_${podId}`
+
+                  if (overwrite || !loadFromStorage(key)) {
+                    saveToStorage(key, config)
+                    teamConfigCount++
+                  }
+                })
+              }
+
+              if (data.podLevel.sprintCapacities) {
+                Object.entries(data.podLevel.sprintCapacities).forEach(([podId, capacity]) => {
+                  const key = `${keys.sprintCapacityBase}_pod_${podId}`
+
+                  if (overwrite || !loadFromStorage(key)) {
+                    saveToStorage(key, capacity)
+                    teamConfigCount++
+                  }
+                })
+              }
+
+              if (data.podLevel.capacitySettings) {
+                Object.entries(data.podLevel.capacitySettings).forEach(([podId, settings]) => {
+                  const key = `${keys.capacitySettingsBase}_pod_${podId}`
+
+                  if (overwrite || !loadFromStorage(key)) {
+                    saveToStorage(key, settings)
+                    teamConfigCount++
+                  }
+                })
+              }
+            }
           }
+          // Handle old structure (backwards compatibility)
+          else {
+            if (data.teamConfigs) {
+              Object.entries(data.teamConfigs).forEach(([projectId, config]) => {
+                const key = projectId === 'default'
+                  ? keys.teamConfigBase
+                  : `${keys.teamConfigBase}_${projectId}`
 
-          if (data.sprintCapacities) {
-            Object.entries(data.sprintCapacities).forEach(([projectId, capacity]) => {
-              const key = projectId === 'default'
-                ? keys.sprintCapacityBase
-                : `${keys.sprintCapacityBase}_${projectId}`
+                if (overwrite || !loadFromStorage(key)) {
+                  saveToStorage(key, config)
+                  teamConfigCount++
+                }
+              })
+            }
 
-              if (overwrite || !loadFromStorage(key)) {
-                saveToStorage(key, capacity)
-                teamConfigCount++
-              }
-            })
-          }
+            if (data.sprintCapacities) {
+              Object.entries(data.sprintCapacities).forEach(([projectId, capacity]) => {
+                const key = projectId === 'default'
+                  ? keys.sprintCapacityBase
+                  : `${keys.sprintCapacityBase}_${projectId}`
 
-          if (data.capacitySettings) {
-            Object.entries(data.capacitySettings).forEach(([projectId, settings]) => {
-              const key = projectId === 'default'
-                ? keys.capacitySettingsBase
-                : `${keys.capacitySettingsBase}_${projectId}`
+                if (overwrite || !loadFromStorage(key)) {
+                  saveToStorage(key, capacity)
+                  teamConfigCount++
+                }
+              })
+            }
 
-              if (overwrite || !loadFromStorage(key)) {
-                saveToStorage(key, settings)
-                teamConfigCount++
-              }
-            })
+            if (data.capacitySettings) {
+              Object.entries(data.capacitySettings).forEach(([projectId, settings]) => {
+                const key = projectId === 'default'
+                  ? keys.capacitySettingsBase
+                  : `${keys.capacitySettingsBase}_${projectId}`
+
+                if (overwrite || !loadFromStorage(key)) {
+                  saveToStorage(key, settings)
+                  teamConfigCount++
+                }
+              })
+            }
           }
 
           if (teamConfigCount > 0) {
@@ -642,22 +802,53 @@ export function restoreFromBackup(backup, options = {}) {
           break
 
         case 'absences':
-          // Restore per-project absences
+          // Restore project and pod-level absences
           let absenceCount = 0
 
-          Object.entries(data).forEach(([projectId, absenceData]) => {
-            const key = projectId === 'default'
-              ? keys.absencesBase
-              : `${keys.absencesBase}_${projectId}`
+          // Handle new structure (projectLevel/podLevel)
+          if (data.projectLevel || data.podLevel) {
+            // Restore project-level absences
+            if (data.projectLevel) {
+              Object.entries(data.projectLevel).forEach(([projectId, absenceData]) => {
+                const key = projectId === 'default'
+                  ? keys.absencesBase
+                  : `${keys.absencesBase}_${projectId}`
 
-            if (overwrite || !loadFromStorage(key)) {
-              saveToStorage(key, absenceData)
-              absenceCount++
+                if (overwrite || !loadFromStorage(key)) {
+                  saveToStorage(key, absenceData)
+                  absenceCount++
+                }
+              })
             }
-          })
+
+            // Restore pod-level absences
+            if (data.podLevel) {
+              Object.entries(data.podLevel).forEach(([podId, absenceData]) => {
+                const key = `${keys.absencesBase}_pod_${podId}`
+
+                if (overwrite || !loadFromStorage(key)) {
+                  saveToStorage(key, absenceData)
+                  absenceCount++
+                }
+              })
+            }
+          }
+          // Handle old structure (backwards compatibility)
+          else {
+            Object.entries(data).forEach(([projectId, absenceData]) => {
+              const key = projectId === 'default'
+                ? keys.absencesBase
+                : `${keys.absencesBase}_${projectId}`
+
+              if (overwrite || !loadFromStorage(key)) {
+                saveToStorage(key, absenceData)
+                absenceCount++
+              }
+            })
+          }
 
           if (absenceCount > 0) {
-            result.restored.push(`absences (${absenceCount} projects)`)
+            result.restored.push(`absences (${absenceCount} items)`)
           }
           break
 
