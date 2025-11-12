@@ -79,7 +79,10 @@ export default function PortfolioFilterDropdown({ onProjectChange }) {
     }
   }
 
-  // Don't show if no projects and no pods configured
+  // Show dropdown if:
+  // - Multiple projects configured (> 1), OR
+  // - Any pods configured (>= 1), OR
+  // - Both projects and pods exist
   if (projects.length <= 1 && pods.length === 0) {
     return null
   }
