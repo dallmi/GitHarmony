@@ -9,8 +9,8 @@ import SprintCapacityTab from './ResourcePlanning/SprintCapacityTab'
  * Consolidates team management, absence planning, and sprint capacity in one place
  * Replaces: ConfigModal (team config) + CapacityCalendarView + Sprint Capacity Modal
  */
-export default function ResourcePlanningView({ issues }) {
-  const [activeTab, setActiveTab] = useState('team')
+export default function ResourcePlanningView({ issues, initialTab = 'team' }) {
+  const [activeTab, setActiveTab] = useState(initialTab)
   const activeProjectId = getActiveProjectId()
   const isCrossProject = activeProjectId === 'cross-project'
 
