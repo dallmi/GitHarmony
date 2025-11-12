@@ -33,13 +33,13 @@ function getAllStorageKeys() {
     // Risk management
     risks: 'project_risks',
 
-    // Team configuration (per-project keys handled separately)
-    teamConfig: 'team_config',
-    teamCapacity: 'team_capacity',
-    velocitySettings: 'velocity_settings',
+    // Team configuration (base keys - per-project variants handled dynamically)
+    teamConfigBase: 'gitlab_team_config',
+    sprintCapacityBase: 'gitlab_sprint_capacity',
+    capacitySettingsBase: 'gitlab_capacity_settings',
 
-    // Absences (per-project keys handled separately)
-    absences: 'absences',
+    // Absences (base key - per-project variants handled dynamically)
+    absencesBase: 'gitlab-pm-absences',
 
     // Stakeholder Hub
     stakeholders: 'stakeholders',
@@ -72,6 +72,31 @@ function getAllStorageKeys() {
     qualityLegendCollapsed: 'quality.legendCollapsed',
     cycleTimeBottleneckCollapsed: 'cycleTime.bottleneckCollapsed'
   }
+}
+
+/**
+ * Get all per-project keys for a base key pattern
+ * @param {string} baseKey - Base key pattern (e.g., 'gitlab_team_config')
+ * @returns {Object} Map of project IDs to localStorage keys
+ */
+function getPerProjectKeys(baseKey) {
+  const projectKeys = {}
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key && key.startsWith(baseKey)) {
+      if (key === baseKey) {
+        // Base key without project suffix (default/global)
+        projectKeys['default'] = key
+      } else if (key.startsWith(`${baseKey}_`)) {
+        // Extract project ID from key
+        const projectId = key.substring(baseKey.length + 1)
+        projectKeys[projectId] = key
+      }
+    }
+  }
+
+  return projectKeys
 }
 
 /**
@@ -192,13 +217,70 @@ export function createBackup(options = {}) {
   // 5. Risk Management
   addIfExists('risks', keys.risks)
 
-  // 6. Team Configuration
-  addIfExists('teamConfig', keys.teamConfig)
-  addIfExists('teamCapacity', keys.teamCapacity)
-  addIfExists('velocitySettings', keys.velocitySettings)
+  // 6. Team Configuration (per-project)
+  const teamConfigKeys = getPerProjectKeys(keys.teamConfigBase)
+  const sprintCapacityKeys = getPerProjectKeys(keys.sprintCapacityBase)
+  const capacitySettingsKeys = getPerProjectKeys(keys.capacitySettingsBase)
 
-  // 7. Absences
-  addIfExists('absences', keys.absences)
+  if (Object.keys(teamConfigKeys).length > 0 || Object.keys(sprintCapacityKeys).length > 0 || Object.keys(capacitySettingsKeys).length > 0) {
+    data.teamConfiguration = {
+      teamConfigs: {},
+      sprintCapacities: {},
+      capacitySettings: {}
+    }
+
+    // Load all project-specific team configs
+    Object.entries(teamConfigKeys).forEach(([projectId, key]) => {
+      const config = loadFromStorage(key)
+      if (config) {
+        data.teamConfiguration.teamConfigs[projectId] = config
+      }
+    })
+
+    // Load all project-specific sprint capacities
+    Object.entries(sprintCapacityKeys).forEach(([projectId, key]) => {
+      const capacity = loadFromStorage(key)
+      if (capacity) {
+        data.teamConfiguration.sprintCapacities[projectId] = capacity
+      }
+    })
+
+    // Load all project-specific capacity settings
+    Object.entries(capacitySettingsKeys).forEach(([projectId, key]) => {
+      const settings = loadFromStorage(key)
+      if (settings) {
+        data.teamConfiguration.capacitySettings[projectId] = settings
+      }
+    })
+
+    if (Object.keys(data.teamConfiguration.teamConfigs).length > 0 ||
+        Object.keys(data.teamConfiguration.sprintCapacities).length > 0 ||
+        Object.keys(data.teamConfiguration.capacitySettings).length > 0) {
+      includedData.push('teamConfiguration')
+    } else {
+      delete data.teamConfiguration
+    }
+  }
+
+  // 7. Absences (per-project)
+  const absenceKeys = getPerProjectKeys(keys.absencesBase)
+
+  if (Object.keys(absenceKeys).length > 0) {
+    data.absences = {}
+
+    Object.entries(absenceKeys).forEach(([projectId, key]) => {
+      const absenceData = loadFromStorage(key)
+      if (absenceData) {
+        data.absences[projectId] = absenceData
+      }
+    })
+
+    if (Object.keys(data.absences).length > 0) {
+      includedData.push('absences')
+    } else {
+      delete data.absences
+    }
+  }
 
   // 8. Stakeholder Hub Data
   const stakeholders = loadFromStorage(keys.stakeholders)
@@ -511,31 +593,71 @@ export function restoreFromBackup(backup, options = {}) {
           }
           break
 
-        case 'teamConfig':
-          if (overwrite || !loadFromStorage(keys.teamConfig)) {
-            saveToStorage(keys.teamConfig, data)
-            result.restored.push('teamConfig')
-          }
-          break
+        case 'teamConfiguration':
+          // Restore per-project team configurations
+          let teamConfigCount = 0
 
-        case 'teamCapacity':
-          if (overwrite || !loadFromStorage(keys.teamCapacity)) {
-            saveToStorage(keys.teamCapacity, data)
-            result.restored.push('teamCapacity')
-          }
-          break
+          if (data.teamConfigs) {
+            Object.entries(data.teamConfigs).forEach(([projectId, config]) => {
+              const key = projectId === 'default'
+                ? keys.teamConfigBase
+                : `${keys.teamConfigBase}_${projectId}`
 
-        case 'velocitySettings':
-          if (overwrite || !loadFromStorage(keys.velocitySettings)) {
-            saveToStorage(keys.velocitySettings, data)
-            result.restored.push('velocitySettings')
+              if (overwrite || !loadFromStorage(key)) {
+                saveToStorage(key, config)
+                teamConfigCount++
+              }
+            })
+          }
+
+          if (data.sprintCapacities) {
+            Object.entries(data.sprintCapacities).forEach(([projectId, capacity]) => {
+              const key = projectId === 'default'
+                ? keys.sprintCapacityBase
+                : `${keys.sprintCapacityBase}_${projectId}`
+
+              if (overwrite || !loadFromStorage(key)) {
+                saveToStorage(key, capacity)
+                teamConfigCount++
+              }
+            })
+          }
+
+          if (data.capacitySettings) {
+            Object.entries(data.capacitySettings).forEach(([projectId, settings]) => {
+              const key = projectId === 'default'
+                ? keys.capacitySettingsBase
+                : `${keys.capacitySettingsBase}_${projectId}`
+
+              if (overwrite || !loadFromStorage(key)) {
+                saveToStorage(key, settings)
+                teamConfigCount++
+              }
+            })
+          }
+
+          if (teamConfigCount > 0) {
+            result.restored.push(`teamConfiguration (${teamConfigCount} items)`)
           }
           break
 
         case 'absences':
-          if (overwrite || !loadFromStorage(keys.absences)) {
-            saveToStorage(keys.absences, data)
-            result.restored.push('absences')
+          // Restore per-project absences
+          let absenceCount = 0
+
+          Object.entries(data).forEach(([projectId, absenceData]) => {
+            const key = projectId === 'default'
+              ? keys.absencesBase
+              : `${keys.absencesBase}_${projectId}`
+
+            if (overwrite || !loadFromStorage(key)) {
+              saveToStorage(key, absenceData)
+              absenceCount++
+            }
+          })
+
+          if (absenceCount > 0) {
+            result.restored.push(`absences (${absenceCount} projects)`)
           }
           break
 
