@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { getAllProjects, getActiveProjectId, setActiveProject } from '../services/storageService'
+import {
+  getAllProjects, getActiveProjectId, setActiveProject,
+  getAllGroups, getActiveGroupId, setActiveGroup
+} from '../services/storageService'
 import { loadProjectGroups } from '../services/projectGroupService'
 
 /**
@@ -10,7 +13,9 @@ import { loadProjectGroups } from '../services/projectGroupService'
 export default function PortfolioFilterDropdown({ onProjectChange }) {
   const [projects, setProjects] = useState([])
   const [projectGroups, setProjectGroups] = useState([])
+  const [pods, setPods] = useState([])
   const [activeProjectId, setActiveProjectId] = useState(null)
+  const [activePodId, setActivePodId] = useState(null)
   const [isOpen, setIsOpen] = useState(false)
 
   useEffect(() => {
@@ -24,13 +29,20 @@ export default function PortfolioFilterDropdown({ onProjectChange }) {
     const allGroups = loadProjectGroups()
     setProjectGroups(allGroups)
 
+    const allPods = getAllGroups()
+    setPods(allPods)
+
     const currentActiveId = getActiveProjectId()
     setActiveProjectId(currentActiveId)
+
+    const currentActivePod = getActiveGroupId()
+    setActivePodId(currentActivePod)
   }
 
   const handleProjectSelect = (projectId) => {
     setActiveProject(projectId)
     setActiveProjectId(projectId)
+    setActivePodId(null)
     setIsOpen(false)
 
     if (onProjectChange) {
@@ -41,10 +53,25 @@ export default function PortfolioFilterDropdown({ onProjectChange }) {
     window.location.reload()
   }
 
+  const handlePodSelect = (podId) => {
+    setActiveGroup(podId)
+    setActivePodId(podId)
+    setActiveProjectId(null)
+    setIsOpen(false)
+
+    if (onProjectChange) {
+      onProjectChange(`pod:${podId}`)
+    }
+
+    // Reload page to fetch new pod data
+    window.location.reload()
+  }
+
   const handleCrossProjectView = () => {
     // Store cross-project mode in localStorage
     setActiveProject('cross-project')
     setActiveProjectId('cross-project')
+    setActivePodId(null)
     setIsOpen(false)
 
     if (onProjectChange) {
@@ -52,8 +79,8 @@ export default function PortfolioFilterDropdown({ onProjectChange }) {
     }
   }
 
-  // Don't show if no projects configured or only one project
-  if (projects.length <= 1) {
+  // Don't show if no projects and no pods configured
+  if (projects.length <= 1 && pods.length === 0) {
     return null
   }
 
@@ -61,12 +88,15 @@ export default function PortfolioFilterDropdown({ onProjectChange }) {
   const activeGroup = activeProjectId?.startsWith('group:')
     ? projectGroups.find(g => `group:${g.id}` === activeProjectId)
     : null
+  const activePod = pods.find(p => p.id === activePodId)
 
   const displayName = activeProjectId === 'cross-project'
     ? 'Cross-Project View'
+    : activePod
+    ? `🏢 ${activePod.name}`
     : activeGroup
     ? activeGroup.name
-    : activeProject?.name || 'Select Project'
+    : activeProject?.name || 'Select Project / Pod'
 
   return (
     <div style={{
@@ -197,6 +227,65 @@ export default function PortfolioFilterDropdown({ onProjectChange }) {
                   Aggregate data across all {projects.length} projects
                 </div>
               </div>
+
+              {/* Pods (GitLab Groups) */}
+              {pods.length > 0 && (
+                <div style={{
+                  padding: '8px 0',
+                  borderBottom: '1px solid #E5E7EB'
+                }}>
+                  <div style={{
+                    padding: '6px 16px',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    color: '#6B7280',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Pods ({pods.length})
+                  </div>
+
+                  {pods.map(pod => {
+                    const isActive = activePodId === pod.id
+
+                    return (
+                      <div
+                        key={pod.id}
+                        onClick={() => handlePodSelect(pod.id)}
+                        style={{
+                          padding: '10px 16px',
+                          cursor: 'pointer',
+                          background: isActive ? '#FEF3C7' : 'white',
+                          borderLeft: isActive ? '3px solid #F59E0B' : '3px solid transparent',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = '#FEF3C7'}
+                        onMouseLeave={(e) => {
+                          if (!isActive) {
+                            e.currentTarget.style.background = 'white'
+                          }
+                        }}
+                      >
+                        <div style={{
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          color: '#1F2937',
+                          marginBottom: '2px'
+                        }}>
+                          🏢 {pod.name}
+                        </div>
+                        <div style={{
+                          fontSize: '11px',
+                          color: '#6B7280',
+                          fontFamily: 'monospace'
+                        }}>
+                          {pod.groupPath}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
 
               {/* Project Groups */}
               {projectGroups.length > 0 && (

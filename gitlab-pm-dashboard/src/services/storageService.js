@@ -12,7 +12,9 @@ const KEYS = {
   MODE: 'gitlab_mode', // 'project' or 'group'
   RISKS: 'project_risks',
   PROJECTS: 'portfolio_projects', // Multi-project configuration
-  ACTIVE_PROJECT: 'active_project_id' // Currently active project
+  ACTIVE_PROJECT: 'active_project_id', // Currently active project
+  GROUPS: 'portfolio_groups', // Multi-group configuration (for pods)
+  ACTIVE_GROUP: 'active_group_id' // Currently active group
 }
 
 /**
@@ -184,4 +186,90 @@ export function getActiveProject() {
 
   const projects = getAllProjects()
   return projects.find(p => p.id === activeId) || null
+}
+
+/**
+ * GROUP MANAGEMENT (for multi-pod configurations)
+ */
+
+/**
+ * Get all configured groups
+ */
+export function getAllGroups() {
+  const stored = localStorage.getItem(KEYS.GROUPS)
+  return stored ? JSON.parse(stored) : []
+}
+
+/**
+ * Save group to portfolio
+ */
+export function saveGroup(group) {
+  const groups = getAllGroups()
+  const existingIndex = groups.findIndex(g => g.id === group.id)
+
+  if (existingIndex >= 0) {
+    // Update existing group
+    groups[existingIndex] = { ...groups[existingIndex], ...group }
+  } else {
+    // Add new group
+    groups.push({
+      id: group.id || Date.now().toString(),
+      name: group.name,
+      gitlabUrl: group.gitlabUrl,
+      token: group.token,
+      groupPath: group.groupPath,
+      addedAt: new Date().toISOString()
+    })
+  }
+
+  localStorage.setItem(KEYS.GROUPS, JSON.stringify(groups))
+  return groups
+}
+
+/**
+ * Remove group from portfolio
+ */
+export function removeGroup(groupId) {
+  const groups = getAllGroups()
+  const filtered = groups.filter(g => g.id !== groupId)
+  localStorage.setItem(KEYS.GROUPS, JSON.stringify(filtered))
+  return filtered
+}
+
+/**
+ * Get active group ID
+ */
+export function getActiveGroupId() {
+  return localStorage.getItem(KEYS.ACTIVE_GROUP)
+}
+
+/**
+ * Set active group
+ */
+export function setActiveGroup(groupId) {
+  localStorage.setItem(KEYS.ACTIVE_GROUP, groupId)
+
+  // Also update the current config for backwards compatibility
+  const groups = getAllGroups()
+  const group = groups.find(g => g.id === groupId)
+
+  if (group) {
+    saveConfig({
+      gitlabUrl: group.gitlabUrl,
+      token: group.token,
+      groupPath: group.groupPath,
+      mode: 'group'
+    })
+  }
+}
+
+/**
+ * Get active group configuration
+ */
+export function getActiveGroup() {
+  const activeId = getActiveGroupId()
+  if (!activeId) return null
+
+  const groups = getAllGroups()
+  return groups.find(g => g.id === activeId) || null
 }

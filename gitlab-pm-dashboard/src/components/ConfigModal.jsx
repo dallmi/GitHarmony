@@ -1,5 +1,9 @@
 import React, { useState } from 'react'
-import { loadConfig, saveConfig, getAllProjects, saveProject, removeProject, setActiveProject } from '../services/storageService'
+import {
+  loadConfig, saveConfig,
+  getAllProjects, saveProject, removeProject, setActiveProject,
+  getAllGroups, saveGroup, removeGroup, setActiveGroup
+} from '../services/storageService'
 import ProjectGroupManager from './ProjectGroupManager'
 
 export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) {
@@ -27,6 +31,17 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
     token: '',
     projectId: '',
     groupPaths: ['']
+  })
+
+  // Group/Pod management state
+  const [groups, setGroups] = useState(getAllGroups())
+  const [showAddGroupForm, setShowAddGroupForm] = useState(false)
+  const [editingGroup, setEditingGroup] = useState(null)
+  const [groupFormData, setGroupFormData] = useState({
+    name: '',
+    gitlabUrl: 'https://gitlab.com',
+    token: '',
+    groupPath: ''
   })
 
   if (!show) return null
@@ -152,6 +167,65 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
     onClose()
   }
 
+  // Group/Pod management functions
+  const handleAddGroup = () => {
+    if (!groupFormData.name || !groupFormData.token || !groupFormData.groupPath) {
+      alert('Please fill in all required fields (Name, Token, and Group Path/ID)')
+      return
+    }
+
+    const updatedGroups = saveGroup(groupFormData)
+    setGroups(updatedGroups)
+    setGroupFormData({
+      name: '',
+      gitlabUrl: 'https://gitlab.com',
+      token: '',
+      groupPath: ''
+    })
+    setShowAddGroupForm(false)
+    setEditingGroup(null)
+  }
+
+  const handleEditGroup = (group) => {
+    setEditingGroup(group.id)
+    setGroupFormData({
+      id: group.id,
+      name: group.name,
+      gitlabUrl: group.gitlabUrl,
+      token: group.token,
+      groupPath: group.groupPath
+    })
+    setShowAddGroupForm(true)
+  }
+
+  const handleCancelGroupEdit = () => {
+    setShowAddGroupForm(false)
+    setEditingGroup(null)
+    setGroupFormData({
+      name: '',
+      gitlabUrl: 'https://gitlab.com',
+      token: '',
+      groupPath: ''
+    })
+  }
+
+  const handleRemoveGroup = (groupId) => {
+    if (!confirm('Are you sure you want to remove this group/pod?')) {
+      return
+    }
+
+    const updatedGroups = removeGroup(groupId)
+    setGroups(updatedGroups)
+  }
+
+  const handleSwitchGroup = (groupId) => {
+    setActiveGroup(groupId)
+    if (onProjectSwitch) {
+      onProjectSwitch(`pod:${groupId}`)
+    }
+    onClose()
+  }
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '800px' }}>
@@ -187,6 +261,12 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
             onClick={() => setActiveTab('groups')}
           >
             Project Groups
+          </button>
+          <button
+            className={`tab ${activeTab === 'pods' ? 'active' : ''}`}
+            onClick={() => setActiveTab('pods')}
+          >
+            Pods
           </button>
         </div>
 
@@ -571,6 +651,218 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
               }}
               onClose={onClose}
             />
+          )}
+
+          {activeTab === 'pods' && (
+            <>
+              <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h3 style={{ margin: 0, marginBottom: '4px' }}>GitLab Groups (Pods)</h3>
+                  <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-muted)' }}>
+                    Configure multiple GitLab groups to track different teams/pods separately
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowAddGroupForm(!showAddGroupForm)}
+                  style={{
+                    padding: '8px 16px',
+                    background: showAddGroupForm ? '#6B7280' : '#3B82F6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: '600'
+                  }}
+                >
+                  {showAddGroupForm ? 'Cancel' : '+ Add Pod'}
+                </button>
+              </div>
+
+              {showAddGroupForm && (
+                <div style={{
+                  background: '#F9FAFB',
+                  padding: '20px',
+                  borderRadius: '8px',
+                  marginBottom: '20px',
+                  border: '1px solid #E5E7EB'
+                }}>
+                  <h4 style={{ marginTop: 0 }}>
+                    {editingGroup ? 'Edit Pod' : 'Add New Pod'}
+                  </h4>
+
+                  <div className="form-group">
+                    <label className="form-label">Pod Name</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={groupFormData.name}
+                      onChange={e => setGroupFormData({ ...groupFormData, name: e.target.value })}
+                      placeholder="e.g., Nova Pod, Astro Team"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">GitLab URL</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={groupFormData.gitlabUrl}
+                      onChange={e => setGroupFormData({ ...groupFormData, gitlabUrl: e.target.value })}
+                      placeholder="https://gitlab.com"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Group ID or Path</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={groupFormData.groupPath}
+                      onChange={e => setGroupFormData({ ...groupFormData, groupPath: e.target.value })}
+                      placeholder="12345 or GMDP Nova or parent-group/gmdp-nova"
+                    />
+                    <div className="text-small text-muted" style={{ marginTop: '4px' }}>
+                      Use numeric group ID (e.g., "12345") or group path (e.g., "GMDP Nova"). All projects in subgroups will be included automatically.
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Access Token</label>
+                    <input
+                      type="password"
+                      className="form-input"
+                      value={groupFormData.token}
+                      onChange={e => setGroupFormData({ ...groupFormData, token: e.target.value })}
+                      placeholder="glpat-xxxxxxxxxxxxxxxxxxxx"
+                    />
+                    <div className="text-small text-muted" style={{ marginTop: '4px' }}>
+                      Requires read_api scope
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={handleAddGroup}
+                      style={{
+                        flex: 1,
+                        padding: '10px',
+                        background: '#3B82F6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontWeight: '600'
+                      }}
+                    >
+                      {editingGroup ? 'Update Pod' : 'Add Pod'}
+                    </button>
+                    <button
+                      onClick={handleCancelGroupEdit}
+                      style={{
+                        padding: '10px 20px',
+                        background: '#6B7280',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {groups.length === 0 ? (
+                <div style={{
+                  padding: '40px',
+                  textAlign: 'center',
+                  background: '#F9FAFB',
+                  borderRadius: '8px',
+                  border: '1px solid #E5E7EB',
+                  color: '#6B7280'
+                }}>
+                  <div style={{ fontSize: '48px', marginBottom: '12px' }}>🏢</div>
+                  <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px', color: '#374151' }}>
+                    No Pods Configured
+                  </div>
+                  <div style={{ fontSize: '14px' }}>
+                    Add your first GitLab group to track team metrics
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {groups.map(group => (
+                    <div
+                      key={group.id}
+                      style={{
+                        padding: '16px',
+                        background: 'white',
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '8px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                        <div style={{ flex: 1 }}>
+                          <h4 style={{ margin: 0, marginBottom: '4px' }}>{group.name}</h4>
+                          <div style={{ fontSize: '13px', color: '#6B7280', fontFamily: 'monospace' }}>
+                            {group.groupPath}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '4px' }}>
+                            {group.gitlabUrl}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            onClick={() => handleSwitchGroup(group.id)}
+                            style={{
+                              padding: '6px 12px',
+                              background: '#10B981',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '13px',
+                              fontWeight: '500'
+                            }}
+                          >
+                            View
+                          </button>
+                          <button
+                            onClick={() => handleEditGroup(group)}
+                            style={{
+                              padding: '6px 12px',
+                              background: '#3B82F6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '13px'
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleRemoveGroup(group.id)}
+                            style={{
+                              padding: '6px 12px',
+                              background: '#DC2626',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '13px'
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
 
