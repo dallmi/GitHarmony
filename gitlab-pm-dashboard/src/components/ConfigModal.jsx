@@ -6,6 +6,7 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
   const existingConfig = loadConfig()
   const [activeTab, setActiveTab] = useState('connection')
 
+  const [mode, setMode] = useState(existingConfig.mode || 'project')
   const [gitlabUrl, setGitlabUrl] = useState(existingConfig.gitlabUrl || 'https://gitlab.com')
   const [projectId, setProjectId] = useState(existingConfig.projectId || '')
   const [groupPaths, setGroupPaths] = useState(
@@ -39,6 +40,7 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
       groupPath: filteredGroupPaths[0] || '', // For backward compatibility
       groupPaths: filteredGroupPaths, // New format supporting multiple paths
       token,
+      mode,
       filter2025
     }
 
@@ -203,38 +205,85 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
               </div>
 
               <div className="form-group">
-                <label className="form-label">Project ID</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={projectId}
-                  onChange={e => setProjectId(e.target.value)}
-                  placeholder="123 or group/project"
-                />
-                <div className="text-small text-muted" style={{ marginTop: '4px' }}>
-                  Find this in your GitLab project settings
+                <label className="form-label">Mode</label>
+                <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', border: `2px solid ${mode === 'project' ? '#3B82F6' : '#E5E7EB'}`, borderRadius: '8px', cursor: 'pointer', flex: 1, background: mode === 'project' ? '#EFF6FF' : 'white' }}>
+                    <input
+                      type="radio"
+                      name="mode"
+                      value="project"
+                      checked={mode === 'project'}
+                      onChange={e => setMode(e.target.value)}
+                      style={{ accentColor: '#3B82F6' }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: '600', color: '#1F2937' }}>Single Project</div>
+                      <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
+                        Fetch data from one specific project
+                      </div>
+                    </div>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', border: `2px solid ${mode === 'group' ? '#3B82F6' : '#E5E7EB'}`, borderRadius: '8px', cursor: 'pointer', flex: 1, background: mode === 'group' ? '#EFF6FF' : 'white' }}>
+                    <input
+                      type="radio"
+                      name="mode"
+                      value="group"
+                      checked={mode === 'group'}
+                      onChange={e => setMode(e.target.value)}
+                      style={{ accentColor: '#3B82F6' }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: '600', color: '#1F2937' }}>Entire Group</div>
+                      <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
+                        Aggregate data from all projects in a group
+                      </div>
+                    </div>
+                  </label>
+                </div>
+                <div className="text-small text-muted" style={{ marginTop: '8px', padding: '8px', background: '#F0F9FF', borderRadius: '4px', border: '1px solid #BFDBFE' }}>
+                  <strong>💡 Tip:</strong> Use <strong>Group Mode</strong> for multi-project pods/teams. This will automatically fetch issues from all projects and subgroups.
                 </div>
               </div>
 
+              {mode === 'project' && (
+                <div className="form-group">
+                  <label className="form-label">Project ID</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={projectId}
+                    onChange={e => setProjectId(e.target.value)}
+                    placeholder="123 or group/project"
+                  />
+                  <div className="text-small text-muted" style={{ marginTop: '4px' }}>
+                    Find this in your GitLab project settings
+                  </div>
+                </div>
+              )}
+
               <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <label className="form-label" style={{ marginBottom: 0 }}>Group Paths (Optional)</label>
-                  <button
-                    type="button"
-                    onClick={handleAddGroupPath}
-                    style={{
-                      padding: '4px 12px',
-                      background: '#10B981',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      fontWeight: '500'
-                    }}
-                  >
-                    + Add Group
-                  </button>
+                  <label className="form-label" style={{ marginBottom: 0 }}>
+                    {mode === 'group' ? 'Group Path (Required)' : 'Group Paths (Optional)'}
+                  </label>
+                  {mode === 'project' && (
+                    <button
+                      type="button"
+                      onClick={handleAddGroupPath}
+                      style={{
+                        padding: '4px 12px',
+                        background: '#10B981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '500'
+                      }}
+                    >
+                      + Add Group
+                    </button>
+                  )}
                 </div>
                 {groupPaths.map((path, index) => (
                   <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
@@ -243,10 +292,10 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
                       className="form-input"
                       value={path}
                       onChange={e => handleUpdateGroupPath(index, e.target.value)}
-                      placeholder="my-group or parent-group/sub-group"
+                      placeholder={mode === 'group' ? 'GMDP Nova or parent-group/gmdp-nova' : 'my-group or parent-group/sub-group'}
                       style={{ flex: 1 }}
                     />
-                    {groupPaths.length > 1 && (
+                    {mode === 'project' && groupPaths.length > 1 && (
                       <button
                         type="button"
                         onClick={() => handleRemoveGroupPath(index)}
@@ -266,7 +315,10 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
                   </div>
                 ))}
                 <div className="text-small text-muted" style={{ marginTop: '4px' }}>
-                  Required for Epic support (Premium/Ultimate only). Add multiple groups to fetch epics from different parts of your hierarchy.
+                  {mode === 'group'
+                    ? 'The group path to fetch all projects from (e.g., "GMDP Nova"). All projects in subgroups will be included automatically.'
+                    : 'Required for Epic support (Premium/Ultimate only). Add multiple groups to fetch epics from different parts of your hierarchy.'
+                  }
                 </div>
               </div>
 

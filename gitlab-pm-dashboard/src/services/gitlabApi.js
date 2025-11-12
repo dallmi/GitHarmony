@@ -334,6 +334,176 @@ export async function fetchIssueStateHistory(gitlabUrl, projectId, issueIid, tok
 }
 
 /**
+ * Validate and fetch group information
+ */
+export async function validateGroup(gitlabUrl, groupPath, token) {
+  const encodedGroupPath = encodeURIComponent(groupPath)
+  const url = `${gitlabUrl}/api/v4/groups/${encodedGroupPath}`
+
+  console.log('Validating group access...')
+  console.log('  URL:', url)
+
+  const response = await fetch(url, {
+    headers: { 'PRIVATE-TOKEN': token }
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error('Group validation failed:', errorText)
+
+    if (response.status === 404) {
+      throw new Error(`Group not found: "${groupPath}"\n\nPossible issues:\n- Group path might be incorrect\n- Use the full group path (e.g., "my-group" or "parent/child-group")\n- Check if the token has access to this group\n- Verify the GitLab URL is correct`)
+    } else if (response.status === 401) {
+      throw new Error(`Authentication failed: Invalid or expired access token`)
+    } else {
+      throw new Error(`Group validation error: ${response.status} - ${response.statusText}`)
+    }
+  }
+
+  const group = await response.json()
+  console.log('✓ Group validated:', group.name)
+  console.log('  Full path:', group.full_path)
+  console.log('  Numeric ID:', group.id)
+
+  return group
+}
+
+/**
+ * Fetch all projects under a group (including subgroups recursively)
+ */
+export async function fetchGroupProjects(gitlabUrl, groupPath, token) {
+  const encodedGroupPath = encodeURIComponent(groupPath)
+  let allProjects = []
+  let page = 1
+  const perPage = 100
+
+  console.log('Fetching all projects in group (including subgroups)...')
+  console.log('  Group Path:', groupPath)
+
+  while (true) {
+    // include_subgroups=true fetches all projects from subgroups recursively
+    const url = `${gitlabUrl}/api/v4/groups/${encodedGroupPath}/projects?per_page=${perPage}&page=${page}&include_subgroups=true&archived=false`
+
+    const response = await fetch(url, {
+      headers: { 'PRIVATE-TOKEN': token }
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Group Projects API Error:', errorText)
+      throw new Error(`Group Projects API Error: ${response.status} - ${errorText}`)
+    }
+
+    const projects = await response.json()
+
+    if (projects.length === 0) {
+      break
+    }
+
+    allProjects = allProjects.concat(projects)
+    console.log(`  Fetched page ${page}: ${projects.length} projects (total: ${allProjects.length})`)
+
+    if (projects.length < perPage) {
+      break
+    }
+
+    page++
+  }
+
+  console.log(`✓ Found ${allProjects.length} projects in group "${groupPath}"`)
+
+  // Log project summary
+  if (allProjects.length > 0) {
+    console.log('  Projects:')
+    allProjects.forEach(p => {
+      console.log(`    - ${p.path_with_namespace} (ID: ${p.id})`)
+    })
+  }
+
+  return allProjects
+}
+
+/**
+ * Fetch issues from multiple projects in parallel
+ */
+export async function fetchIssuesFromProjects(gitlabUrl, projects, token, onProgress = null) {
+  console.log(`Fetching issues from ${projects.length} projects...`)
+
+  const batchSize = 5 // Process 5 projects at a time to avoid overwhelming the API
+  let allIssues = []
+  let processed = 0
+
+  for (let i = 0; i < projects.length; i += batchSize) {
+    const batch = projects.slice(i, i + batchSize)
+
+    const batchResults = await Promise.all(
+      batch.map(async (project) => {
+        try {
+          const issues = await fetchIssues(gitlabUrl, project.id, token)
+          return { projectId: project.id, projectPath: project.path_with_namespace, issues }
+        } catch (error) {
+          console.warn(`Failed to fetch issues from project ${project.path_with_namespace}:`, error)
+          return { projectId: project.id, projectPath: project.path_with_namespace, issues: [] }
+        }
+      })
+    )
+
+    batchResults.forEach(({ projectPath, issues }) => {
+      if (issues.length > 0) {
+        console.log(`  ✓ ${projectPath}: ${issues.length} issues`)
+      }
+      allIssues = allIssues.concat(issues)
+    })
+
+    processed += batch.length
+    if (onProgress) {
+      onProgress(processed, projects.length)
+    }
+  }
+
+  console.log(`✓ Loaded ${allIssues.length} total issues from ${projects.length} projects`)
+  return allIssues
+}
+
+/**
+ * Fetch milestones from multiple projects in parallel
+ */
+export async function fetchMilestonesFromProjects(gitlabUrl, projects, token) {
+  console.log(`Fetching milestones from ${projects.length} projects...`)
+
+  const batchSize = 5
+  let allMilestones = []
+
+  for (let i = 0; i < projects.length; i += batchSize) {
+    const batch = projects.slice(i, i + batchSize)
+
+    const batchResults = await Promise.all(
+      batch.map(async (project) => {
+        try {
+          const milestones = await fetchMilestones(gitlabUrl, project.id, token)
+          return { projectPath: project.path_with_namespace, milestones }
+        } catch (error) {
+          console.warn(`Failed to fetch milestones from project ${project.path_with_namespace}:`, error)
+          return { projectPath: project.path_with_namespace, milestones: [] }
+        }
+      })
+    )
+
+    batchResults.forEach(({ milestones }) => {
+      allMilestones = allMilestones.concat(milestones)
+    })
+  }
+
+  // Remove duplicate milestones (same title and dates)
+  const uniqueMilestones = Array.from(
+    new Map(allMilestones.map(m => [m.id, m])).values()
+  )
+
+  console.log(`✓ Loaded ${uniqueMilestones.length} unique milestones from ${projects.length} projects`)
+  return uniqueMilestones
+}
+
+/**
  * Filter data to only include items from 2025 onwards
  */
 function filterByYear2025(data, dateFields) {
@@ -355,31 +525,74 @@ function filterByYear2025(data, dateFields) {
  * Fetch all data needed for the dashboard
  */
 export async function fetchAllData(config) {
-  const { gitlabUrl, projectId, groupPath, groupPaths, token, filter2025 } = config
+  const { gitlabUrl, projectId, groupPath, groupPaths, token, filter2025, mode } = config
 
-  // First validate project access to provide clear error messages
   console.log('=== Starting GitLab Data Fetch ===')
   console.log('Full config object:', config)
-  console.log('Config values:', {
-    gitlabUrl,
-    projectId,
-    groupPath: groupPath || '(none)',
-    groupPathType: typeof groupPath,
-    groupPathLength: groupPath?.length
-  })
+  console.log('Mode:', mode || 'project (default)')
 
-  await validateProject(gitlabUrl, projectId, token)
+  let allIssues, allMilestones, projects = []
+  const isSingleProjectMode = mode !== 'group'
 
-  // Support both single groupPath and multiple groupPaths
+  // GROUP MODE: Fetch all projects from group, then fetch all issues
+  if (mode === 'group') {
+    if (!groupPath && (!groupPaths || groupPaths.length === 0)) {
+      throw new Error('Group mode requires groupPath or groupPaths to be configured')
+    }
+
+    // Use the first groupPath for fetching projects
+    const primaryGroupPath = groupPaths && groupPaths.length > 0 ? groupPaths[0] : groupPath
+
+    // Validate group access
+    await validateGroup(gitlabUrl, primaryGroupPath, token)
+
+    // Fetch all projects in the group
+    projects = await fetchGroupProjects(gitlabUrl, primaryGroupPath, token)
+
+    console.log(`\n📊 GROUP MODE: Fetching data from ${projects.length} projects in "${primaryGroupPath}"\n`)
+
+    // Fetch issues and milestones from all projects
+    const [issuesResult, milestonesResult] = await Promise.all([
+      fetchIssuesFromProjects(gitlabUrl, projects, token),
+      fetchMilestonesFromProjects(gitlabUrl, projects, token)
+    ])
+
+    allIssues = issuesResult
+    allMilestones = milestonesResult
+  }
+  // PROJECT MODE: Fetch from single project (existing behavior)
+  else {
+    console.log('Config values:', {
+      gitlabUrl,
+      projectId,
+      groupPath: groupPath || '(none)',
+      groupPathType: typeof groupPath,
+      groupPathLength: groupPath?.length
+    })
+
+    // Validate project access
+    await validateProject(gitlabUrl, projectId, token)
+
+    console.log(`\n📊 PROJECT MODE: Fetching data from single project "${projectId}"\n`)
+
+    // Fetch issues and milestones from single project
+    const [issuesResult, milestonesResult] = await Promise.all([
+      fetchIssues(gitlabUrl, projectId, token),
+      fetchMilestones(gitlabUrl, projectId, token)
+    ])
+
+    allIssues = issuesResult
+    allMilestones = milestonesResult
+  }
+
+  // Fetch epics from all configured groups
   const groupPathsToFetch = groupPaths && Array.isArray(groupPaths) && groupPaths.length > 0
     ? groupPaths
     : (groupPath ? [groupPath] : [])
 
-  const [allIssues, allMilestones, ...epicResults] = await Promise.all([
-    fetchIssues(gitlabUrl, projectId, token),
-    fetchMilestones(gitlabUrl, projectId, token),
-    ...groupPathsToFetch.map(path => fetchEpics(gitlabUrl, path, token))
-  ])
+  const epicResults = await Promise.all(
+    groupPathsToFetch.map(path => fetchEpics(gitlabUrl, path, token))
+  )
 
   // Merge epics from all groups and remove duplicates
   const allEpics = epicResults.flat()
@@ -405,7 +618,11 @@ export async function fetchAllData(config) {
     ? filterByYear2025(uniqueEpics, ['start_date', 'end_date', 'created_at'])
     : uniqueEpics
 
-  console.log(`Filtered data: ${allIssues.length} → ${issues.length} issues, ${allMilestones.length} → ${milestones.length} milestones, ${uniqueEpics.length} → ${epics.length} epics ${shouldFilter ? '(>= 2025)' : '(no filter)'} (from ${groupPathsToFetch.length} group${groupPathsToFetch.length !== 1 ? 's' : ''})`)
+  console.log(`Filtered data: ${allIssues.length} → ${issues.length} issues, ${allMilestones.length} → ${milestones.length} milestones, ${uniqueEpics.length} → ${epics.length} epics ${shouldFilter ? '(>= 2025)' : '(no filter)'}`)
+
+  if (mode === 'group') {
+    console.log(`  Aggregated from ${projects.length} projects in group`)
+  }
 
   // Import cross-project linking functions
   const {
@@ -415,18 +632,15 @@ export async function fetchAllData(config) {
     findOrphanedIssues
   } = await import('./crossProjectLinkingService.js')
 
-  // IMPORTANT: In single-project mode, we only have issues from the selected project
-  // But epics come from the entire group and may reference issues in other projects
-  // To show complete cross-project relationships, we need to note this limitation
-  const isSingleProjectMode = true // This is single project mode
-
   // Build cross-project relationships with available data
   const linkingData = linkCrossProjectIssues(issues, epics)
 
-  // Add metadata about single-project limitation
+  // Add metadata about mode
   linkingData.singleProjectMode = isSingleProjectMode
-  linkingData.selectedProjectId = projectId
-  linkingData.limitedView = true // Only showing issues from selected project
+  linkingData.selectedProjectId = isSingleProjectMode ? projectId : null
+  linkingData.limitedView = isSingleProjectMode // Only showing issues from selected project in project mode
+  linkingData.mode = mode || 'project'
+  linkingData.projectCount = mode === 'group' ? projects.length : 1
 
   // Build epic hierarchy
   const { rootEpics, epicMap } = buildEpicHierarchy(epics)
@@ -447,16 +661,17 @@ export async function fetchAllData(config) {
     return { ...epic, issues: epicIssues }
   })
 
-  console.log(`Loaded ${epics.length} epics with ${epicsWithIssues.reduce((sum, e) => sum + e.issues.length, 0)} total issues`)
-  console.log(`Cross-project statistics:`, linkingData.statistics)
+  console.log(`✓ Loaded ${epics.length} epics with ${epicsWithIssues.reduce((sum, e) => sum + e.issues.length, 0)} total issues`)
+  console.log(`✓ Cross-project statistics:`, linkingData.statistics)
   if (orphanedIssues.length > 0) {
-    console.log(`Found ${orphanedIssues.length} orphaned issues that might need epic assignment`)
+    console.log(`  Found ${orphanedIssues.length} orphaned issues that might need epic assignment`)
   }
 
   return {
     issues,
     milestones,
     epics: epicsWithIssues,
+    projects, // Include projects list for group mode
     crossProjectData: {
       ...linkingData,
       epicHierarchy: { rootEpics, epicMap },

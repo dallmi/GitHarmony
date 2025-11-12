@@ -9,6 +9,7 @@ const KEYS = {
   PROJECT_ID: 'gitlab_project',
   GROUP_PATH: 'gitlab_group_path',
   FILTER_2025: 'gitlab_filter_2025',
+  MODE: 'gitlab_mode', // 'project' or 'group'
   RISKS: 'project_risks',
   PROJECTS: 'portfolio_projects', // Multi-project configuration
   ACTIVE_PROJECT: 'active_project_id' // Currently active project
@@ -22,6 +23,7 @@ export function saveConfig(config) {
   localStorage.setItem(KEYS.GITLAB_TOKEN, config.token || '')
   localStorage.setItem(KEYS.PROJECT_ID, config.projectId || '')
   localStorage.setItem(KEYS.GROUP_PATH, config.groupPath || '')
+  localStorage.setItem(KEYS.MODE, config.mode || 'project')
   // Save filter2025 setting (store as string to handle boolean properly)
   if (config.filter2025 !== undefined) {
     localStorage.setItem(KEYS.FILTER_2025, config.filter2025.toString())
@@ -36,11 +38,14 @@ export function loadConfig() {
   const filter2025Stored = localStorage.getItem(KEYS.FILTER_2025)
   const filter2025 = filter2025Stored !== null ? filter2025Stored === 'true' : false
 
+  const mode = localStorage.getItem(KEYS.MODE) || 'project'
+
   return {
     gitlabUrl: localStorage.getItem(KEYS.GITLAB_URL) || 'https://gitlab.com',
     token: localStorage.getItem(KEYS.GITLAB_TOKEN) || '',
     projectId: localStorage.getItem(KEYS.PROJECT_ID) || '',
     groupPath: localStorage.getItem(KEYS.GROUP_PATH) || '',
+    mode,
     filter2025
   }
 }
@@ -50,6 +55,13 @@ export function loadConfig() {
  */
 export function isConfigured() {
   const config = loadConfig()
+
+  // In group mode, groupPath is required instead of projectId
+  if (config.mode === 'group') {
+    return !!(config.gitlabUrl && config.token && config.groupPath)
+  }
+
+  // In project mode, projectId is required
   return !!(config.gitlabUrl && config.token && config.projectId)
 }
 
@@ -61,6 +73,7 @@ export function clearConfig() {
   localStorage.removeItem(KEYS.GITLAB_TOKEN)
   localStorage.removeItem(KEYS.PROJECT_ID)
   localStorage.removeItem(KEYS.GROUP_PATH)
+  localStorage.removeItem(KEYS.MODE)
   localStorage.removeItem(KEYS.FILTER_2025)
 }
 
