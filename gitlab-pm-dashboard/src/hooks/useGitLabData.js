@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { fetchAllData } from '../services/gitlabApi'
-import { loadConfig, isConfigured, getActiveProjectId, getAllProjects } from '../services/storageService'
+import { loadConfig, isConfigured, getActiveProjectId, getAllProjects, getActiveGroupId, getActiveGroup } from '../services/storageService'
 import { getProjectGroup, getProjectsForGroup } from '../services/projectGroupService'
 
 export default function useGitLabData() {
@@ -33,6 +33,50 @@ export default function useGitLabData() {
   // Fetch data from GitLab (single project, project group, or cross-project aggregation)
   const fetchData = useCallback(async () => {
     const activeProjectId = getActiveProjectId()
+    const activeGroupId = getActiveGroupId()
+
+    // Check if POD mode is active (GitLab Group/Pod)
+    if (activeGroupId) {
+      console.log('useGitLabData: Pod mode detected, activeGroupId:', activeGroupId)
+      const activePod = getActiveGroup()
+
+      if (!activePod) {
+        console.warn('useGitLabData: Pod not found:', activeGroupId)
+        return
+      }
+
+      setLoading(true)
+      setError(null)
+
+      try {
+        console.log(`useGitLabData: Fetching data for pod "${activePod.name}"...`)
+        console.log('  Pod config:', activePod)
+
+        const podConfig = {
+          gitlabUrl: activePod.gitlabUrl,
+          token: activePod.token,
+          groupPath: activePod.groupPath,
+          mode: 'group',
+          filter2025: loadConfig().filter2025
+        }
+
+        const result = await fetchAllData(podConfig)
+
+        console.log(`useGitLabData: Pod data fetch complete:`)
+        console.log(`  Pod: ${activePod.name}`)
+        console.log(`  Total issues: ${result.issues.length}`)
+        console.log(`  Total milestones: ${result.milestones.length}`)
+        console.log(`  Total epics: ${result.epics.length}`)
+
+        setData(result)
+      } catch (err) {
+        console.error('Pod data fetch failed:', err)
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+      return
+    }
 
     // Check if project group mode is active
     if (activeProjectId?.startsWith('group:')) {
@@ -303,12 +347,13 @@ export default function useGitLabData() {
     }
   }, [config])
 
-  // Auto-fetch on config change or when entering cross-project/group mode
+  // Auto-fetch on config change or when entering cross-project/group/pod mode
   useEffect(() => {
     const activeProjectId = getActiveProjectId()
+    const activeGroupId = getActiveGroupId()
 
-    // Fetch if in cross-project mode OR project group mode OR if single project is configured
-    if (activeProjectId === 'cross-project' || activeProjectId?.startsWith('group:') || (config && isConfigured())) {
+    // Fetch if in pod mode OR cross-project mode OR project group mode OR if single project is configured
+    if (activeGroupId || activeProjectId === 'cross-project' || activeProjectId?.startsWith('group:') || (config && isConfigured())) {
       fetchData()
     }
   }, [config, fetchData])
