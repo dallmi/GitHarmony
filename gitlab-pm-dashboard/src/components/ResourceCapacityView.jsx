@@ -1022,10 +1022,11 @@ export default function ResourceCapacityView({ issues: allIssues }) {
                     </div>
 
                     <div>
-                      <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '4px' }}>OPEN ISSUES</div>
+                      <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '4px' }}>REMAINING ISSUES</div>
                       <div style={{ fontSize: '24px', fontWeight: '700', color: '#1F2937' }}>
                         {member.openIssues}
                       </div>
+                      <div style={{ fontSize: '11px', color: '#6B7280' }}>of {member.totalIssues} total</div>
                     </div>
 
                     <div>
@@ -1033,6 +1034,7 @@ export default function ResourceCapacityView({ issues: allIssues }) {
                       <div style={{ fontSize: '24px', fontWeight: '700', color: '#059669' }}>
                         {Math.round((member.closedIssues / member.totalIssues) * 100)}%
                       </div>
+                      <div style={{ fontSize: '11px', color: '#6B7280' }}>{member.closedIssues} closed</div>
                     </div>
                   </div>
 
