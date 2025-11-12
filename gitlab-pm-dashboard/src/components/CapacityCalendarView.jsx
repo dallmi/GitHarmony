@@ -542,6 +542,10 @@ export default function CapacityCalendarView({ issues }) {
             <div style={{ display: 'flex', flex: 1 }}>
               {days.map((day, idx) => {
                 const isWknd = isWeekend(day)
+                const today = new Date()
+                const isToday = day.getDate() === today.getDate() &&
+                                day.getMonth() === today.getMonth() &&
+                                day.getFullYear() === today.getFullYear()
                 return (
                   <div
                     key={idx}
@@ -551,9 +555,10 @@ export default function CapacityCalendarView({ issues }) {
                       padding: '4px 0',
                       textAlign: 'center',
                       fontSize: '10px',
-                      color: isWknd ? '#DC2626' : '#6B7280',
-                      fontWeight: isWknd ? '600' : '400',
-                      background: isWknd ? '#FEF2F2' : 'transparent'
+                      color: isToday ? 'white' : (isWknd ? '#DC2626' : '#6B7280'),
+                      fontWeight: isToday ? '700' : (isWknd ? '600' : '400'),
+                      background: isToday ? '#2563EB' : (isWknd ? '#FEF2F2' : 'transparent'),
+                      borderRadius: isToday ? '4px' : '0'
                     }}
                   >
                     {day.getDate()}
