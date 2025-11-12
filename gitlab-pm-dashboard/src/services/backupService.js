@@ -17,10 +17,18 @@ function getAllStorageKeys() {
     projectId: 'gitlab_project',
     groupPath: 'gitlab_group_path',
     filter2025: 'gitlab_filter_2025',
+    mode: 'gitlab_mode',
 
     // Portfolio/Multi-project
     portfolioProjects: 'portfolio_projects',
     activeProject: 'active_project_id',
+
+    // Project Groups
+    projectGroups: 'gitlab-pm-project-groups',
+
+    // Pods/Multi-group
+    portfolioGroups: 'portfolio_groups',
+    activeGroup: 'active_group_id',
 
     // Risk management
     risks: 'project_risks',
@@ -130,14 +138,16 @@ export function createBackup(options = {}) {
   const projectId = loadFromStorage(keys.projectId)
   const groupPath = loadFromStorage(keys.groupPath)
   const filter2025 = loadFromStorage(keys.filter2025)
+  const mode = loadFromStorage(keys.mode)
 
-  if (gitlabToken || gitlabUrl || projectId || groupPath || filter2025) {
+  if (gitlabToken || gitlabUrl || projectId || groupPath || filter2025 || mode) {
     data.gitlabConfig = {
       gitlabUrl,
       gitlabToken: includeTokens ? gitlabToken : (gitlabToken ? maskToken(gitlabToken) : null),
       projectId,
       groupPath,
-      filter2025
+      filter2025,
+      mode
     }
     includedData.push('gitlabConfig')
   }
@@ -149,7 +159,7 @@ export function createBackup(options = {}) {
       // Mask access tokens in portfolio projects
       data.portfolioProjects = portfolioProjects.map(p => ({
         ...p,
-        accessToken: p.accessToken ? maskToken(p.accessToken) : null
+        token: p.token ? maskToken(p.token) : null
       }))
     } else {
       data.portfolioProjects = portfolioProjects
@@ -159,18 +169,38 @@ export function createBackup(options = {}) {
 
   addIfExists('activeProject', keys.activeProject)
 
-  // 3. Risk Management
+  // 3. Project Groups
+  addIfExists('projectGroups', keys.projectGroups)
+
+  // 4. Pods/Multi-group Configuration
+  const portfolioGroups = loadFromStorage(keys.portfolioGroups)
+  if (portfolioGroups) {
+    if (!includeTokens && Array.isArray(portfolioGroups)) {
+      // Mask access tokens in portfolio groups (pods)
+      data.portfolioGroups = portfolioGroups.map(g => ({
+        ...g,
+        token: g.token ? maskToken(g.token) : null
+      }))
+    } else {
+      data.portfolioGroups = portfolioGroups
+    }
+    includedData.push('portfolioGroups')
+  }
+
+  addIfExists('activeGroup', keys.activeGroup)
+
+  // 5. Risk Management
   addIfExists('risks', keys.risks)
 
-  // 4. Team Configuration
+  // 6. Team Configuration
   addIfExists('teamConfig', keys.teamConfig)
   addIfExists('teamCapacity', keys.teamCapacity)
   addIfExists('velocitySettings', keys.velocitySettings)
 
-  // 5. Absences
+  // 7. Absences
   addIfExists('absences', keys.absences)
 
-  // 6. Stakeholder Hub Data
+  // 8. Stakeholder Hub Data
   const stakeholders = loadFromStorage(keys.stakeholders)
   const communicationHistory = loadFromStorage(keys.communicationHistory)
   const communicationTemplates = loadFromStorage(keys.communicationTemplates)
@@ -188,26 +218,26 @@ export function createBackup(options = {}) {
     includedData.push('stakeholderHub')
   }
 
-  // 7. Health Score Configuration
+  // 9. Health Score Configuration
   addIfExists('healthScoreConfig', keys.healthScoreConfig)
 
-  // 8. Quality & Compliance
+  // 10. Quality & Compliance
   addIfExists('criteriaConfig', keys.criteriaConfig)
   addIfExists('dodTemplates', keys.dodTemplates)
 
-  // 9. Sprint Management
+  // 11. Sprint Management
   addIfExists('sprintGoals', keys.sprintGoals)
   addIfExists('retroActions', keys.retroActions)
 
-  // 10. Backlog Health
+  // 12. Backlog Health
   addIfExists('backlogHealthHistory', keys.backlogHealthHistory)
 
-  // 11. User Preferences
+  // 13. User Preferences
   addIfExists('userRole', keys.userRole)
   addIfExists('viewPreference', keys.viewPreference)
   addIfExists('favoriteViews', keys.favoriteViews)
 
-  // 12. UI State
+  // 14. UI State
   const uiState = {}
   const qualityShowOpenOnly = loadFromStorage(keys.qualityShowOpenOnly)
   const qualityLegendCollapsed = loadFromStorage(keys.qualityLegendCollapsed)
@@ -339,7 +369,14 @@ export function validateBackup(backup) {
 
     // Check portfolio projects tokens
     if (backup.data.portfolioProjects && Array.isArray(backup.data.portfolioProjects)) {
-      if (backup.data.portfolioProjects.some(p => p.accessToken && p.accessToken.includes('***'))) {
+      if (backup.data.portfolioProjects.some(p => p.token && p.token.includes('***'))) {
+        hasMaskedTokens = true
+      }
+    }
+
+    // Check portfolio groups (pods) tokens
+    if (backup.data.portfolioGroups && Array.isArray(backup.data.portfolioGroups)) {
+      if (backup.data.portfolioGroups.some(g => g.token && g.token.includes('***'))) {
         hasMaskedTokens = true
       }
     }
@@ -403,7 +440,8 @@ export function restoreFromBackup(backup, options = {}) {
             if (data.gitlabToken) saveToStorage(keys.gitlabToken, data.gitlabToken)
             if (data.projectId) saveToStorage(keys.projectId, data.projectId)
             if (data.groupPath) saveToStorage(keys.groupPath, data.groupPath)
-            if (data.filter2025 !== null) saveToStorage(keys.filter2025, data.filter2025)
+            if (data.filter2025 !== null && data.filter2025 !== undefined) saveToStorage(keys.filter2025, data.filter2025)
+            if (data.mode) saveToStorage(keys.mode, data.mode)
             result.restored.push('gitlabConfig')
           } else {
             result.skipped.push('gitlabConfig (already exists)')
@@ -428,6 +466,41 @@ export function restoreFromBackup(backup, options = {}) {
           if (overwrite || !loadFromStorage(keys.activeProject)) {
             saveToStorage(keys.activeProject, data)
             result.restored.push('activeProject')
+          }
+          break
+
+        case 'projectGroups':
+          if (overwrite || !loadFromStorage(keys.projectGroups)) {
+            saveToStorage(keys.projectGroups, data)
+            result.restored.push('projectGroups')
+          } else if (merge && Array.isArray(data)) {
+            const existing = loadFromStorage(keys.projectGroups) || []
+            const merged = [...existing, ...data]
+            saveToStorage(keys.projectGroups, merged)
+            result.restored.push('projectGroups (merged)')
+          } else {
+            result.skipped.push('projectGroups (already exists)')
+          }
+          break
+
+        case 'portfolioGroups':
+          if (overwrite || !loadFromStorage(keys.portfolioGroups)) {
+            saveToStorage(keys.portfolioGroups, data)
+            result.restored.push('portfolioGroups')
+          } else if (merge && Array.isArray(data)) {
+            const existing = loadFromStorage(keys.portfolioGroups) || []
+            const merged = [...existing, ...data]
+            saveToStorage(keys.portfolioGroups, merged)
+            result.restored.push('portfolioGroups (merged)')
+          } else {
+            result.skipped.push('portfolioGroups (already exists)')
+          }
+          break
+
+        case 'activeGroup':
+          if (overwrite || !loadFromStorage(keys.activeGroup)) {
+            saveToStorage(keys.activeGroup, data)
+            result.restored.push('activeGroup')
           }
           break
 
