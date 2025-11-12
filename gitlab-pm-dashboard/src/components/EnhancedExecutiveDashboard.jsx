@@ -197,17 +197,30 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
       return null
     }
 
-    console.log('[DeliveryConfidence] Calculating with', issues.length, 'issues')
-    const result = calculateDeliveryConfidence(issues)
-    console.log('[DeliveryConfidence] Result:', result)
+    try {
+      console.log('[DeliveryConfidence] Calculating with', issues.length, 'issues')
+      const result = calculateDeliveryConfidence(issues)
+      console.log('[DeliveryConfidence] Result:', result)
 
-    // Ensure result has required properties
-    if (!result || typeof result.score === 'undefined') {
-      console.warn('[DeliveryConfidence] Invalid result, returning null:', result)
-      return null
+      // Ensure result has required properties
+      if (!result || typeof result.score === 'undefined') {
+        console.warn('[DeliveryConfidence] Invalid result, returning null:', result)
+        return null
+      }
+
+      return result
+    } catch (error) {
+      console.error('[DeliveryConfidence] Error calculating delivery confidence:', error)
+      // Return a safe default object
+      return {
+        score: 0,
+        status: 'unknown',
+        statusColor: '#6B7280',
+        factors: [],
+        recommendations: [],
+        breakdown: {}
+      }
     }
-
-    return result
   }, [issues])
 
   // Calculate month-over-month metrics
