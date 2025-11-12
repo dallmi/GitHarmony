@@ -292,7 +292,7 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
                       className="form-input"
                       value={path}
                       onChange={e => handleUpdateGroupPath(index, e.target.value)}
-                      placeholder={mode === 'group' ? 'GMDP Nova or parent-group/gmdp-nova' : 'my-group or parent-group/sub-group'}
+                      placeholder={mode === 'group' ? '12345 or GMDP Nova or parent-group/gmdp-nova' : 'my-group or parent-group/sub-group'}
                       style={{ flex: 1 }}
                     />
                     {mode === 'project' && groupPaths.length > 1 && (
@@ -316,7 +316,7 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
                 ))}
                 <div className="text-small text-muted" style={{ marginTop: '4px' }}>
                   {mode === 'group'
-                    ? 'The group path to fetch all projects from (e.g., "GMDP Nova"). All projects in subgroups will be included automatically.'
+                    ? 'Use numeric group ID (e.g., "12345") or group path (e.g., "GMDP Nova"). All projects in subgroups will be included automatically.'
                     : 'Required for Epic support (Premium/Ultimate only). Add multiple groups to fetch epics from different parts of your hierarchy.'
                   }
                 </div>

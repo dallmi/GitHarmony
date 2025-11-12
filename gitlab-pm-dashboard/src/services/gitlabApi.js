@@ -352,7 +352,7 @@ export async function validateGroup(gitlabUrl, groupPath, token) {
     console.error('Group validation failed:', errorText)
 
     if (response.status === 404) {
-      throw new Error(`Group not found: "${groupPath}"\n\nPossible issues:\n- Group path might be incorrect\n- Use the full group path (e.g., "my-group" or "parent/child-group")\n- Check if the token has access to this group\n- Verify the GitLab URL is correct`)
+      throw new Error(`Group not found: "${groupPath}"\n\nPossible issues:\n- Group ID/path might be incorrect\n- Use either numeric ID (e.g., "12345") or full path (e.g., "my-group" or "parent/child-group")\n- Check if the token has access to this group\n- Verify the GitLab URL is correct`)
     } else if (response.status === 401) {
       throw new Error(`Authentication failed: Invalid or expired access token`)
     } else {
