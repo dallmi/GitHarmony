@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react'
 import { getActiveProjectId } from '../services/storageService'
 import TeamSetupTab from './ResourcePlanning/TeamSetupTab'
 import AbsenceCalendarTab from './ResourcePlanning/AbsenceCalendarTab'
-import SprintCapacityTab from './ResourcePlanning/SprintCapacityTab'
 
 /**
  * Integrated Resource Planning View
  * Consolidates team management, absence planning, and sprint capacity in one place
  * Replaces: ConfigModal (team config) + CapacityCalendarView + Sprint Capacity Modal
  */
-export default function ResourcePlanningView({ issues, initialTab = 'capacity' }) {
+export default function ResourcePlanningView({ issues, initialTab = 'team' }) {
   const [activeTab, setActiveTab] = useState(initialTab)
   const activeProjectId = getActiveProjectId()
   const isCrossProject = activeProjectId === 'cross-project'
@@ -19,7 +18,6 @@ export default function ResourcePlanningView({ issues, initialTab = 'capacity' }
   const triggerRefresh = () => setRefreshKey(prev => prev + 1)
 
   const tabs = [
-    { id: 'capacity', label: 'Sprint Capacity' },
     { id: 'team', label: 'Team Setup' },
     { id: 'absences', label: 'Absence Calendar' },
     { id: 'forecast', label: 'Capacity Forecast' },
@@ -93,13 +91,6 @@ export default function ResourcePlanningView({ issues, initialTab = 'capacity' }
 
       {/* Tab Content */}
       <div>
-        {activeTab === 'capacity' && (
-          <SprintCapacityTab
-            issues={issues}
-            isCrossProject={isCrossProject}
-            refreshKey={refreshKey}
-          />
-        )}
         {activeTab === 'team' && (
           <TeamSetupTab
             isCrossProject={isCrossProject}
