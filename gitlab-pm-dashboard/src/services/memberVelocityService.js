@@ -241,6 +241,6 @@ export function getHoursPerStoryPoint(username, allIssues, memberDefaultCapacity
     hours: staticHoursPerSP,
     source: 'static',
     quality: 'configured',
-    details: 'Configured default value'
+    details: `No historical data (needs ≥2 iterations with completed work)`
   }
 }
