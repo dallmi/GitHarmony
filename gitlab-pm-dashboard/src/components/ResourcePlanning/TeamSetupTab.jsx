@@ -13,6 +13,7 @@ export default function TeamSetupTab({ isCrossProject, onTeamUpdate, issues = []
   const [importStatus, setImportStatus] = useState(null)
   const [showVelocity, setShowVelocity] = useState(false)
   const [teamVelocity, setTeamVelocity] = useState(null)
+  const [selectedMembers, setSelectedMembers] = useState([])
 
   useEffect(() => {
     loadTeam()
@@ -105,6 +106,42 @@ export default function TeamSetupTab({ isCrossProject, onTeamUpdate, issues = []
     if (confirm(`Remove ${teamMembers[index].username} from the team?`)) {
       const updated = teamMembers.filter((_, i) => i !== index)
       setTeamMembers(updated)
+      setSelectedMembers([]) // Clear selection after delete
+
+      // Auto-save after deleting
+      const config = loadTeamConfig()
+      config.teamMembers = updated
+      saveTeamConfig(config)
+      onTeamUpdate()
+    }
+  }
+
+  const handleToggleMemberSelection = (index) => {
+    setSelectedMembers(prev => {
+      if (prev.includes(index)) {
+        return prev.filter(i => i !== index)
+      } else {
+        return [...prev, index]
+      }
+    })
+  }
+
+  const handleToggleSelectAll = () => {
+    if (selectedMembers.length === teamMembers.length) {
+      setSelectedMembers([])
+    } else {
+      setSelectedMembers(teamMembers.map((_, index) => index))
+    }
+  }
+
+  const handleBulkDelete = () => {
+    if (selectedMembers.length === 0) return
+
+    const memberNames = selectedMembers.map(index => teamMembers[index].username).join(', ')
+    if (confirm(`Remove ${selectedMembers.length} team member(s)?\n\n${memberNames}`)) {
+      const updated = teamMembers.filter((_, index) => !selectedMembers.includes(index))
+      setTeamMembers(updated)
+      setSelectedMembers([])
 
       // Auto-save after deleting
       const config = loadTeamConfig()
@@ -243,9 +280,48 @@ export default function TeamSetupTab({ isCrossProject, onTeamUpdate, issues = []
           alignItems: 'center',
           marginBottom: '16px'
         }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1F2937' }}>
-            Team Roster
-          </h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1F2937' }}>
+              Team Roster
+            </h3>
+            {teamMembers.length > 0 && (
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '13px',
+                  color: '#6B7280',
+                  cursor: 'pointer'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedMembers.length === teamMembers.length && teamMembers.length > 0}
+                    onChange={handleToggleSelectAll}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  Select All
+                </label>
+                {selectedMembers.length > 0 && (
+                  <button
+                    onClick={handleBulkDelete}
+                    style={{
+                      padding: '6px 12px',
+                      background: '#FEE2E2',
+                      color: '#DC2626',
+                      border: '1px solid #FCA5A5',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Remove Selected ({selectedMembers.length})
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
           <button
             onClick={handleImportFromIssues}
             style={{
@@ -281,8 +357,8 @@ export default function TeamSetupTab({ isCrossProject, onTeamUpdate, issues = []
               <div
                 key={index}
                 style={{
-                  background: 'white',
-                  border: '1px solid #E5E7EB',
+                  background: selectedMembers.includes(index) ? '#F0F9FF' : 'white',
+                  border: `1px solid ${selectedMembers.includes(index) ? '#BFDBFE' : '#E5E7EB'}`,
                   borderRadius: '8px',
                   padding: '16px',
                   display: 'flex',
@@ -290,6 +366,20 @@ export default function TeamSetupTab({ isCrossProject, onTeamUpdate, issues = []
                   gap: '16px'
                 }}
               >
+                {/* Checkbox */}
+                <div>
+                  <input
+                    type="checkbox"
+                    checked={selectedMembers.includes(index)}
+                    onChange={() => handleToggleMemberSelection(index)}
+                    style={{
+                      cursor: 'pointer',
+                      width: '18px',
+                      height: '18px'
+                    }}
+                  />
+                </div>
+
                 {/* Avatar */}
                 <div>
                   {member.avatarUrl ? (
