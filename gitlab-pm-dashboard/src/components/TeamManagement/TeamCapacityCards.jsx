@@ -749,19 +749,41 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
       </div>
 
       {/* Reallocation Suggestions */}
-      {showReallocationSuggestions && reallocationSuggestions.length > 0 && (
+      {showReallocationSuggestions && (
         <div style={{
           marginBottom: '20px',
           padding: '16px',
-          background: '#EFF6FF',
-          border: '1px solid #BFDBFE',
+          background: reallocationSuggestions.length > 0 ? '#EFF6FF' : '#F9FAFB',
+          border: `1px solid ${reallocationSuggestions.length > 0 ? '#BFDBFE' : '#E5E7EB'}`,
           borderRadius: '8px'
         }}>
-          <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#1E40AF', marginBottom: '12px' }}>
+          <h4 style={{ fontSize: '14px', fontWeight: '600', color: reallocationSuggestions.length > 0 ? '#1E40AF' : '#6B7280', marginBottom: '12px' }}>
             Workload Rebalancing Suggestions
           </h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {reallocationSuggestions.map((suggestion, index) => (
+          {reallocationSuggestions.length === 0 ? (
+            <div style={{
+              fontSize: '13px',
+              color: '#6B7280',
+              padding: '12px',
+              background: 'white',
+              border: '1px solid #E5E7EB',
+              borderRadius: '6px'
+            }}>
+              <div style={{ marginBottom: '8px' }}>
+                <strong>No reallocation suggestions available.</strong>
+              </div>
+              <div style={{ fontSize: '12px', lineHeight: '1.5' }}>
+                Suggestions appear when:
+                <ul style={{ marginTop: '6px', marginBottom: '0', paddingLeft: '20px' }}>
+                  <li>A team member has ≥100% utilization (overloaded)</li>
+                  <li>Another team member with the same role has &lt;60% utilization</li>
+                  <li>The overloaded member has issues that can be reassigned</li>
+                </ul>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {reallocationSuggestions.map((suggestion, index) => (
               <div key={index} style={{
                 padding: '12px',
                 background: 'white',
@@ -814,7 +836,8 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
                 </button>
               </div>
             ))}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
