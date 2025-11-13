@@ -89,15 +89,33 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
         return sum + parseInt(sp)
       }, 0)
 
-      // Get member's default capacity
+      // Get member's default capacity (weekly)
       const memberDefaultCapacity = member.defaultCapacity !== undefined && member.defaultCapacity !== null ? member.defaultCapacity : 40
 
-      // Calculate absence impact for current iteration
+      // Calculate sprint capacity and absence impact for current iteration
       let absenceHours = 0
       let absenceDays = 0
       let memberAbsences = []
+      let sprintWorkDays = 10 // Default 2 weeks
+      let sprintCapacity = memberDefaultCapacity // Default to weekly capacity
 
       if (currentIterationDates) {
+        // Calculate working days in sprint
+        let workDays = 0
+        const current = new Date(currentIterationDates.startDate)
+        const end = new Date(currentIterationDates.dueDate)
+        while (current <= end) {
+          const dayOfWeek = current.getDay()
+          if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+            workDays++
+          }
+          current.setDate(current.getDate() + 1)
+        }
+        sprintWorkDays = workDays
+
+        // Calculate sprint capacity based on working days (assuming 8h per day)
+        sprintCapacity = workDays * 8
+
         absenceHours = calculateAbsenceImpact(
           member.username,
           currentIterationDates.startDate,
@@ -118,21 +136,21 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
           const overlapEnd = absence.endDate < currentIterationDates.dueDate
             ? absence.endDate : currentIterationDates.dueDate
 
-          let workDays = 0
-          const current = new Date(overlapStart)
-          while (current <= overlapEnd) {
-            const dayOfWeek = current.getDay()
+          let absDays = 0
+          const absCurrent = new Date(overlapStart)
+          while (absCurrent <= overlapEnd) {
+            const dayOfWeek = absCurrent.getDay()
             if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-              workDays++
+              absDays++
             }
-            current.setDate(current.getDate() + 1)
+            absCurrent.setDate(absCurrent.getDate() + 1)
           }
-          absenceDays += workDays
+          absenceDays += absDays
         })
       }
 
-      // Calculate actual available capacity (default - absences)
-      const currentCapacity = Math.max(0, memberDefaultCapacity - absenceHours)
+      // Calculate actual available capacity for sprint (sprint capacity - absences)
+      const currentCapacity = Math.max(0, sprintCapacity - absenceHours)
 
       // Calculate utilization based on actual available capacity
       const hoursAllocated = storyPoints * 6 // Assuming 6 hours per story point
@@ -169,6 +187,8 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
         hoursAllocated,
         currentCapacity,
         baseCapacity: memberDefaultCapacity,
+        sprintCapacity, // Total capacity for the sprint period
+        sprintWorkDays, // Number of working days in sprint
         absenceHours,
         absenceDays,
         absences: memberAbsences,
@@ -195,6 +215,23 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
       atCapacity: memberCapacityData.filter(m => m.status === 'at-capacity'),
       busy: memberCapacityData.filter(m => m.status === 'busy'),
       available: memberCapacityData.filter(m => m.status === 'available')
+    }
+  }, [memberCapacityData])
+
+  // Calculate team-level aggregates for the blue box
+  const teamAggregates = useMemo(() => {
+    if (!memberCapacityData.length) return null
+
+    const totalSprintCapacity = memberCapacityData.reduce((sum, m) => sum + (m.sprintCapacity || 0), 0)
+    const totalAbsenceHours = memberCapacityData.reduce((sum, m) => sum + (m.absenceHours || 0), 0)
+    const totalAvailableCapacity = memberCapacityData.reduce((sum, m) => sum + (m.currentCapacity || 0), 0)
+    const membersWithAbsences = memberCapacityData.filter(m => m.absenceDays > 0).length
+
+    return {
+      totalSprintCapacity,
+      totalAbsenceHours,
+      totalAvailableCapacity,
+      membersWithAbsences
     }
   }, [memberCapacityData])
 
@@ -416,7 +453,12 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
         borderRadius: '6px'
       }}>
         <div>
-          <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '2px' }}>Capacity</div>
+          <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '2px' }}>
+            Sprint Capacity
+            {member.sprintWorkDays && (
+              <span style={{ fontSize: '10px', marginLeft: '4px' }}>({member.sprintWorkDays}d)</span>
+            )}
+          </div>
           <div style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937' }}>
             {member.currentCapacity}h
             {member.absenceHours > 0 && (
@@ -425,6 +467,11 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
               </span>
             )}
           </div>
+          {member.absenceHours > 0 && (
+            <div style={{ fontSize: '10px', color: '#6B7280', marginTop: '2px' }}>
+              Base: {member.sprintCapacity}h
+            </div>
+          )}
         </div>
         <div>
           <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '2px' }}>Allocated</div>
@@ -513,19 +560,47 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
   return (
     <div>
       {/* Iteration Context */}
-      {currentIterationDates && (
+      {currentIterationDates && teamAggregates && (
         <div style={{
           marginBottom: '16px',
-          padding: '12px',
+          padding: '16px',
           background: '#EFF6FF',
           border: '1px solid #BFDBFE',
-          borderRadius: '6px',
+          borderRadius: '8px',
           fontSize: '13px',
           color: '#1E40AF'
         }}>
-          <strong>Capacity for {currentIterationDates.name}:</strong>{' '}
-          {currentIterationDates.startDate.toLocaleDateString('de-DE')} - {currentIterationDates.dueDate.toLocaleDateString('de-DE')}
-          {' '}• Absence impacts are calculated for this period
+          <div style={{ marginBottom: '12px' }}>
+            <strong>Capacity for {currentIterationDates.name}:</strong>{' '}
+            {currentIterationDates.startDate.toLocaleDateString('de-DE')} - {currentIterationDates.dueDate.toLocaleDateString('de-DE')}
+          </div>
+          <div style={{
+            display: 'flex',
+            gap: '24px',
+            fontSize: '14px',
+            paddingTop: '12px',
+            borderTop: '1px solid #BFDBFE'
+          }}>
+            <div>
+              <span style={{ color: '#6B7280' }}>Team Capacity: </span>
+              <strong>{teamAggregates.totalSprintCapacity}h</strong>
+            </div>
+            {teamAggregates.totalAbsenceHours > 0 && (
+              <>
+                <div>
+                  <span style={{ color: '#6B7280' }}>→ Available: </span>
+                  <strong style={{ color: '#10B981' }}>{teamAggregates.totalAvailableCapacity}h</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#6B7280' }}>Absence Impact: </span>
+                  <strong style={{ color: '#DC2626' }}>-{teamAggregates.totalAbsenceHours}h</strong>
+                  <span style={{ color: '#6B7280', fontSize: '12px', marginLeft: '4px' }}>
+                    ({teamAggregates.membersWithAbsences} member{teamAggregates.membersWithAbsences !== 1 ? 's' : ''})
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
 
@@ -792,7 +867,7 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
                   Role
                 </th>
                 <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#374151' }}>
-                  Capacity
+                  Sprint Capacity
                 </th>
                 <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#374151' }}>
                   Absences
