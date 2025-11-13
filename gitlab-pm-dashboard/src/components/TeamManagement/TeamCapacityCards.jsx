@@ -22,7 +22,7 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
   const currentIterationDates = useMemo(() => {
     if (!issues || issues.length === 0) return null
 
-    // Get all iterations from issues and find the most common one (likely the current)
+    // Get all unique iterations from issues
     const iterationMap = new Map()
     issues.forEach(issue => {
       const iterationName = getSprintFromLabels(issue.labels, issue.iteration)
@@ -39,10 +39,22 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
       }
     })
 
-    // If we have iterations, return the most common one
+    // If we have iterations, find the best one
     if (iterationMap.size > 0) {
       const iterations = Array.from(iterationMap.values())
-      iterations.sort((a, b) => b.count - a.count)
+      const today = new Date()
+
+      // First, try to find an iteration that includes today
+      const currentIteration = iterations.find(iter =>
+        iter.startDate <= today && iter.dueDate >= today
+      )
+
+      if (currentIteration) {
+        return currentIteration
+      }
+
+      // If no current iteration, find the most recent one (latest end date)
+      iterations.sort((a, b) => b.dueDate - a.dueDate)
       return iterations[0]
     }
 
