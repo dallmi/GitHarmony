@@ -113,8 +113,12 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
         }
         sprintWorkDays = workDays
 
-        // Calculate sprint capacity based on working days (assuming 8h per day)
-        sprintCapacity = workDays * 8
+        // Calculate daily hours based on member's weekly capacity
+        // Standard work week = 5 days, so daily hours = weekly capacity / 5
+        const dailyHours = memberDefaultCapacity / 5
+
+        // Calculate sprint capacity based on working days and member's configured daily hours
+        sprintCapacity = workDays * dailyHours
 
         absenceHours = calculateAbsenceImpact(
           member.username,
