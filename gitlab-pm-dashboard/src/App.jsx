@@ -16,7 +16,6 @@ import ExecutiveDashboard from './components/ExecutiveDashboard'
 import EnhancedExecutiveDashboard from './components/EnhancedExecutiveDashboard'
 import RoadmapView from './components/RoadmapView'
 import VelocityView from './components/VelocityView'
-import ResourceCapacityView from './components/ResourceCapacityView'
 import StakeholderHubView from './components/StakeholderHubView'
 import InsightsView from './components/InsightsView'
 import IssueComplianceView from './components/IssueComplianceView'
@@ -214,9 +213,8 @@ function App() {
             {activeView === 'roadmap' && <RoadmapView issues={issues} milestones={milestones} />}
             {activeView === 'sprintmanagement' && <SprintManagementView issues={issues} onNavigate={setActiveView} />}
             {activeView === 'velocity' && <VelocityView issues={issues} />}
-            {activeView === 'resources' && <ResourceCapacityView issues={issues} />}
-            {activeView === 'resourceplanning' && <ResourcePlanningView issues={issues} />}
-            {activeView === 'teammanagement' && <ResourcePlanningView issues={issues} />}
+            {activeView === 'resourceplanning' && <ResourcePlanningView issues={issues} milestones={milestones} />}
+            {activeView === 'teammanagement' && <TeamManagementView issues={issues} milestones={milestones} crossProjectMode={getActiveProjectId() === 'cross-project'} />}
             {activeView === 'stakeholders' && <StakeholderHubView stats={stats} healthScore={healthScore} />}
             {activeView === 'crossteam' && <CrossTeamCoordinationView issues={issues} epics={epics} milestones={milestones} />}
             {activeView === 'dependencies' && <DependencyManagementView issues={issues} epics={epics} milestones={milestones} />}

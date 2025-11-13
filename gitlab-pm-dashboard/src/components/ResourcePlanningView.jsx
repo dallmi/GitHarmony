@@ -1,21 +1,31 @@
 import React, { useState, useEffect } from 'react'
 import { getActiveProjectId } from '../services/storageService'
+import { loadTeamConfig } from '../services/teamConfigService'
 import TeamSetupTab from './ResourcePlanning/TeamSetupTab'
 import AbsenceCalendarTab from './ResourcePlanning/AbsenceCalendarTab'
+import CapacityForecast from './TeamManagement/CapacityForecast'
+import CapacityScenarioPlanner from './TeamManagement/CapacityScenarioPlanner'
 
 /**
  * Integrated Resource Planning View
  * Consolidates team management, absence planning, and sprint capacity in one place
  * Replaces: ConfigModal (team config) + CapacityCalendarView + Sprint Capacity Modal
  */
-export default function ResourcePlanningView({ issues, initialTab = 'team' }) {
-  const [activeTab, setActiveTab] = useState(initialTab)
+export default function ResourcePlanningView({ issues, milestones = [] }) {
+  const [activeTab, setActiveTab] = useState('team')
   const activeProjectId = getActiveProjectId()
   const isCrossProject = activeProjectId === 'cross-project'
 
   // Refresh trigger for cross-tab communication
   const [refreshKey, setRefreshKey] = useState(0)
   const triggerRefresh = () => setRefreshKey(prev => prev + 1)
+
+  // Load team members for forecast and scenario planning
+  const [teamMembers, setTeamMembers] = useState([])
+  useEffect(() => {
+    const config = loadTeamConfig()
+    setTeamMembers(config?.members || [])
+  }, [refreshKey])
 
   const tabs = [
     { id: 'team', label: 'Team Setup' },
@@ -106,20 +116,18 @@ export default function ResourcePlanningView({ issues, initialTab = 'team' }) {
           />
         )}
         {activeTab === 'forecast' && (
-          <div className="card">
-            <h2>Capacity Forecast</h2>
-            <p style={{ color: '#6B7280' }}>
-              Coming soon: Forecast future sprint capacity based on historical velocity, planned absences, and team changes.
-            </p>
-          </div>
+          <CapacityForecast
+            teamMembers={teamMembers}
+            issues={issues}
+            milestones={milestones}
+          />
         )}
         {activeTab === 'scenario' && (
-          <div className="card">
-            <h2>Scenario Planning</h2>
-            <p style={{ color: '#6B7280' }}>
-              Coming soon: What-if scenario planning for resource allocation and capacity forecasting.
-            </p>
-          </div>
+          <CapacityScenarioPlanner
+            teamMembers={teamMembers}
+            issues={issues}
+            milestones={milestones}
+          />
         )}
       </div>
     </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useIterationFilter } from '../contexts/IterationFilterContext'
 import { loadTeamConfig, loadSprintCapacity } from '../services/teamConfigService'
 import { getTeamAbsenceStats } from '../services/absenceService'
 
@@ -6,7 +7,6 @@ import { getTeamAbsenceStats } from '../services/absenceService'
 import TeamCapacityCards from './TeamManagement/TeamCapacityCards'
 import TeamSetupTab from './ResourcePlanning/TeamSetupTab'
 import AbsenceCalendarTab from './ResourcePlanning/AbsenceCalendarTab'
-import SprintCapacityTab from './ResourcePlanning/SprintCapacityTab'
 import CapacityForecast from './TeamManagement/CapacityForecast'
 import CapacityScenarioPlanner from './TeamManagement/CapacityScenarioPlanner'
 
@@ -17,7 +17,11 @@ import CapacityScenarioPlanner from './TeamManagement/CapacityScenarioPlanner'
  * - Team setup and absence planning (from Resource Planning)
  * - New capacity forecasting to see bottlenecks coming
  */
-export default function TeamManagementView({ issues = [], milestones = [], crossProjectMode = false }) {
+export default function TeamManagementView({ issues: allIssues = [], milestones = [], crossProjectMode = false }) {
+  // Use filtered issues from iteration context
+  const { filteredIssues } = useIterationFilter()
+  const issues = filteredIssues.length > 0 ? filteredIssues : allIssues
+
   const [activeTab, setActiveTab] = useState('current')
   const [teamData, setTeamData] = useState(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -63,8 +67,7 @@ export default function TeamManagementView({ issues = [], milestones = [], cross
     { id: 'forecast', label: 'Capacity Forecast', icon: '📈' },
     { id: 'scenarios', label: 'Scenario Planning', icon: '🔮' },
     { id: 'team', label: 'Team Setup', icon: '👥' },
-    { id: 'absences', label: 'Absence Calendar', icon: '📅' },
-    { id: 'sprint', label: 'Sprint Capacity', icon: '🏃' }
+    { id: 'absences', label: 'Absence Calendar', icon: '📅' }
   ]
 
   // Remove icons for corporate environment
@@ -207,15 +210,6 @@ export default function TeamManagementView({ issues = [], milestones = [], cross
             issues={issues}
             isCrossProject={crossProjectMode}
             onAbsenceUpdate={handleTeamUpdate}
-          />
-        )}
-
-        {/* Sprint Capacity */}
-        {activeTab === 'sprint' && (
-          <SprintCapacityTab
-            issues={issues}
-            isCrossProject={crossProjectMode}
-            refreshKey={refreshTrigger}
           />
         )}
       </div>

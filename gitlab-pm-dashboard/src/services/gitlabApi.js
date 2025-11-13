@@ -150,6 +150,105 @@ export async function fetchMilestones(gitlabUrl, projectId, token) {
 }
 
 /**
+ * Update issue assignee
+ * @param {string} gitlabUrl - GitLab instance URL
+ * @param {string} projectId - Project ID or path
+ * @param {number} issueIid - Issue IID
+ * @param {number} assigneeId - New assignee's user ID
+ * @param {string} token - GitLab API token
+ * @returns {Promise<object>} Updated issue object
+ */
+export async function updateIssueAssignee(gitlabUrl, projectId, issueIid, assigneeId, token) {
+  const encodedProjectId = encodeURIComponent(projectId)
+  const url = `${gitlabUrl}/api/v4/projects/${encodedProjectId}/issues/${issueIid}`
+
+  console.log(`Updating issue #${issueIid} assignee to user ${assigneeId}`)
+
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'PRIVATE-TOKEN': token,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      assignee_id: assigneeId
+    })
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error('Failed to update issue assignee:', errorText)
+
+    if (response.status === 404) {
+      throw new Error(`Issue #${issueIid} not found in project ${projectId}`)
+    } else if (response.status === 401) {
+      throw new Error('Unauthorized: Invalid or expired access token')
+    } else if (response.status === 403) {
+      throw new Error('Forbidden: You do not have permission to update this issue')
+    } else {
+      throw new Error(`Failed to update assignee: ${response.status} - ${errorText}`)
+    }
+  }
+
+  const updatedIssue = await response.json()
+  console.log(`✓ Successfully updated issue #${issueIid} assignee`)
+  return updatedIssue
+}
+
+/**
+ * Batch update multiple issues with new assignee
+ * @param {string} gitlabUrl - GitLab instance URL
+ * @param {string} projectId - Project ID or path
+ * @param {array} issues - Array of issues to update
+ * @param {number} assigneeId - New assignee's user ID
+ * @param {string} token - GitLab API token
+ * @param {function} onProgress - Progress callback (optional)
+ * @returns {Promise<object>} Results object with success/failed arrays
+ */
+export async function batchUpdateIssueAssignees(gitlabUrl, projectId, issues, assigneeId, token, onProgress = null) {
+  const results = {
+    successful: [],
+    failed: []
+  }
+
+  console.log(`Starting batch update for ${issues.length} issues`)
+
+  for (let i = 0; i < issues.length; i++) {
+    const issue = issues[i]
+
+    if (onProgress) {
+      onProgress({
+        current: i + 1,
+        total: issues.length,
+        issue: issue
+      })
+    }
+
+    try {
+      const updated = await updateIssueAssignee(gitlabUrl, projectId, issue.iid, assigneeId, token)
+      results.successful.push({
+        issue: issue,
+        updated: updated
+      })
+    } catch (error) {
+      console.error(`Failed to update issue #${issue.iid}:`, error.message)
+      results.failed.push({
+        issue: issue,
+        error: error.message
+      })
+    }
+
+    // Add small delay to avoid rate limiting
+    if (i < issues.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 200))
+    }
+  }
+
+  console.log(`Batch update completed: ${results.successful.length} successful, ${results.failed.length} failed`)
+  return results
+}
+
+/**
  * Fetch epics from a GitLab group (Premium/Ultimate only) with pagination
  */
 export async function fetchEpics(gitlabUrl, groupPath, token) {
