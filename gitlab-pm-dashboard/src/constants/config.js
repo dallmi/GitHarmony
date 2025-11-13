@@ -127,3 +127,18 @@ export const LABEL_CONVENTIONS = {
   squad: 'squad::squad-name',
   storyPoints: 'sp::number'
 }
+
+// Velocity-based capacity calculation configuration
+export const VELOCITY_CONFIG = {
+  // Mode: 'dynamic' uses historical velocity, 'static' uses fixed hours per SP
+  mode: 'dynamic', // 'dynamic' or 'static'
+
+  // Static hours per story point (used when mode = 'static' or as fallback)
+  staticHoursPerStoryPoint: 6,
+
+  // Number of iterations to analyze for velocity calculation
+  velocityLookbackIterations: 3,
+
+  // Minimum iterations required to use individual velocity (otherwise use team average)
+  minIterationsForIndividualVelocity: 2
+}

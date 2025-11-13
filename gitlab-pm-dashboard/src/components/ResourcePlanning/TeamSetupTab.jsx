@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { loadTeamConfig, saveTeamConfig, DEFAULT_ROLES } from '../../services/teamConfigService'
 import { importTeamFromIssues, calculateTeamVelocity } from '../../services/teamImportService'
+import { loadVelocityConfig, saveVelocityConfig, resetVelocityConfig } from '../../services/velocityConfigService'
 
 /**
  * Team Setup Tab
@@ -14,6 +15,8 @@ export default function TeamSetupTab({ isCrossProject, onTeamUpdate, issues = []
   const [showVelocity, setShowVelocity] = useState(false)
   const [teamVelocity, setTeamVelocity] = useState(null)
   const [selectedMembers, setSelectedMembers] = useState([])
+  const [velocityConfig, setVelocityConfig] = useState(loadVelocityConfig())
+  const [showVelocityConfig, setShowVelocityConfig] = useState(false)
 
   useEffect(() => {
     loadTeam()
@@ -151,6 +154,33 @@ export default function TeamSetupTab({ isCrossProject, onTeamUpdate, issues = []
     }
   }
 
+  const handleSaveVelocityConfig = () => {
+    const success = saveVelocityConfig(velocityConfig)
+    if (success) {
+      // Trigger re-render of capacity cards by calling onTeamUpdate
+      onTeamUpdate()
+      alert('Velocity configuration saved successfully!')
+    } else {
+      alert('Failed to save velocity configuration')
+    }
+  }
+
+  const handleResetVelocityConfig = () => {
+    if (confirm('Reset velocity configuration to defaults?')) {
+      const defaultConfig = resetVelocityConfig()
+      setVelocityConfig(defaultConfig)
+      onTeamUpdate()
+      alert('Velocity configuration reset to defaults')
+    }
+  }
+
+  const handleVelocityConfigChange = (field, value) => {
+    setVelocityConfig(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
   if (isCrossProject) {
     return (
       <div style={{
@@ -266,6 +296,282 @@ export default function TeamSetupTab({ isCrossProject, onTeamUpdate, issues = []
           )}
         </div>
       )}
+
+      {/* Velocity Configuration */}
+      <div style={{
+        background: 'white',
+        border: '1px solid #E5E7EB',
+        borderRadius: '8px',
+        padding: '16px',
+        marginBottom: '20px'
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '12px'
+        }}>
+          <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937' }}>
+            Capacity Calculation Settings
+          </h3>
+          <button
+            onClick={() => setShowVelocityConfig(!showVelocityConfig)}
+            style={{
+              padding: '4px 8px',
+              background: 'transparent',
+              color: '#3B82F6',
+              border: 'none',
+              fontSize: '12px',
+              cursor: 'pointer'
+            }}
+          >
+            {showVelocityConfig ? 'Hide' : 'Configure'}
+          </button>
+        </div>
+
+        {/* Current Configuration Display */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '8px 12px',
+          background: velocityConfig.mode === 'dynamic' ? '#EFF6FF' : '#F3F4F6',
+          border: `1px solid ${velocityConfig.mode === 'dynamic' ? '#BFDBFE' : '#E5E7EB'}`,
+          borderRadius: '6px',
+          fontSize: '13px'
+        }}>
+          <div style={{ fontWeight: '600', color: '#374151' }}>Current Mode:</div>
+          <div style={{
+            padding: '4px 12px',
+            background: velocityConfig.mode === 'dynamic' ? '#3B82F6' : '#6B7280',
+            color: 'white',
+            borderRadius: '12px',
+            fontSize: '12px',
+            fontWeight: '500'
+          }}>
+            {velocityConfig.mode === 'dynamic' ? 'Dynamic (Velocity-Based)' : 'Static'}
+          </div>
+          {velocityConfig.mode === 'static' && (
+            <div style={{ color: '#6B7280' }}>
+              Using {velocityConfig.staticHoursPerStoryPoint}h per story point
+            </div>
+          )}
+          {velocityConfig.mode === 'dynamic' && (
+            <div style={{ color: '#6B7280' }}>
+              Based on last {velocityConfig.velocityLookbackIterations} iterations
+            </div>
+          )}
+        </div>
+
+        {/* Configuration Panel */}
+        {showVelocityConfig && (
+          <div style={{
+            marginTop: '16px',
+            padding: '16px',
+            background: '#F9FAFB',
+            border: '1px solid #E5E7EB',
+            borderRadius: '8px'
+          }}>
+            {/* Mode Selection */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: '#374151',
+                marginBottom: '8px'
+              }}>
+                Calculation Mode
+              </label>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <label style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '12px',
+                  background: velocityConfig.mode === 'dynamic' ? '#EFF6FF' : 'white',
+                  border: `2px solid ${velocityConfig.mode === 'dynamic' ? '#3B82F6' : '#D1D5DB'}`,
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}>
+                  <input
+                    type="radio"
+                    name="velocityMode"
+                    value="dynamic"
+                    checked={velocityConfig.mode === 'dynamic'}
+                    onChange={(e) => handleVelocityConfigChange('mode', e.target.value)}
+                    style={{ marginRight: '8px' }}
+                  />
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937' }}>
+                      Dynamic (Recommended)
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
+                      Calculate hours per SP based on individual velocity
+                    </div>
+                  </div>
+                </label>
+                <label style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '12px',
+                  background: velocityConfig.mode === 'static' ? '#F3F4F6' : 'white',
+                  border: `2px solid ${velocityConfig.mode === 'static' ? '#6B7280' : '#D1D5DB'}`,
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}>
+                  <input
+                    type="radio"
+                    name="velocityMode"
+                    value="static"
+                    checked={velocityConfig.mode === 'static'}
+                    onChange={(e) => handleVelocityConfigChange('mode', e.target.value)}
+                    style={{ marginRight: '8px' }}
+                  />
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937' }}>
+                      Static
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
+                      Use fixed hours per story point for all members
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Static Hours Configuration */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '16px',
+              marginBottom: '16px'
+            }}>
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '6px'
+                }}>
+                  Static Hours per Story Point
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="40"
+                  step="0.5"
+                  value={velocityConfig.staticHoursPerStoryPoint}
+                  onChange={(e) => handleVelocityConfigChange('staticHoursPerStoryPoint', parseFloat(e.target.value))}
+                  disabled={velocityConfig.mode === 'dynamic'}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    background: velocityConfig.mode === 'dynamic' ? '#F3F4F6' : 'white',
+                    opacity: velocityConfig.mode === 'dynamic' ? 0.6 : 1
+                  }}
+                />
+                <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>
+                  Used as fallback when velocity data is unavailable
+                </div>
+              </div>
+
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '6px'
+                }}>
+                  Lookback Iterations
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={velocityConfig.velocityLookbackIterations}
+                  onChange={(e) => handleVelocityConfigChange('velocityLookbackIterations', parseInt(e.target.value))}
+                  disabled={velocityConfig.mode === 'static'}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    background: velocityConfig.mode === 'static' ? '#F3F4F6' : 'white',
+                    opacity: velocityConfig.mode === 'static' ? 0.6 : 1
+                  }}
+                />
+                <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>
+                  Number of past iterations to analyze for velocity
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: '12px',
+              paddingTop: '12px',
+              borderTop: '1px solid #E5E7EB'
+            }}>
+              <button
+                onClick={handleResetVelocityConfig}
+                style={{
+                  padding: '8px 16px',
+                  background: 'white',
+                  color: '#DC2626',
+                  border: '1px solid #FCA5A5',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Reset to Defaults
+              </button>
+              <button
+                onClick={handleSaveVelocityConfig}
+                style={{
+                  padding: '8px 24px',
+                  background: '#10B981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Save Configuration
+              </button>
+            </div>
+
+            {/* Info Box */}
+            <div style={{
+              marginTop: '12px',
+              padding: '12px',
+              background: '#FEF3C7',
+              border: '1px solid #FCD34D',
+              borderRadius: '6px',
+              fontSize: '12px',
+              color: '#92400E'
+            }}>
+              <strong>Note:</strong> Dynamic mode calculates hours per story point based on each team member's historical performance.
+              Individual velocity is used when available (≥2 iterations of data), otherwise team average or static value is used as fallback.
+            </div>
+          </div>
+        )}
+      </div>
 
       <div style={{
         background: '#F9FAFB',

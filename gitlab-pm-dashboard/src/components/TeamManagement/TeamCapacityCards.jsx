@@ -1,10 +1,12 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { analyzeCapacityIssues } from '../../services/capacityAnalysisService'
 import { calculateAbsenceImpact, getUserAbsences } from '../../services/absenceService'
 import { getSprintFromLabels } from '../../utils/labelUtils'
 import IssueReallocationDialog from './IssueReallocationDialog'
 import { batchUpdateIssueAssignees } from '../../services/gitlabApi'
 import { loadConfig } from '../../services/storageService'
+import { calculateTeamAverageVelocity, getHoursPerStoryPoint } from '../../services/memberVelocityService'
+import { loadVelocityConfig } from '../../services/velocityConfigService'
 
 /**
  * Team Capacity Cards
@@ -17,6 +19,34 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
   const [showOnlyOpen, setShowOnlyOpen] = useState(true) // Default to showing only open issues
   const [showReallocationSuggestions, setShowReallocationSuggestions] = useState(false)
   const [reallocationDialog, setReallocationDialog] = useState(null)
+  const [velocityConfigKey, setVelocityConfigKey] = useState(0)
+
+  // Load velocity configuration from localStorage (reload when key changes)
+  const velocityConfig = useMemo(() => loadVelocityConfig(), [velocityConfigKey])
+
+  // Listen for storage changes to reload velocity config when it's updated
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'velocityConfig' || e.key === null) {
+        // Force reload of velocity config
+        setVelocityConfigKey(prev => prev + 1)
+      }
+    }
+
+    // Listen for storage events from other tabs
+    window.addEventListener('storage', handleStorageChange)
+
+    // Also set up a custom event for same-tab changes
+    const handleCustomChange = () => {
+      setVelocityConfigKey(prev => prev + 1)
+    }
+    window.addEventListener('velocityConfigChanged', handleCustomChange)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('velocityConfigChanged', handleCustomChange)
+    }
+  }, [])
 
   // Detect current iteration from filtered issues
   const currentIterationDates = useMemo(() => {
@@ -67,6 +97,12 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
       dueDate: twoWeeksFromNow
     }
   }, [issues])
+
+  // Calculate team average velocity for fallback
+  const teamAverageVelocity = useMemo(() => {
+    if (velocityConfig.mode !== 'dynamic' || !teamMembers || !issues) return null
+    return calculateTeamAverageVelocity(teamMembers, issues, velocityConfig.velocityLookbackIterations)
+  }, [teamMembers, issues, velocityConfig])
 
   // Calculate member capacity and workload
   const memberCapacityData = useMemo(() => {
@@ -156,8 +192,23 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
       // Calculate actual available capacity for sprint (sprint capacity - absences)
       const currentCapacity = Math.max(0, sprintCapacity - absenceHours)
 
+      // Get hours per story point using velocity-based calculation or static value
+      let velocityData = null
+      let hoursPerSP = velocityConfig.staticHoursPerStoryPoint // Default fallback
+
+      if (velocityConfig.mode === 'dynamic') {
+        velocityData = getHoursPerStoryPoint(
+          member.username,
+          issues,  // Use ALL issues for velocity calculation, not just filtered ones
+          memberDefaultCapacity,
+          teamAverageVelocity,
+          velocityConfig.staticHoursPerStoryPoint
+        )
+        hoursPerSP = velocityData.hours
+      }
+
       // Calculate utilization based on actual available capacity
-      const hoursAllocated = storyPoints * 6 // Assuming 6 hours per story point
+      const hoursAllocated = storyPoints * hoursPerSP
       const utilization = currentCapacity > 0 ? Math.round((hoursAllocated / currentCapacity) * 100) : 0
 
       // Determine status
@@ -189,6 +240,8 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
         ...member,
         storyPoints,
         hoursAllocated,
+        hoursPerStoryPoint: hoursPerSP,
+        velocityData,
         currentCapacity,
         baseCapacity: memberDefaultCapacity,
         sprintCapacity, // Total capacity for the sprint period
@@ -204,7 +257,7 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
         issues: memberIssues
       }
     })
-  }, [teamMembers, issues, currentIterationDates, showOnlyOpen])
+  }, [teamMembers, issues, currentIterationDates, showOnlyOpen, teamAverageVelocity, velocityConfig])
 
   // Analyze capacity issues for recommendations
   const capacityAnalysis = useMemo(() => {
@@ -245,13 +298,29 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
 
     const suggestions = []
 
+    // Define compatible role pairs for cross-role reallocation
+    const isCompatibleRole = (role1, role2) => {
+      // Same role is always compatible
+      if (role1 === role2) return true
+
+      // Product Owner and Initiative Manager can swap tasks
+      const compatiblePairs = [
+        ['Product Owner', 'Initiative Manager'],
+        ['Initiative Manager', 'Product Owner']
+      ]
+
+      return compatiblePairs.some(([r1, r2]) =>
+        (role1 === r1 && role2 === r2) || (role1 === r2 && role2 === r1)
+      )
+    }
+
     // Find overloaded members
     const overloadedMembers = memberCapacityData.filter(m => m.utilization >= 100)
 
-    // Find underutilized members with same role
+    // Find underutilized members with same or compatible role
     overloadedMembers.forEach(overloaded => {
       const availableMembers = memberCapacityData.filter(m =>
-        m.role === overloaded.role &&
+        isCompatibleRole(m.role, overloaded.role) &&
         m.utilization < 60 &&
         m.username !== overloaded.username
       )
@@ -266,12 +335,14 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
           const canTakeStoryPoints = Math.floor(availableHours / 6)
 
           if (canTakeStoryPoints > 0) {
+            const isCrossRole = overloaded.role !== available.role
             suggestions.push({
               from: overloaded,
               to: available,
               suggestedStoryPoints: Math.min(excessStoryPoints, canTakeStoryPoints),
               suggestedHours: Math.min(excessHours, availableHours),
-              reason: `${overloaded.name || overloaded.username} is at ${overloaded.utilization}% utilization while ${available.name || available.username} is only at ${available.utilization}%`
+              isCrossRole,
+              reason: `${overloaded.name || overloaded.username} is at ${overloaded.utilization}% utilization while ${available.name || available.username} is only at ${available.utilization}%${isCrossRole ? ' (cross-role reallocation)' : ''}`
             })
           }
         })
@@ -512,6 +583,40 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Velocity Information */}
+      {member.velocityData && (
+        <div style={{
+          marginBottom: '12px',
+          padding: '8px 12px',
+          background: member.velocityData.source === 'individual' ? '#EFF6FF' : '#F3F4F6',
+          border: `1px solid ${member.velocityData.source === 'individual' ? '#BFDBFE' : '#E5E7EB'}`,
+          borderRadius: '6px',
+          fontSize: '12px',
+          color: '#374151'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <strong>Velocity:</strong> {member.hoursPerStoryPoint}h per SP
+            </div>
+            <div style={{
+              fontSize: '10px',
+              padding: '2px 6px',
+              background: member.velocityData.source === 'individual' ? '#3B82F6' :
+                         member.velocityData.source === 'team-average' ? '#F59E0B' : '#6B7280',
+              color: 'white',
+              borderRadius: '10px',
+              fontWeight: '500'
+            }}>
+              {member.velocityData.source === 'individual' ? 'INDIVIDUAL' :
+               member.velocityData.source === 'team-average' ? 'TEAM AVG' : 'STATIC'}
+            </div>
+          </div>
+          <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>
+            {member.velocityData.details}
+          </div>
         </div>
       )}
 
