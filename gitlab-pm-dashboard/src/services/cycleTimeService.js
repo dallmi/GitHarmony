@@ -5,20 +5,20 @@
 
 /**
  * Common label patterns for different phases
- * Can be configured per project
+ * Updated to match actual GitLab labels in use
  */
 export const DEFAULT_PHASE_PATTERNS = {
-  backlog: ['backlog', 'new', 'open', 'todo', 'to do'],
-  analysis: ['analysis', 'analyzing', 'refinement', 'planning', 'design', 'in analysis'],
+  backlog: ['backlog', 'new', 'open', 'todo', 'to do', 'ready for work', 'awaiting refinement'],
+  analysis: ['analysis', 'analyzing', 'refinement', 'planning', 'design', 'in analysis', 'in discovery'],
   inProgress: ['in progress', 'doing', 'wip', 'development', 'started', 'active'],
-  review: ['review', 'code review', 'peer review', 'reviewing'],
+  review: ['review', 'code review', 'peer review', 'reviewing', 'in review'],
   testing: ['in testing', 'testing', 'qa', 'test', 'validation', 'verification'],
   awaitingTesting: ['awaiting testing', 'awaiting qa', 'ready for testing', 'to test'],
   awaitingRelease: ['awaiting release', 'ready for release', 'to release', 'pending release'],
   released: ['released', 'deployed', 'in production'],
   cancelled: ['cancelled', 'canceled', 'rejected', 'wont fix', 'won\'t fix'],
   done: ['done', 'completed', 'closed', 'resolved', 'finished'],
-  blocked: ['blocked', 'blocker', 'on hold', 'paused']
+  blocked: ['blocked', 'blocker', 'on hold', 'paused', 'blocked(do not use)']
 }
 
 /**
@@ -95,13 +95,15 @@ export function getLeadTime(issue) {
 }
 
 /**
- * Estimate cycle time (time from creation to closure for closed issues)
- * NOTE: Without GitLab label event history, we cannot accurately determine when
- * work actually started (moved from backlog to in-progress). Therefore, for closed
- * issues we use the full lifecycle time (created_at to closed_at).
+ * Estimate cycle time (time from when work starts to closure)
+ * Without GitLab label event history, we cannot accurately determine when
+ * work actually started. We use heuristics to provide a better estimate
+ * than simply using lead time.
  *
- * This is the same as lead time, but we keep this function separate for
- * semantic clarity and potential future enhancement when label history is available.
+ * Estimation strategy:
+ * 1. If issue has milestone: assume work started at milestone start date
+ * 2. If issue was updated significantly after creation: use first major update
+ * 3. Otherwise: use a percentage of lead time (80% default) as typical wait time is 20%
  */
 export function estimateCycleTime(issue) {
   // Only calculate for closed issues
@@ -111,9 +113,47 @@ export function estimateCycleTime(issue) {
 
   const created = new Date(issue.created_at)
   const closed = new Date(issue.closed_at)
-  const diffTime = Math.abs(closed - created)
+  const updated = new Date(issue.updated_at)
+
+  let workStarted = created // Default to created date
+
+  // Strategy 1: Use milestone start date if available
+  if (issue.milestone && issue.milestone.start_date) {
+    const milestoneStart = new Date(issue.milestone.start_date)
+    // Only use milestone start if it's after creation and before close
+    if (milestoneStart > created && milestoneStart < closed) {
+      workStarted = milestoneStart
+    }
+  }
+  // Strategy 2: Use first significant update (if updated > 1 day after creation)
+  else if (updated > created) {
+    const updateDiff = (updated - created) / (1000 * 60 * 60 * 24)
+    const leadTime = (closed - created) / (1000 * 60 * 60 * 24)
+
+    // If issue was updated significantly after creation (> 1 day) and update is in first half of lifecycle
+    if (updateDiff > 1 && updateDiff < leadTime / 2) {
+      // Estimate work started around first update
+      workStarted = updated
+    }
+    // Strategy 3: Apply typical wait time percentage (20% wait, 80% work)
+    else {
+      const waitTimeMs = (closed - created) * 0.2 // 20% wait time
+      workStarted = new Date(created.getTime() + waitTimeMs)
+    }
+  }
+  // Strategy 3: Apply typical wait time percentage as fallback
+  else {
+    const waitTimeMs = (closed - created) * 0.2 // 20% wait time
+    workStarted = new Date(created.getTime() + waitTimeMs)
+  }
+
+  // Calculate cycle time from estimated work start
+  const diffTime = Math.abs(closed - workStarted)
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  return diffDays
+
+  // Ensure cycle time is not greater than lead time
+  const leadTimeDays = Math.ceil((closed - created) / (1000 * 60 * 60 * 24))
+  return Math.min(diffDays, leadTimeDays)
 }
 
 /**

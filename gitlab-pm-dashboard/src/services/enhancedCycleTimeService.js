@@ -71,12 +71,28 @@ export function calculateAccurateCycleTime(issue, labelEvents) {
   })
 
   // Find when work actually started (moved from backlog to active work)
+  // Include all non-backlog, non-cancelled phase labels
   const workStartLabels = [
     ...DEFAULT_PHASE_PATTERNS.analysis,
     ...DEFAULT_PHASE_PATTERNS.inProgress,
     ...DEFAULT_PHASE_PATTERNS.review,
-    ...DEFAULT_PHASE_PATTERNS.testing
-  ]
+    ...DEFAULT_PHASE_PATTERNS.testing,
+    ...DEFAULT_PHASE_PATTERNS.awaitingTesting,
+    ...DEFAULT_PHASE_PATTERNS.awaitingRelease
+  ].map(l => l.toLowerCase())
+
+  // Debug: Log what labels we're looking for vs what we have
+  if (timeline.length > 0) {
+    const allLabelsInHistory = [...new Set(timeline.map(t => t.labelLower))]
+    const matchingLabels = allLabelsInHistory.filter(l =>
+      workStartLabels.some(wsl => l.includes(wsl))
+    )
+
+    if (matchingLabels.length === 0 && allLabelsInHistory.length > 0) {
+      console.log(`Issue #${issue.iid}: No work-start labels found. Labels in history:`, allLabelsInHistory.slice(0, 10))
+      console.log('Looking for patterns:', workStartLabels.slice(0, 10))
+    }
+  }
 
   let workStartedAt = null
 
@@ -89,6 +105,7 @@ export function calculateAccurateCycleTime(issue, labelEvents) {
 
       if (isWorkLabel) {
         workStartedAt = event.timestamp
+        console.log(`Issue #${issue.iid}: Work started at ${workStartedAt.toISOString()} with label "${event.label}"`)
         break
       }
     }
@@ -97,6 +114,9 @@ export function calculateAccurateCycleTime(issue, labelEvents) {
   // If no work start found in label events, we cannot accurately determine cycle time
   // Return null to indicate this is not an accurate measurement
   if (!workStartedAt) {
+    if (timeline.length > 0) {
+      console.log(`Issue #${issue.iid}: Could not determine work start from ${timeline.length} label events`)
+    }
     return {
       cycleTime: null,
       workStartedAt: null,
@@ -158,7 +178,12 @@ export async function fetchBatchLabelEvents(issues, config, onProgress = null) {
   // Only fetch for closed issues
   const closedIssues = issues.filter(i => i.state === 'closed')
 
-  console.log(`Fetching label events for ${closedIssues.length} closed issues...`)
+  // Identify unique projects
+  const projectIds = [...new Set(closedIssues.map(i => i.project_id).filter(Boolean))]
+  console.log(`Fetching label events for ${closedIssues.length} closed issues from ${projectIds.length} project(s)...`)
+  if (projectIds.length > 1) {
+    console.log('Multiple projects detected (pod/multi-project mode):', projectIds)
+  }
 
   // Batch requests to avoid overwhelming the API
   const batchSize = 10
@@ -170,11 +195,13 @@ export async function fetchBatchLabelEvents(issues, config, onProgress = null) {
     const results = await Promise.all(
       batch.map(async (issue) => {
         try {
-          const events = await fetchIssueLabelHistory(gitlabUrl, projectId, issue.iid, token)
-          return { iid: issue.iid, events }
+          // Use the issue's project_id if available (for multi-project/pod scenarios)
+          const issueProjectId = issue.project_id || projectId
+          const events = await fetchIssueLabelHistory(gitlabUrl, issueProjectId, issue.iid, token)
+          return { iid: issue.iid, events, projectId: issueProjectId }
         } catch (error) {
           console.warn(`Failed to fetch label events for issue #${issue.iid}:`, error)
-          return { iid: issue.iid, events: null }
+          return { iid: issue.iid, events: null, projectId: issue.project_id || projectId }
         }
       })
     )
@@ -227,10 +254,27 @@ export function getEnhancedCycleTimeStats(issues, labelEventsMap) {
     // If accurate cycle time couldn't be determined, fall back to estimation
     if (result.cycleTime === null) {
       const estimatedCycleTime = estimateCycleTime(issue)
+
+      // For estimated cycle time, also estimate when work started
+      let estimatedWorkStart = null
+      if (estimatedCycleTime && issue.closed_at) {
+        const closed = new Date(issue.closed_at)
+        const created = new Date(issue.created_at)
+        const leadTimeDays = Math.ceil((closed - created) / (1000 * 60 * 60 * 24))
+
+        // If cycle time is less than lead time, work started later
+        if (estimatedCycleTime < leadTimeDays) {
+          const cycleTimeMs = estimatedCycleTime * 24 * 60 * 60 * 1000
+          estimatedWorkStart = new Date(closed.getTime() - cycleTimeMs)
+        } else {
+          estimatedWorkStart = created
+        }
+      }
+
       return {
         issue,
         cycleTime: estimatedCycleTime,
-        workStartedAt: estimatedCycleTime ? new Date(issue.created_at) : null,
+        workStartedAt: estimatedWorkStart,
         workEndedAt: new Date(issue.closed_at),
         method: 'estimated'
       }
