@@ -45,19 +45,29 @@ function getAllStorageKeys() {
     stakeholders: 'stakeholders',
     communicationHistory: 'communication_history',
     communicationTemplates: 'communication_templates',
-    decisions: 'decisions',
+    stakeholderDecisions: 'decisions',  // Stakeholder hub decisions
     documents: 'documents',
+
+    // Project Decisions (base key - per-project variants handled dynamically)
+    projectDecisionsBase: 'gitlab-pm-decisions',
 
     // Health Score
     healthScoreConfig: 'healthScoreConfig',
 
     // Quality & Compliance
-    criteriaConfig: 'criteriaConfig',
+    criteriaConfig: 'gitlab-pm-quality-criteria-config',
     dodTemplates: 'dodTemplates',
 
     // Sprint Management
-    sprintGoals: 'sprint_goals',
-    retroActions: 'retro_actions',
+    sprintGoals: 'sprintGoals',
+    retroActions: 'retroActions',
+
+    // Release Planning
+    releases: 'gitlab-pm-releases',
+    featureToggles: 'gitlab-pm-feature-toggles',
+
+    // Forecast Accuracy (base key - per-project variants handled dynamically)
+    forecastsBase: 'gitlab-pm-forecasts',
 
     // Backlog Health
     backlogHealthHistory: 'backlogHealthHistory',
@@ -366,43 +376,123 @@ export function createBackup(options = {}) {
   const stakeholders = loadFromStorage(keys.stakeholders)
   const communicationHistory = loadFromStorage(keys.communicationHistory)
   const communicationTemplates = loadFromStorage(keys.communicationTemplates)
-  const decisions = loadFromStorage(keys.decisions)
+  const stakeholderDecisions = loadFromStorage(keys.stakeholderDecisions)
   const documents = loadFromStorage(keys.documents)
 
-  if (stakeholders || communicationHistory || communicationTemplates || decisions || documents) {
+  if (stakeholders || communicationHistory || communicationTemplates || stakeholderDecisions || documents) {
     data.stakeholderHub = {
       stakeholders,
       communicationHistory,
       communicationTemplates,
-      decisions,
+      decisions: stakeholderDecisions,  // Keep as 'decisions' for backward compatibility
       documents
     }
     includedData.push('stakeholderHub')
   }
 
-  // 9. Health Score Configuration
+  // 9. Project Decisions (per-project)
+  const projectDecisionKeys = getPerProjectKeys(keys.projectDecisionsBase)
+  const hasProjectDecisions =
+    Object.keys(projectDecisionKeys.projectKeys).length > 0 ||
+    Object.keys(projectDecisionKeys.podKeys).length > 0
+
+  if (hasProjectDecisions) {
+    data.projectDecisions = {
+      projectLevel: {},
+      podLevel: {}
+    }
+
+    // Load project-level decisions
+    Object.entries(projectDecisionKeys.projectKeys).forEach(([projectId, key]) => {
+      const decisionData = loadFromStorage(key)
+      if (decisionData) {
+        data.projectDecisions.projectLevel[projectId] = decisionData
+      }
+    })
+
+    // Load pod-level decisions
+    Object.entries(projectDecisionKeys.podKeys).forEach(([podId, key]) => {
+      const decisionData = loadFromStorage(key)
+      if (decisionData) {
+        data.projectDecisions.podLevel[podId] = decisionData
+      }
+    })
+
+    const hasProjectData = Object.keys(data.projectDecisions.projectLevel).length > 0
+    const hasPodData = Object.keys(data.projectDecisions.podLevel).length > 0
+
+    if (hasProjectData || hasPodData) {
+      includedData.push('projectDecisions')
+    } else {
+      delete data.projectDecisions
+    }
+  }
+
+  // 10. Health Score Configuration
   addIfExists('healthScoreConfig', keys.healthScoreConfig)
 
-  // 10. Quality & Compliance
+  // 11. Quality & Compliance
   addIfExists('criteriaConfig', keys.criteriaConfig)
   addIfExists('dodTemplates', keys.dodTemplates)
 
-  // 11. Sprint Management
+  // 12. Sprint Management
   addIfExists('sprintGoals', keys.sprintGoals)
   addIfExists('retroActions', keys.retroActions)
 
-  // 12. Backlog Health
+  // 13. Release Planning
+  addIfExists('releases', keys.releases)
+  addIfExists('featureToggles', keys.featureToggles)
+
+  // 14. Forecast Accuracy (per-project)
+  const forecastKeys = getPerProjectKeys(keys.forecastsBase)
+  const hasForecastData =
+    Object.keys(forecastKeys.projectKeys).length > 0 ||
+    Object.keys(forecastKeys.podKeys).length > 0
+
+  if (hasForecastData) {
+    data.forecasts = {
+      projectLevel: {},
+      podLevel: {}
+    }
+
+    // Load project-level forecasts
+    Object.entries(forecastKeys.projectKeys).forEach(([projectId, key]) => {
+      const forecastData = loadFromStorage(key)
+      if (forecastData) {
+        data.forecasts.projectLevel[projectId] = forecastData
+      }
+    })
+
+    // Load pod-level forecasts
+    Object.entries(forecastKeys.podKeys).forEach(([podId, key]) => {
+      const forecastData = loadFromStorage(key)
+      if (forecastData) {
+        data.forecasts.podLevel[podId] = forecastData
+      }
+    })
+
+    const hasProjectForecasts = Object.keys(data.forecasts.projectLevel).length > 0
+    const hasPodForecasts = Object.keys(data.forecasts.podLevel).length > 0
+
+    if (hasProjectForecasts || hasPodForecasts) {
+      includedData.push('forecasts')
+    } else {
+      delete data.forecasts
+    }
+  }
+
+  // 15. Backlog Health
   addIfExists('backlogHealthHistory', keys.backlogHealthHistory)
 
-  // 13. User Preferences
+  // 16. User Preferences
   addIfExists('userRole', keys.userRole)
   addIfExists('viewPreference', keys.viewPreference)
   addIfExists('favoriteViews', keys.favoriteViews)
 
-  // 14. Velocity Configuration
+  // 17. Velocity Configuration
   addIfExists('velocityConfig', keys.velocityConfig)
 
-  // 15. UI State
+  // 18. UI State
   const uiState = {}
   const qualityShowOpenOnly = loadFromStorage(keys.qualityShowOpenOnly)
   const qualityLegendCollapsed = loadFromStorage(keys.qualityLegendCollapsed)
@@ -878,9 +968,9 @@ export function restoreFromBackup(backup, options = {}) {
             }
           }
           if (data.decisions) {
-            if (overwrite || !loadFromStorage(keys.decisions)) {
-              saveToStorage(keys.decisions, data.decisions)
-              result.restored.push('decisions')
+            if (overwrite || !loadFromStorage(keys.stakeholderDecisions)) {
+              saveToStorage(keys.stakeholderDecisions, data.decisions)
+              result.restored.push('stakeholderDecisions')
             }
           }
           if (data.documents) {
@@ -888,6 +978,44 @@ export function restoreFromBackup(backup, options = {}) {
               saveToStorage(keys.documents, data.documents)
               result.restored.push('documents')
             }
+          }
+          break
+
+        case 'projectDecisions':
+          // Restore project and pod-level decisions
+          let decisionCount = 0
+
+          // Handle new structure (projectLevel/podLevel)
+          if (data.projectLevel || data.podLevel) {
+            // Restore project-level decisions
+            if (data.projectLevel) {
+              Object.entries(data.projectLevel).forEach(([projectId, decisionData]) => {
+                const key = projectId === 'default'
+                  ? keys.projectDecisionsBase
+                  : `${keys.projectDecisionsBase}_${projectId}`
+
+                if (overwrite || !loadFromStorage(key)) {
+                  saveToStorage(key, decisionData)
+                  decisionCount++
+                }
+              })
+            }
+
+            // Restore pod-level decisions
+            if (data.podLevel) {
+              Object.entries(data.podLevel).forEach(([podId, decisionData]) => {
+                const key = `${keys.projectDecisionsBase}_pod_${podId}`
+
+                if (overwrite || !loadFromStorage(key)) {
+                  saveToStorage(key, decisionData)
+                  decisionCount++
+                }
+              })
+            }
+          }
+
+          if (decisionCount > 0) {
+            result.restored.push(`projectDecisions (${decisionCount} items)`)
           }
           break
 
@@ -923,6 +1051,58 @@ export function restoreFromBackup(backup, options = {}) {
           if (overwrite || !loadFromStorage(keys.retroActions)) {
             saveToStorage(keys.retroActions, data)
             result.restored.push('retroActions')
+          }
+          break
+
+        case 'releases':
+          if (overwrite || !loadFromStorage(keys.releases)) {
+            saveToStorage(keys.releases, data)
+            result.restored.push('releases')
+          }
+          break
+
+        case 'featureToggles':
+          if (overwrite || !loadFromStorage(keys.featureToggles)) {
+            saveToStorage(keys.featureToggles, data)
+            result.restored.push('featureToggles')
+          }
+          break
+
+        case 'forecasts':
+          // Restore project and pod-level forecasts
+          let forecastCount = 0
+
+          // Handle new structure (projectLevel/podLevel)
+          if (data.projectLevel || data.podLevel) {
+            // Restore project-level forecasts
+            if (data.projectLevel) {
+              Object.entries(data.projectLevel).forEach(([projectId, forecastData]) => {
+                const key = projectId === 'default'
+                  ? keys.forecastsBase
+                  : `${keys.forecastsBase}_${projectId}`
+
+                if (overwrite || !loadFromStorage(key)) {
+                  saveToStorage(key, forecastData)
+                  forecastCount++
+                }
+              })
+            }
+
+            // Restore pod-level forecasts
+            if (data.podLevel) {
+              Object.entries(data.podLevel).forEach(([podId, forecastData]) => {
+                const key = `${keys.forecastsBase}_pod_${podId}`
+
+                if (overwrite || !loadFromStorage(key)) {
+                  saveToStorage(key, forecastData)
+                  forecastCount++
+                }
+              })
+            }
+          }
+
+          if (forecastCount > 0) {
+            result.restored.push(`forecasts (${forecastCount} items)`)
           }
           break
 
