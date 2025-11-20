@@ -322,7 +322,33 @@ export default function VelocityView({ issues: allIssues }) {
     )
   }
 
-  const { velocityData, avgVelocity, currentSprint, burndownIssues, burndownPoints, prediction } = analytics
+  const { velocityData: fullVelocityData, avgVelocity, currentSprint, burndownIssues, burndownPoints, prediction } = analytics
+
+  // Limit chart display to trailing 12 months or last 12 sprints to prevent overflow
+  const velocityDataForChart = React.useMemo(() => {
+    if (!fullVelocityData || fullVelocityData.length === 0) return []
+
+    // Try to filter by 12 months first
+    const twelveMonthsAgo = new Date()
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12)
+
+    const recentData = fullVelocityData.filter(sprint => {
+      if (!sprint.endDate) return false
+      const endDate = new Date(sprint.endDate)
+      return endDate >= twelveMonthsAgo
+    })
+
+    // If we have data within 12 months, use it; otherwise fall back to last 12 sprints
+    if (recentData.length > 0) {
+      return recentData
+    }
+
+    // Fall back to last 12 sprints
+    return fullVelocityData.slice(-12)
+  }, [fullVelocityData])
+
+  // Use full data for trend calculations (need historical context)
+  const velocityData = fullVelocityData
 
   // Calculate trend based on current view mode
   const trend = calculateVelocityTrend(velocityData, currentSprint, viewMode)
@@ -345,8 +371,8 @@ export default function VelocityView({ issues: allIssues }) {
   const shortTermDisplay = getTrendDisplay(shortTerm)
   const longTermDisplay = getTrendDisplay(longTerm)
 
-  // Calculate max values for chart scaling based on view mode
-  const maxVelocity = Math.max(...velocityData.map((s) => viewMode === 'points' ? s.velocityPoints : s.velocity), 10)
+  // Calculate max values for chart scaling based on view mode (use chart data, not full data)
+  const maxVelocity = Math.max(...velocityDataForChart.map((s) => viewMode === 'points' ? s.velocityPoints : s.velocity), 10)
   const maxBurndown = burndown.total || 10
 
   const handleExportCSV = () => {
@@ -580,9 +606,14 @@ export default function VelocityView({ issues: allIssues }) {
         <div className="card">
           <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
             Sprint Velocity
+            {fullVelocityData.length > velocityDataForChart.length && (
+              <span style={{ fontSize: '12px', fontWeight: '400', color: '#6B7280', marginLeft: '8px' }}>
+                (Last {velocityDataForChart.length} of {fullVelocityData.length} sprints)
+              </span>
+            )}
           </h2>
 
-          {velocityData.length === 0 ? (
+          {velocityDataForChart.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#6B7280' }}>
               No velocity data available
             </div>
@@ -601,14 +632,14 @@ export default function VelocityView({ issues: allIssues }) {
 
                 {/* Chart area */}
                 <div style={{ position: 'absolute', left: '50px', right: 0, top: 0, bottom: 40, borderLeft: '2px solid #E5E7EB', borderBottom: '2px solid #E5E7EB', display: 'flex', alignItems: 'flex-end', gap: '8px', padding: '10px' }}>
-                  {velocityData.map((sprint, index) => {
+                  {velocityDataForChart.map((sprint, index) => {
                     const value = viewMode === 'points' ? sprint.velocityPoints : sprint.velocity
                     const barHeightPercent = (value / maxVelocity) * 100
 
-                    // Find the current sprint index to avoid highlighting future sprints
-                    let currentSprintIndex = velocityData.length - 1
+                    // Find the current sprint index in the filtered chart data
+                    let currentSprintIndex = velocityDataForChart.length - 1
                     if (currentSprint) {
-                      const foundIndex = velocityData.findIndex(s => s.sprint === currentSprint)
+                      const foundIndex = velocityDataForChart.findIndex(s => s.sprint === currentSprint)
                       if (foundIndex >= 0) {
                         currentSprintIndex = foundIndex
                       }
@@ -647,7 +678,7 @@ export default function VelocityView({ issues: allIssues }) {
 
                 {/* X-axis labels */}
                 <div style={{ position: 'absolute', left: '50px', right: 0, bottom: 0, height: '40px', display: 'flex', gap: '8px', padding: '0 10px' }}>
-                  {velocityData.map((sprint) => (
+                  {velocityDataForChart.map((sprint) => (
                     <div key={sprint.sprint} style={{ flex: 1, fontSize: '11px', color: '#6B7280', textAlign: 'center', paddingTop: '8px', lineHeight: '1.2' }}>
                       {sprint.sprint}
                     </div>
