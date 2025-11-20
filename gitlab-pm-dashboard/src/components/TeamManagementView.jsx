@@ -8,7 +8,6 @@ import TeamCapacityCards from './TeamManagement/TeamCapacityCards'
 import TeamSetupTab from './ResourcePlanning/TeamSetupTab'
 import AbsenceCalendarTab from './ResourcePlanning/AbsenceCalendarTab'
 import CapacityForecast from './TeamManagement/CapacityForecast'
-import CapacityScenarioPlanner from './TeamManagement/CapacityScenarioPlanner'
 
 /**
  * Unified Team Management View
@@ -65,7 +64,6 @@ export default function TeamManagementView({ issues: allIssues = [], milestones 
   const tabs = [
     { id: 'current', label: 'Current Capacity', icon: '📊' },
     { id: 'forecast', label: 'Capacity Forecast', icon: '📈' },
-    { id: 'scenarios', label: 'Scenario Planning', icon: '🔮' },
     { id: 'team', label: 'Team Setup', icon: '👥' },
     { id: 'absences', label: 'Absence Calendar', icon: '📅' }
   ]
@@ -183,15 +181,6 @@ export default function TeamManagementView({ issues: allIssues = [], milestones 
             issues={issues}
             milestones={milestones}
             absenceStats={teamData.absenceStats}
-          />
-        )}
-
-        {/* Scenario Planning - Advanced "what if" analysis */}
-        {activeTab === 'scenarios' && teamData && (
-          <CapacityScenarioPlanner
-            teamMembers={teamData.teamMembers}
-            issues={issues}
-            milestones={milestones}
           />
         )}
 
