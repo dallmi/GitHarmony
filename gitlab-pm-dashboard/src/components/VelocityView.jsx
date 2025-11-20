@@ -293,8 +293,9 @@ export default function VelocityView({ issues: allIssues }) {
     }
 
     // Calculate trend and average using current sprint to avoid future sprints
-    // Use configured lookback iterations instead of hard-coded 3
-    const avgVelocity = calculateAverageVelocity(velocityData, velocityConfig.velocityLookbackIterations || 3, currentSprint)
+    // Use analytics-specific lookback iterations (separate from Team Management)
+    const analyticsLookback = velocityConfig.analyticsLookbackIterations || velocityConfig.velocityLookbackIterations || 3
+    const avgVelocity = calculateAverageVelocity(velocityData, analyticsLookback, currentSprint)
 
     const burndownIssues = calculateBurndown(issues, currentSprint, 'issues')
     const burndownPoints = calculateBurndown(issues, currentSprint, 'points')
@@ -429,7 +430,7 @@ export default function VelocityView({ issues: allIssues }) {
 
         <div className="card">
           <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
-            Avg. Velocity (Last {velocityConfig.velocityLookbackIterations || 3})
+            Avg. Velocity (Last {velocityConfig.analyticsLookbackIterations || velocityConfig.velocityLookbackIterations || 3})
           </div>
           <div style={{ fontSize: '32px', fontWeight: '600', color: '#2563EB' }}>
             {viewMode === 'points' ? avgVelocity.byPoints : avgVelocity.byIssues}{' '}

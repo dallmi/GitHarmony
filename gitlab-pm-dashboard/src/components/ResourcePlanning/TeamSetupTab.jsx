@@ -617,7 +617,38 @@ export default function TeamSetupTab({ isCrossProject, onTeamUpdate, issues = []
                   }}
                 />
                 <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>
-                  Number of past iterations to analyze for velocity
+                  For Team Management capacity planning
+                </div>
+              </div>
+
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '6px'
+                }}>
+                  Analytics Lookback Iterations
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={velocityConfig.analyticsLookbackIterations || velocityConfig.velocityLookbackIterations}
+                  onChange={(e) => handleVelocityConfigChange('analyticsLookbackIterations', parseInt(e.target.value))}
+                  disabled={velocityConfig.mode === 'static'}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '6px',
+                    background: velocityConfig.mode === 'static' ? '#F3F4F6' : 'white',
+                    opacity: velocityConfig.mode === 'static' ? 0.6 : 1
+                  }}
+                />
+                <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>
+                  For Analytics Velocity view trends
                 </div>
               </div>
             </div>

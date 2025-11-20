@@ -140,8 +140,11 @@ export const VELOCITY_CONFIG = {
   // Static hours per issue (used when metricType = 'issues')
   staticHoursPerIssue: 8,
 
-  // Number of iterations to analyze for velocity calculation
+  // Number of iterations to analyze for Team Management capacity planning
   velocityLookbackIterations: 3,
+
+  // Number of iterations to analyze for Analytics Velocity view (separate from Team Management)
+  analyticsLookbackIterations: 3,
 
   // Minimum iterations required to use individual velocity (otherwise use team average)
   minIterationsForIndividualVelocity: 2
