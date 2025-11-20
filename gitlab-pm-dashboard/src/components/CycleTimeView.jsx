@@ -16,7 +16,7 @@ import {
 import { getEnhancedCycleTimeStats } from '../services/enhancedCycleTimeService'
 import useLabelEvents from '../hooks/useLabelEvents'
 import { useIterationFilter } from '../contexts/IterationFilterContext'
-import { checkPremiumFeatures } from '../services/gitlabApi'
+import { checkPremiumFeaturesForProjects } from '../services/gitlabApi'
 import { loadConfig } from '../services/storageService'
 import SearchBar from './SearchBar'
 import { searchIssues } from '../utils/searchUtils'
@@ -67,9 +67,28 @@ export default function CycleTimeView({ issues: allIssues }) {
         return
       }
 
-      const features = await checkPremiumFeatures(
+      if (!allIssues || allIssues.length === 0) {
+        setCheckingPremium(false)
+        return
+      }
+
+      // Get all unique project IDs from issues (important for Pods/multi-project mode)
+      const projectIds = [...new Set(
+        allIssues
+          .map(issue => issue.project_id)
+          .filter(Boolean)
+      )]
+
+      if (projectIds.length === 0) {
+        // Fall back to config project ID
+        projectIds.push(config.projectId)
+      }
+
+      console.log(`Checking Premium features for ${projectIds.length} project(s)...`)
+
+      const features = await checkPremiumFeaturesForProjects(
         config.gitlabUrl,
-        config.projectId,
+        projectIds,
         config.token
       )
       setPremiumFeatures(features)
@@ -77,7 +96,7 @@ export default function CycleTimeView({ issues: allIssues }) {
     }
 
     checkPremium()
-  }, [])
+  }, [allIssues])
 
   const analytics = useMemo(() => {
     if (!issues || issues.length === 0) {
@@ -174,33 +193,60 @@ export default function CycleTimeView({ issues: allIssues }) {
       {!checkingPremium && premiumFeatures && (
         <div className="card" style={{
           marginBottom: '30px',
-          background: premiumFeatures.hasLabelHistory ? '#D1FAE5' : '#FEF3C7',
-          borderColor: premiumFeatures.hasLabelHistory ? '#10B981' : '#F59E0B'
+          background: premiumFeatures.allPremium ? '#D1FAE5' : premiumFeatures.anyPremium ? '#DBEAFE' : '#FEF3C7',
+          borderColor: premiumFeatures.allPremium ? '#10B981' : premiumFeatures.anyPremium ? '#3B82F6' : '#F59E0B'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ fontSize: '24px' }}>
-              {premiumFeatures.hasLabelHistory ? '✅' : 'ℹ️'}
+              {premiumFeatures.allPremium ? '✅' : premiumFeatures.anyPremium ? '⚠️' : 'ℹ️'}
             </div>
             <div style={{ flex: 1 }}>
               <h3 style={{
                 fontSize: '14px',
                 fontWeight: '600',
-                color: premiumFeatures.hasLabelHistory ? '#065F46' : '#92400E',
+                color: premiumFeatures.allPremium ? '#065F46' : premiumFeatures.anyPremium ? '#1E40AF' : '#92400E',
                 marginBottom: '4px'
               }}>
-                {premiumFeatures.hasLabelHistory
+                {premiumFeatures.allPremium
                   ? 'GitLab Premium/Ultimate Detected'
-                  : 'GitLab Free/Community Edition Detected'}
+                  : premiumFeatures.anyPremium
+                    ? `Mixed Premium Status (${premiumFeatures.premiumCount}/${premiumFeatures.totalProjects} projects)`
+                    : 'GitLab Free/Community Edition Detected'}
               </h3>
               <p style={{
                 fontSize: '12px',
-                color: premiumFeatures.hasLabelHistory ? '#065F46' : '#92400E',
+                color: premiumFeatures.allPremium ? '#065F46' : premiumFeatures.anyPremium ? '#1E40AF' : '#92400E',
                 margin: 0
               }}>
-                {premiumFeatures.hasLabelHistory
-                  ? '✓ Label history API available - Precise cycle time tracking enabled'
-                  : '⚠ Using estimated cycle times. Upgrade to Premium/Ultimate for exact label-change history and more accurate metrics.'}
+                {premiumFeatures.allPremium
+                  ? '✓ Label history API available - Precise cycle time tracking enabled for all projects'
+                  : premiumFeatures.anyPremium
+                    ? `✓ Using precise cycle times for ${premiumFeatures.premiumCount} project(s) with Premium, estimated for others`
+                    : '⚠ Using estimated cycle times. Upgrade to Premium/Ultimate for exact label-change history and more accurate metrics.'}
               </p>
+              {premiumFeatures.anyPremium && !premiumFeatures.allPremium && premiumFeatures.featuresMap && (
+                <details style={{ marginTop: '8px', fontSize: '11px' }}>
+                  <summary style={{ cursor: 'pointer', color: '#1E40AF', fontWeight: '500' }}>
+                    View project breakdown
+                  </summary>
+                  <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {Object.entries(premiumFeatures.featuresMap).map(([projectId, features]) => (
+                      <div key={projectId} style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        padding: '4px 8px',
+                        background: features.hasLabelHistory ? '#D1FAE5' : '#FEF3C7',
+                        borderRadius: '4px'
+                      }}>
+                        <span>Project {projectId}</span>
+                        <span style={{ fontWeight: '600' }}>
+                          {features.hasLabelHistory ? '✓ Premium' : '✗ Free'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
             </div>
           </div>
         </div>

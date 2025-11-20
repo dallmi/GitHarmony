@@ -168,6 +168,7 @@ export default function TeamManagementView({ issues: allIssues = [], milestones 
           <TeamCapacityCards
             teamMembers={teamData.teamMembers}
             issues={issues}
+            allIssues={allIssues}
             milestones={milestones}
             sprintCapacity={teamData.sprintCapacity}
             crossProjectMode={crossProjectMode}

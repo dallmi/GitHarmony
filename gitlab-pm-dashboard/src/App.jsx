@@ -28,7 +28,6 @@ import SprintManagementView from './components/SprintManagementView'
 import CrossTeamCoordinationView from './components/CrossTeamCoordinationView'
 import ResourcePlanningView from './components/ResourcePlanningView'
 import TeamManagementView from './components/TeamManagementView'
-import DependencyManagementView from './components/DependencyManagementView'
 import ReleasePlanningView from './components/ReleasePlanningView'
 
 function App() {
@@ -125,7 +124,6 @@ function App() {
             'roadmap',
             'stakeholders',
             'crossteam',
-            'dependencies',
             'releases'
             // Note: 'backup' view doesn't need iteration filter
           ].includes(activeView)
@@ -217,7 +215,6 @@ function App() {
             {activeView === 'teammanagement' && <TeamManagementView issues={issues} milestones={milestones} crossProjectMode={getActiveProjectId() === 'cross-project'} />}
             {activeView === 'stakeholders' && <StakeholderHubView stats={stats} healthScore={healthScore} />}
             {activeView === 'crossteam' && <CrossTeamCoordinationView issues={issues} epics={epics} milestones={milestones} />}
-            {activeView === 'dependencies' && <DependencyManagementView issues={issues} epics={epics} milestones={milestones} />}
             {activeView === 'releases' && <ReleasePlanningView issues={issues} milestones={milestones} epics={epics} />}
           </>
         )}

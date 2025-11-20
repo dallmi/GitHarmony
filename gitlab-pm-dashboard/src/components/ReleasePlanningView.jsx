@@ -8,7 +8,7 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
   const [releases, setReleases] = useState([])
   const [activeRelease, setActiveRelease] = useState(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [viewMode, setViewMode] = useState('calendar') // calendar, board, timeline
+  const [viewMode, setViewMode] = useState('calendar') // calendar, timeline
   const [featureToggles, setFeatureToggles] = useState({})
   const [selectedRelease, setSelectedRelease] = useState(null)
 
@@ -77,9 +77,12 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
       featureFlags: []
     }
 
-    const updatedReleases = [...releases, newRelease]
-    setReleases(updatedReleases)
-    saveReleases(updatedReleases)
+    // Use functional update to ensure we have the latest releases state
+    setReleases(prevReleases => {
+      const updatedReleases = [...prevReleases, newRelease]
+      saveReleases(updatedReleases)
+      return updatedReleases
+    })
     setActiveRelease(newRelease.id)
     return newRelease
   }
@@ -423,112 +426,6 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
     )
   }
 
-  // Render release board view
-  const renderBoard = () => {
-    const releaseStates = ['planning', 'development', 'testing', 'staging', 'deploying', 'released']
-
-    return (
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: `repeat(${releaseStates.length}, minmax(250px, 1fr))`,
-        gap: '16px',
-        overflowX: 'auto'
-      }}>
-        {releaseStates.map(state => {
-          const stateReleases = releases.filter(r => r.status === state)
-
-          return (
-            <div
-              key={state}
-              style={{
-                background: '#F9FAFB',
-                borderRadius: '8px',
-                padding: '12px',
-                minHeight: '400px'
-              }}
-            >
-              <h4 style={{
-                fontSize: '13px',
-                fontWeight: '600',
-                color: '#374151',
-                marginBottom: '12px',
-                textTransform: 'capitalize'
-              }}>
-                {state} ({stateReleases.length})
-              </h4>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {stateReleases.map(release => (
-                  <div
-                    key={release.id}
-                    onClick={() => setSelectedRelease(release)}
-                    style={{
-                      background: 'white',
-                      border: '1px solid #E5E7EB',
-                      borderRadius: '6px',
-                      padding: '12px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'}
-                    onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
-                  >
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: '8px'
-                    }}>
-                      <span style={{ fontSize: '14px', fontWeight: '600' }}>
-                        v{release.version}
-                      </span>
-                      <span style={{
-                        padding: '2px 6px',
-                        background: '#EEF2FF',
-                        color: '#4F46E5',
-                        borderRadius: '3px',
-                        fontSize: '10px',
-                        fontWeight: '600'
-                      }}>
-                        {release.type}
-                      </span>
-                    </div>
-
-                    <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>
-                      {new Date(release.targetDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                    </div>
-
-                    <div style={{ fontSize: '11px', color: '#6B7280' }}>
-                      {releaseContent.issues.filter(i =>
-                        i.labels?.includes(`release::${release.version}`)
-                      ).length} issues
-                    </div>
-
-                    {release.deploymentWindows?.length > 0 && (
-                      <div style={{
-                        marginTop: '8px',
-                        paddingTop: '8px',
-                        borderTop: '1px solid #F3F4F6'
-                      }}>
-                        <div style={{ fontSize: '10px', fontWeight: '600', color: '#6B7280', marginBottom: '4px' }}>
-                          Deployment Windows:
-                        </div>
-                        {release.deploymentWindows.map((window, idx) => (
-                          <div key={idx} style={{ fontSize: '10px', color: '#9CA3AF' }}>
-                            {window.environment}: {new Date(window.startTime).toLocaleTimeString()}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    )
-  }
 
   return (
     <div style={{ padding: '20px' }}>
@@ -624,7 +521,7 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
         </div>
 
         <div style={{ display: 'flex', gap: '8px' }}>
-          {['calendar', 'board', 'timeline'].map(mode => (
+          {['calendar', 'timeline'].map(mode => (
             <button
               key={mode}
               onClick={() => setViewMode(mode)}
@@ -633,8 +530,7 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
                 background: viewMode === mode ? '#3B82F6' : 'white',
                 color: viewMode === mode ? 'white' : '#374151',
                 border: '1px solid #D1D5DB',
-                borderRadius: mode === 'calendar' ? '6px 0 0 6px' :
-                            mode === 'timeline' ? '0 6px 6px 0' : '0',
+                borderRadius: mode === 'calendar' ? '6px 0 0 6px' : '0 6px 6px 0',
                 fontSize: '12px',
                 fontWeight: '500',
                 cursor: 'pointer',
@@ -719,10 +615,9 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
 
       {/* Main View */}
       {viewMode === 'calendar' && renderCalendar()}
-      {viewMode === 'board' && renderBoard()}
 
       {/* Release Content */}
-      {currentRelease && viewMode !== 'calendar' && viewMode !== 'board' && (
+      {currentRelease && viewMode !== 'calendar' && (
         <div style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',

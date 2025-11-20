@@ -13,7 +13,7 @@ import { loadVelocityConfig } from '../../services/velocityConfigService'
  * Shows team members in card view with current capacity and workload
  * Adapted from ResourceCapacityView but focused on current state
  */
-export default function TeamCapacityCards({ teamMembers, issues, milestones, sprintCapacity, crossProjectMode }) {
+export default function TeamCapacityCards({ teamMembers, issues, allIssues, milestones, sprintCapacity, crossProjectMode }) {
   const [selectedMember, setSelectedMember] = useState(null)
   const [viewMode, setViewMode] = useState('cards') // cards or table
   const [showOnlyOpen, setShowOnlyOpen] = useState(true) // Default to showing only open issues
@@ -100,9 +100,12 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
 
   // Calculate team average velocity for fallback
   const teamAverageVelocity = useMemo(() => {
-    if (velocityConfig.mode !== 'dynamic' || !teamMembers || !issues) return null
-    return calculateTeamAverageVelocity(teamMembers, issues, velocityConfig.velocityLookbackIterations)
-  }, [teamMembers, issues, velocityConfig])
+    if (velocityConfig.mode !== 'dynamic' || !teamMembers) return null
+    // Use allIssues if available (for velocity calculation), otherwise fall back to issues
+    const issuesForVelocity = allIssues || issues
+    if (!issuesForVelocity) return null
+    return calculateTeamAverageVelocity(teamMembers, issuesForVelocity, velocityConfig.velocityLookbackIterations)
+  }, [teamMembers, allIssues, issues, velocityConfig])
 
   // Calculate member capacity and workload
   const memberCapacityData = useMemo(() => {
@@ -197,9 +200,11 @@ export default function TeamCapacityCards({ teamMembers, issues, milestones, spr
       let hoursPerSP = velocityConfig.staticHoursPerStoryPoint // Default fallback
 
       if (velocityConfig.mode === 'dynamic') {
+        // Use allIssues for velocity calculation (to analyze historical data across all iterations)
+        const issuesForVelocity = allIssues || issues
         velocityData = getHoursPerStoryPoint(
           member.username,
-          issues,  // Use ALL issues for velocity calculation, not just filtered ones
+          issuesForVelocity,
           memberDefaultCapacity,
           teamAverageVelocity,
           velocityConfig.staticHoursPerStoryPoint

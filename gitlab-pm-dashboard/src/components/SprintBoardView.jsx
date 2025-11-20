@@ -384,9 +384,14 @@ export default function SprintBoardView({ issues }) {
                           fontSize: '13px',
                           fontWeight: '500',
                           textDecoration: 'line-through',
-                          color: 'var(--text-secondary)'
+                          color: 'var(--text-secondary)',
+                          marginBottom: '4px'
                         }}>
                           #{issue.iid} {issue.title}
+                        </div>
+                        <div className="text-small text-muted" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>{issue.assignees?.[0]?.name || 'Unassigned'}</span>
+                          {issue.weight && <span style={{ fontWeight: '600' }}>{issue.weight} pts</span>}
                         </div>
                       </div>
                     ))}

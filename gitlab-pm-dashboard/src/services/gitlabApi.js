@@ -358,12 +358,7 @@ export async function checkPremiumFeatures(gitlabUrl, projectId, token) {
       { headers: { 'PRIVATE-TOKEN': token } }
     )
 
-    if (eventsResponse.status === 404 || eventsResponse.status === 403) {
-      console.log('Resource State Events API not available (requires Premium/Ultimate)')
-      return { hasLabelHistory: false, hasResourceEvents: false }
-    }
-
-    // Try to fetch resource label events
+    // Try to fetch resource label events (check both independently)
     const labelEventsResponse = await fetch(
       `${gitlabUrl}/api/v4/projects/${encodedProjectId}/issues/${testIssueIid}/resource_label_events`,
       { headers: { 'PRIVATE-TOKEN': token } }
@@ -372,15 +367,54 @@ export async function checkPremiumFeatures(gitlabUrl, projectId, token) {
     const hasLabelHistory = labelEventsResponse.ok
     const hasResourceEvents = eventsResponse.ok
 
-    console.log('GitLab Premium Features:', {
+    console.log(`GitLab Premium Features for project ${projectId}:`, {
       hasLabelHistory,
       hasResourceEvents
     })
 
-    return { hasLabelHistory, hasResourceEvents }
+    return { hasLabelHistory, hasResourceEvents, projectId }
   } catch (error) {
-    console.error('Premium feature check failed:', error)
-    return { hasLabelHistory: false, hasResourceEvents: false }
+    console.error(`Premium feature check failed for project ${projectId}:`, error)
+    return { hasLabelHistory: false, hasResourceEvents: false, projectId }
+  }
+}
+
+/**
+ * Check Premium features for multiple projects
+ * Used in Pods/multi-project mode to determine which projects have Premium
+ */
+export async function checkPremiumFeaturesForProjects(gitlabUrl, projectIds, token) {
+  const results = await Promise.all(
+    projectIds.map(projectId => checkPremiumFeatures(gitlabUrl, projectId, token))
+  )
+
+  // Build a map of projectId -> features
+  const featuresMap = {}
+  results.forEach(result => {
+    featuresMap[result.projectId] = {
+      hasLabelHistory: result.hasLabelHistory,
+      hasResourceEvents: result.hasResourceEvents
+    }
+  })
+
+  // Determine overall status
+  const anyPremium = results.some(r => r.hasLabelHistory || r.hasResourceEvents)
+  const allPremium = results.every(r => r.hasLabelHistory && r.hasResourceEvents)
+  const premiumCount = results.filter(r => r.hasLabelHistory || r.hasResourceEvents).length
+
+  console.log('Multi-project Premium check:', {
+    totalProjects: projectIds.length,
+    premiumCount,
+    allPremium,
+    anyPremium
+  })
+
+  return {
+    featuresMap,
+    anyPremium,
+    allPremium,
+    premiumCount,
+    totalProjects: projectIds.length
   }
 }
 
