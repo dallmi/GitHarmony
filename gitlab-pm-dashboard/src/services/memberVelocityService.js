@@ -13,9 +13,10 @@ import { calculateAbsenceImpact } from './absenceService'
  * @param {Array} allIssues - All issues from GitLab
  * @param {number} memberDefaultCapacity - Member's weekly capacity in hours
  * @param {number} lookbackIterations - Number of iterations to analyze (default: 3)
- * @returns {Object} Velocity data including hours per story point
+ * @param {string} metricType - 'storyPoints' or 'issueCount' (default: 'storyPoints')
+ * @returns {Object} Velocity data including hours per story point or hours per issue
  */
-export function calculateMemberVelocity(username, allIssues, memberDefaultCapacity = 40, lookbackIterations = 3) {
+export function calculateMemberVelocity(username, allIssues, memberDefaultCapacity = 40, lookbackIterations = 3, metricType = 'storyPoints') {
   if (!username || !allIssues || allIssues.length === 0) {
     console.log(`[Velocity] No issues provided for ${username}`)
     return {
@@ -76,23 +77,29 @@ export function calculateMemberVelocity(username, allIssues, memberDefaultCapaci
       storyPoints = parseInt(issue.weight) || 0
     }
 
-    if (iterationName && storyPoints > 0) {
+    // For issue count mode, we count all issues; for story points, we only count issues with SPs
+    const shouldInclude = metricType === 'issueCount' || storyPoints > 0
+
+    if (iterationName && shouldInclude) {
       if (!iterationMap.has(iterationName)) {
         iterationMap.set(iterationName, {
           name: iterationName,
           startDate: new Date(issue.iteration.start_date),
           endDate: new Date(issue.iteration.due_date),
           storyPoints: 0,
+          issueCount: 0,
           issues: []
         })
       }
       const iteration = iterationMap.get(iterationName)
       iteration.storyPoints += storyPoints
+      iteration.issueCount++
       iteration.issues.push(issue)
     }
   })
 
-  console.log(`[Velocity] Found ${iterationMap.size} iterations with story points for ${username}`)
+  const metricLabel = metricType === 'issueCount' ? 'issues' : 'story points'
+  console.log(`[Velocity] Found ${iterationMap.size} iterations with ${metricLabel} for ${username}`)
 
   // Sort iterations by end date (most recent first) and take the last N
   const iterations = Array.from(iterationMap.values())
@@ -110,8 +117,10 @@ export function calculateMemberVelocity(username, allIssues, memberDefaultCapaci
     }
   }
 
-  // Calculate capacity and story points for each iteration
+  // Calculate capacity and metric totals for each iteration
+  let totalMetricValue = 0 // either story points or issue count
   let totalStoryPoints = 0
+  let totalIssueCount = 0
   let totalHoursAvailable = 0
 
   const iterationDetails = iterations.map(iteration => {
@@ -143,6 +152,8 @@ export function calculateMemberVelocity(username, allIssues, memberDefaultCapaci
     const availableHours = Math.max(0, iterationCapacity - absenceHours)
 
     totalStoryPoints += iteration.storyPoints
+    totalIssueCount += iteration.issueCount
+    totalMetricValue += metricType === 'issueCount' ? iteration.issueCount : iteration.storyPoints
     totalHoursAvailable += availableHours
 
     return {
@@ -150,16 +161,16 @@ export function calculateMemberVelocity(username, allIssues, memberDefaultCapaci
       startDate: iteration.startDate,
       endDate: iteration.endDate,
       storyPoints: iteration.storyPoints,
+      issueCount: iteration.issueCount,
       capacity: iterationCapacity,
       absenceHours,
-      availableHours,
-      issueCount: iteration.issues.length
+      availableHours
     }
   })
 
-  // Calculate average hours per story point
-  const hoursPerStoryPoint = totalStoryPoints > 0
-    ? totalHoursAvailable / totalStoryPoints
+  // Calculate average hours per metric unit (story point or issue)
+  const hoursPerMetric = totalMetricValue > 0
+    ? totalHoursAvailable / totalMetricValue
     : null
 
   // Determine data quality
@@ -169,18 +180,22 @@ export function calculateMemberVelocity(username, allIssues, memberDefaultCapaci
   }
 
   const result = {
-    hoursPerStoryPoint: hoursPerStoryPoint ? Math.round(hoursPerStoryPoint * 10) / 10 : null,
+    hoursPerStoryPoint: metricType === 'storyPoints' ? (hoursPerMetric ? Math.round(hoursPerMetric * 10) / 10 : null) : null,
+    hoursPerIssue: metricType === 'issueCount' ? (hoursPerMetric ? Math.round(hoursPerMetric * 10) / 10 : null) : null,
+    metricType,
     iterationsAnalyzed: iterations.length,
     totalStoryPoints,
+    totalIssueCount,
+    totalMetricValue,
     totalHoursAvailable: Math.round(totalHoursAvailable),
     dataQuality,
     iterations: iterationDetails
   }
 
-  console.log(`[Velocity] ${username} velocity calc result:`, {
-    hoursPerSP: result.hoursPerStoryPoint,
+  console.log(`[Velocity] ${username} velocity calc result (${metricType}):`, {
+    hoursPerMetric: hoursPerMetric ? Math.round(hoursPerMetric * 10) / 10 : null,
     iterations: result.iterationsAnalyzed,
-    storyPoints: result.totalStoryPoints,
+    metricValue: totalMetricValue,
     quality: result.dataQuality
   })
 
@@ -193,9 +208,10 @@ export function calculateMemberVelocity(username, allIssues, memberDefaultCapaci
  * @param {Array} teamMembers - All team members
  * @param {Array} allIssues - All issues from GitLab
  * @param {number} lookbackIterations - Number of iterations to analyze
+ * @param {string} metricType - 'storyPoints' or 'issueCount'
  * @returns {Object} Team velocity data
  */
-export function calculateTeamAverageVelocity(teamMembers, allIssues, lookbackIterations = 3) {
+export function calculateTeamAverageVelocity(teamMembers, allIssues, lookbackIterations = 3, metricType = 'storyPoints') {
   if (!teamMembers || teamMembers.length === 0 || !allIssues || allIssues.length === 0) {
     return {
       hoursPerStoryPoint: null,
@@ -210,74 +226,90 @@ export function calculateTeamAverageVelocity(teamMembers, allIssues, lookbackIte
         member.username,
         allIssues,
         member.defaultCapacity || 40,
-        lookbackIterations
+        lookbackIterations,
+        metricType
       )
+      const hoursPerMetric = metricType === 'issueCount' ? velocity.hoursPerIssue : velocity.hoursPerStoryPoint
       return {
         username: member.username,
-        hoursPerStoryPoint: velocity.hoursPerStoryPoint,
+        hoursPerMetric,
         iterationsAnalyzed: velocity.iterationsAnalyzed
       }
     })
-    .filter(v => v.hoursPerStoryPoint !== null && v.iterationsAnalyzed >= 2)
+    .filter(v => v.hoursPerMetric !== null && v.iterationsAnalyzed >= 2)
 
   if (memberVelocities.length === 0) {
     return {
       hoursPerStoryPoint: null,
+      hoursPerIssue: null,
+      metricType,
       membersAnalyzed: 0,
       dataQuality: 'insufficient'
     }
   }
 
   // Calculate average
-  const avgHoursPerStoryPoint = memberVelocities.reduce((sum, v) => sum + v.hoursPerStoryPoint, 0) / memberVelocities.length
+  const avgHoursPerMetric = memberVelocities.reduce((sum, v) => sum + v.hoursPerMetric, 0) / memberVelocities.length
 
   return {
-    hoursPerStoryPoint: Math.round(avgHoursPerStoryPoint * 10) / 10,
+    hoursPerStoryPoint: metricType === 'storyPoints' ? Math.round(avgHoursPerMetric * 10) / 10 : null,
+    hoursPerIssue: metricType === 'issueCount' ? Math.round(avgHoursPerMetric * 10) / 10 : null,
+    metricType,
     membersAnalyzed: memberVelocities.length,
     dataQuality: memberVelocities.length >= 3 ? 'good' : 'moderate'
   }
 }
 
 /**
- * Get hours per story point for a member with fallback logic
+ * Get hours per metric unit for a member with fallback logic
  * @param {string} username - Team member username
  * @param {Array} allIssues - All issues
  * @param {number} memberDefaultCapacity - Member's capacity
  * @param {Object} teamAverage - Team average velocity
- * @param {number} staticHoursPerSP - Static fallback value
- * @returns {Object} Hours per story point with metadata
+ * @param {number} staticHoursPerSP - Static fallback value for story points
+ * @param {number} staticHoursPerIssue - Static fallback value for issue count
+ * @param {string} metricType - 'storyPoints' or 'issueCount'
+ * @returns {Object} Hours per metric unit with metadata
  */
-export function getHoursPerStoryPoint(username, allIssues, memberDefaultCapacity, teamAverage, staticHoursPerSP = 6) {
-  const memberVelocity = calculateMemberVelocity(username, allIssues, memberDefaultCapacity)
+export function getHoursPerStoryPoint(username, allIssues, memberDefaultCapacity, teamAverage, staticHoursPerSP = 6, staticHoursPerIssue = 8, metricType = 'storyPoints') {
+  const memberVelocity = calculateMemberVelocity(username, allIssues, memberDefaultCapacity, 3, metricType)
+
+  const hoursPerMetric = metricType === 'issueCount' ? memberVelocity.hoursPerIssue : memberVelocity.hoursPerStoryPoint
+  const teamAverageHours = metricType === 'issueCount' ? teamAverage?.hoursPerIssue : teamAverage?.hoursPerStoryPoint
+  const staticHours = metricType === 'issueCount' ? staticHoursPerIssue : staticHoursPerSP
+  const metricLabel = metricType === 'issueCount' ? 'issue' : 'SP'
 
   // Priority 1: Use member's own velocity if quality is good enough
-  if (memberVelocity.hoursPerStoryPoint && memberVelocity.iterationsAnalyzed >= 2) {
-    console.log(`[Velocity] ${username} using INDIVIDUAL velocity: ${memberVelocity.hoursPerStoryPoint} h/SP from ${memberVelocity.iterationsAnalyzed} iterations`)
+  if (hoursPerMetric && memberVelocity.iterationsAnalyzed >= 2) {
+    console.log(`[Velocity] ${username} using INDIVIDUAL velocity: ${hoursPerMetric} h/${metricLabel} from ${memberVelocity.iterationsAnalyzed} iterations`)
     return {
-      hours: memberVelocity.hoursPerStoryPoint,
+      hours: hoursPerMetric,
       source: 'individual',
       quality: memberVelocity.dataQuality,
-      details: `Based on ${memberVelocity.iterationsAnalyzed} iterations`
+      details: `Based on ${memberVelocity.iterationsAnalyzed} iterations`,
+      metricType
     }
   }
 
   // Priority 2: Use team average if available
-  if (teamAverage && teamAverage.hoursPerStoryPoint) {
-    console.log(`[Velocity] ${username} using TEAM AVERAGE: ${teamAverage.hoursPerStoryPoint} h/SP (individual had ${memberVelocity.iterationsAnalyzed} iterations)`)
+  if (teamAverage && teamAverageHours) {
+    console.log(`[Velocity] ${username} using TEAM AVERAGE: ${teamAverageHours} h/${metricLabel} (individual had ${memberVelocity.iterationsAnalyzed} iterations)`)
     return {
-      hours: teamAverage.hoursPerStoryPoint,
+      hours: teamAverageHours,
       source: 'team-average',
       quality: teamAverage.dataQuality,
-      details: `Team average (${teamAverage.membersAnalyzed} members)`
+      details: `Team average (${teamAverage.membersAnalyzed} members)`,
+      metricType
     }
   }
 
   // Priority 3: Fall back to static value
-  console.log(`[Velocity] ${username} using STATIC: ${staticHoursPerSP} h/SP (no historical data)`)
+  console.log(`[Velocity] ${username} using STATIC: ${staticHours} h/${metricLabel} (no historical data)`)
   return {
-    hours: staticHoursPerSP,
+    hours: staticHours,
     source: 'static',
     quality: 'configured',
-    details: `No historical data (needs ≥2 iterations with completed work)`
+    details: `No historical data (needs ≥2 iterations with completed work)`,
+    metricType
   }
 }
