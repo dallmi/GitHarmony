@@ -105,7 +105,7 @@ export default function TeamCapacityCards({ teamMembers, issues, allIssues, mile
     const issuesForVelocity = allIssues || issues
     if (!issuesForVelocity) return null
     return calculateTeamAverageVelocity(teamMembers, issuesForVelocity, velocityConfig.velocityLookbackIterations)
-  }, [teamMembers, allIssues, issues, velocityConfig])
+  }, [teamMembers, allIssues, issues, velocityConfig, velocityConfigKey])
 
   // Calculate member capacity and workload
   const memberCapacityData = useMemo(() => {
@@ -262,7 +262,7 @@ export default function TeamCapacityCards({ teamMembers, issues, allIssues, mile
         issues: memberIssues
       }
     })
-  }, [teamMembers, issues, currentIterationDates, showOnlyOpen, teamAverageVelocity, velocityConfig])
+  }, [teamMembers, issues, allIssues, currentIterationDates, showOnlyOpen, teamAverageVelocity, velocityConfigKey])
 
   // Analyze capacity issues for recommendations
   const capacityAnalysis = useMemo(() => {
