@@ -169,11 +169,11 @@ function calculateSprintVelocity(issues, metricType, lookbackIterations) {
     }
   })
 
-  // Sort sprints and calculate velocity
+  // Sort sprints chronologically (oldest to newest) for chart display
   const velocityData = Array.from(sprintMap.values())
     .sort((a, b) => {
       if (a.endDate && b.endDate) {
-        return new Date(b.endDate) - new Date(a.endDate)
+        return new Date(a.endDate) - new Date(b.endDate) // Ascending order (oldest first)
       }
       return 0
     })
@@ -190,7 +190,16 @@ function calculateSprintVelocity(issues, metricType, lookbackIterations) {
     }))
 
   // Calculate average velocity for the lookback period
-  const recentSprints = velocityData.slice(0, lookbackIterations)
+  // Only include COMPLETED sprints (exclude current/ongoing sprint)
+  const today = new Date()
+  const completedSprints = velocityData.filter(sprint => {
+    if (!sprint.endDate) return false
+    const endDate = new Date(sprint.endDate)
+    return endDate < today // Sprint has ended
+  })
+
+  // Take the most recent completed sprints for average calculation
+  const recentSprints = completedSprints.slice(-lookbackIterations) // Last N completed sprints
   const avgVelocity = {
     byIssues: 0,
     byPoints: 0
@@ -204,7 +213,7 @@ function calculateSprintVelocity(issues, metricType, lookbackIterations) {
     avgVelocity.byPoints = Math.round(totalPoints / recentSprints.length)
   }
 
-  // Determine data quality
+  // Determine data quality based on completed sprints analyzed
   let dataQuality = 'excellent'
   if (recentSprints.length < lookbackIterations) {
     dataQuality = recentSprints.length < 2 ? 'low' : 'moderate'
