@@ -1,102 +1,31 @@
 /**
  * Velocity & Burndown Analytics Service
- * Calculates sprint velocity, burndown data, and predictive metrics
+ *
+ * This service now delegates sprint velocity calculations to the unified velocity service
+ * while maintaining all additional analytics functionality (burndown, burnup, confidence, etc.)
  */
 
 import { getSprintFromLabels } from '../utils/labelUtils'
+import { getAnalyticsVelocity } from './unifiedVelocityService'
+import { loadVelocityConfig } from './velocityConfigService'
 
 /**
  * Calculate velocity metrics for all sprints
+ * DELEGATES TO UNIFIED SERVICE for consistency
  * Returns velocity data sorted by sprint number
- * Tracks both issue count and story points (weight)
+ * Tracks both issue count and story points
  */
 export function calculateVelocity(issues) {
   if (!issues || issues.length === 0) {
     return []
   }
 
-  // Group issues by sprint
-  const sprintMap = new Map()
+  // Use the unified service to get velocity data
+  const result = getAnalyticsVelocity(issues, 'points')
 
-  issues.forEach((issue) => {
-    const sprint = getSprintFromLabels(issue.labels, issue.iteration)
-    if (!sprint) return
-
-    if (!sprintMap.has(sprint)) {
-      sprintMap.set(sprint, {
-        sprint,
-        totalIssues: 0,
-        completedIssues: 0,
-        openIssues: 0,
-        totalPoints: 0,
-        completedPoints: 0,
-        openPoints: 0,
-        completedAt: []
-      })
-    }
-
-    const sprintData = sprintMap.get(sprint)
-    const issueWeight = issue.weight || 0
-
-    sprintData.totalIssues++
-    sprintData.totalPoints += issueWeight
-
-    if (issue.state === 'closed') {
-      sprintData.completedIssues++
-      sprintData.completedPoints += issueWeight
-      if (issue.closed_at) {
-        sprintData.completedAt.push(new Date(issue.closed_at))
-      }
-    } else {
-      sprintData.openIssues++
-      sprintData.openPoints += issueWeight
-    }
-  })
-
-  // Build a map of sprint name to start date for sorting
-  const sprintDates = new Map()
-  issues.forEach((issue) => {
-    const sprint = getSprintFromLabels(issue.labels, issue.iteration)
-    if (sprint && issue.iteration?.start_date && !sprintDates.has(sprint)) {
-      sprintDates.set(sprint, issue.iteration.start_date)
-    }
-  })
-
-  // Convert to array and sort by start date (or by sprint number for legacy format)
-  const velocityData = Array.from(sprintMap.values())
-    .sort((a, b) => {
-      const dateA = sprintDates.get(a.sprint)
-      const dateB = sprintDates.get(b.sprint)
-
-      // If both have dates, sort by date
-      if (dateA && dateB) {
-        return new Date(dateA) - new Date(dateB)
-      }
-
-      // Try to parse as numbers (for legacy "Sprint X" format)
-      const numA = typeof a.sprint === 'number' ? a.sprint : parseInt(a.sprint, 10)
-      const numB = typeof b.sprint === 'number' ? b.sprint : parseInt(b.sprint, 10)
-
-      if (!isNaN(numA) && !isNaN(numB)) {
-        return numA - numB
-      }
-
-      // Fallback to string comparison
-      return String(a.sprint).localeCompare(String(b.sprint))
-    })
-    .map((sprint) => ({
-      ...sprint,
-      velocity: sprint.completedIssues, // Velocity by issue count (default)
-      velocityPoints: sprint.completedPoints, // Velocity by story points
-      completionRate: sprint.totalIssues > 0
-        ? Math.round((sprint.completedIssues / sprint.totalIssues) * 100)
-        : 0,
-      completionRatePoints: sprint.totalPoints > 0
-        ? Math.round((sprint.completedPoints / sprint.totalPoints) * 100)
-        : 0
-    }))
-
-  return velocityData
+  // The unified service returns { velocityData, avgVelocity, dataQuality }
+  // We just need the velocityData array for backward compatibility
+  return result.velocityData || []
 }
 
 /**
