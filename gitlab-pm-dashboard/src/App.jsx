@@ -17,7 +17,6 @@ import EnhancedExecutiveDashboard from './components/EnhancedExecutiveDashboard'
 import RoadmapView from './components/RoadmapView'
 import VelocityView from './components/VelocityView'
 import StakeholderHubView from './components/StakeholderHubView'
-import InsightsView from './components/InsightsView'
 import IssueComplianceView from './components/IssueComplianceView'
 import CycleTimeView from './components/CycleTimeView'
 import BackupRestoreView from './components/BackupRestoreView'
@@ -111,7 +110,6 @@ function App() {
         {isConfigured() && issues.length > 0 && (
           [
             'executive',
-            'insights',
             'compliance',
             'cycletime',
             'resources',
@@ -191,16 +189,6 @@ function App() {
                 issues={issues}
                 milestones={milestones}
                 epics={epics}
-                risks={risks}
-              />
-            )}
-            {activeView === 'insights' && (
-              <InsightsView
-                issues={issues}
-                milestones={milestones}
-                epics={epics}
-                stats={stats}
-                healthScore={healthScore}
                 risks={risks}
               />
             )}
