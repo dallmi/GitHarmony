@@ -8,6 +8,7 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
   const [releases, setReleases] = useState([])
   const [activeRelease, setActiveRelease] = useState(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [editingRelease, setEditingRelease] = useState(null) // For editing existing releases
   const [viewMode, setViewMode] = useState('calendar') // calendar, timeline
   const [featureToggles, setFeatureToggles] = useState({})
   const [selectedRelease, setSelectedRelease] = useState(null)
@@ -85,6 +86,36 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
     })
     setActiveRelease(newRelease.id)
     return newRelease
+  }
+
+  // Update existing release
+  const updateRelease = (releaseId, releaseData) => {
+    setReleases(prevReleases => {
+      const updatedReleases = prevReleases.map(release =>
+        release.id === releaseId
+          ? { ...release, ...releaseData, updatedAt: new Date().toISOString() }
+          : release
+      )
+      saveReleases(updatedReleases)
+      return updatedReleases
+    })
+  }
+
+  // Delete release
+  const deleteRelease = (releaseId) => {
+    if (window.confirm('Are you sure you want to delete this release? This action cannot be undone.')) {
+      setReleases(prevReleases => {
+        const updatedReleases = prevReleases.filter(release => release.id !== releaseId)
+        saveReleases(updatedReleases)
+        return updatedReleases
+      })
+      // Clear active release if deleted
+      if (activeRelease === releaseId) {
+        setActiveRelease(null)
+      }
+      setShowCreateModal(false)
+      setEditingRelease(null)
+    }
   }
 
   // Get active release object
@@ -380,7 +411,10 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
                         {dayReleases.map(release => (
                           <div
                             key={release.id}
-                            onClick={() => setSelectedRelease(release)}
+                            onClick={() => {
+                              setEditingRelease(release)
+                              setShowCreateModal(true)
+                            }}
                             style={{
                               padding: '2px 4px',
                               background: release.status === 'released' ? '#D1FAE5' :
@@ -497,7 +531,7 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
           </select>
 
           {currentRelease && (
-            <div style={{ display: 'flex', gap: '12px', fontSize: '13px' }}>
+            <div style={{ display: 'flex', gap: '12px', fontSize: '13px', alignItems: 'center' }}>
               <span style={{ color: '#6B7280' }}>
                 Target: {new Date(currentRelease.targetDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
               </span>
@@ -516,6 +550,24 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
               }}>
                 {currentRelease.status}
               </span>
+              <button
+                onClick={() => {
+                  setEditingRelease(currentRelease)
+                  setShowCreateModal(true)
+                }}
+                style={{
+                  padding: '4px 12px',
+                  background: 'white',
+                  color: '#3B82F6',
+                  border: '1px solid #3B82F6',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Edit Release
+              </button>
             </div>
           )}
         </div>
@@ -753,7 +805,10 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
             justifyContent: 'center',
             zIndex: 1000
           }}
-          onClick={() => setShowCreateModal(false)}
+          onClick={() => {
+            setShowCreateModal(false)
+            setEditingRelease(null)
+          }}
         >
           <div
             style={{
@@ -766,7 +821,7 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
-              Create New Release
+              {editingRelease ? 'Edit Release' : 'Create New Release'}
             </h3>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -778,6 +833,7 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
                   id="release-version"
                   type="text"
                   placeholder="1.0.0"
+                  defaultValue={editingRelease?.version || ''}
                   style={{
                     width: '100%',
                     padding: '8px',
@@ -796,6 +852,7 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
                   id="release-name"
                   type="text"
                   placeholder="Q1 2024 Release"
+                  defaultValue={editingRelease?.name || ''}
                   style={{
                     width: '100%',
                     padding: '8px',
@@ -812,6 +869,7 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
                 </label>
                 <select
                   id="release-type"
+                  defaultValue={editingRelease?.type || 'major'}
                   style={{
                     width: '100%',
                     padding: '8px',
@@ -834,6 +892,7 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
                 <input
                   id="release-date"
                   type="date"
+                  defaultValue={editingRelease?.targetDate ? new Date(editingRelease.targetDate).toISOString().split('T')[0] : ''}
                   style={{
                     width: '100%',
                     padding: '8px',
@@ -851,6 +910,7 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
                 <input
                   id="release-start-date"
                   type="date"
+                  defaultValue={editingRelease?.startDate ? new Date(editingRelease.startDate).toISOString().split('T')[0] : ''}
                   style={{
                     width: '100%',
                     padding: '8px',
@@ -867,6 +927,7 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
                 </label>
                 <select
                   id="release-milestone"
+                  defaultValue={editingRelease?.milestone || ''}
                   style={{
                     width: '100%',
                     padding: '8px',
@@ -891,6 +952,7 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
                 id="release-description"
                 rows={4}
                 placeholder="Release description..."
+                defaultValue={editingRelease?.description || ''}
                 style={{
                   width: '100%',
                   padding: '8px',
@@ -901,58 +963,93 @@ export default function ReleasePlanningView({ issues = [], milestones = [], epic
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                style={{
-                  padding: '8px 16px',
-                  background: 'white',
-                  color: '#374151',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  const version = document.getElementById('release-version').value
-                  const name = document.getElementById('release-name').value
-                  const type = document.getElementById('release-type').value
-                  const targetDate = document.getElementById('release-date').value
-                  const startDate = document.getElementById('release-start-date').value
-                  const milestone = document.getElementById('release-milestone').value
-                  const description = document.getElementById('release-description').value
-
-                  if (version && name && targetDate && startDate) {
-                    createRelease({
-                      version,
-                      name,
-                      type,
-                      targetDate,
-                      startDate,
-                      milestone,
-                      description
-                    })
+            <div style={{ display: 'flex', gap: '12px', justifyContent: editingRelease ? 'space-between' : 'flex-end', marginTop: '20px' }}>
+              {editingRelease && (
+                <button
+                  onClick={() => deleteRelease(editingRelease.id)}
+                  style={{
+                    padding: '8px 16px',
+                    background: '#EF4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Delete Release
+                </button>
+              )}
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => {
                     setShowCreateModal(false)
-                  }
-                }}
-                style={{
-                  padding: '8px 16px',
-                  background: '#3B82F6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                Create Release
-              </button>
+                    setEditingRelease(null)
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    background: 'white',
+                    color: '#374151',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const version = document.getElementById('release-version').value
+                    const name = document.getElementById('release-name').value
+                    const type = document.getElementById('release-type').value
+                    const targetDate = document.getElementById('release-date').value
+                    const startDate = document.getElementById('release-start-date').value
+                    const milestone = document.getElementById('release-milestone').value
+                    const description = document.getElementById('release-description').value
+
+                    if (version && name && targetDate && startDate) {
+                      if (editingRelease) {
+                        updateRelease(editingRelease.id, {
+                          version,
+                          name,
+                          type,
+                          targetDate,
+                          startDate,
+                          milestone,
+                          description
+                        })
+                      } else {
+                        createRelease({
+                          version,
+                          name,
+                          type,
+                          targetDate,
+                          startDate,
+                          milestone,
+                          description
+                        })
+                      }
+                      setShowCreateModal(false)
+                      setEditingRelease(null)
+                    }
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    background: '#3B82F6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {editingRelease ? 'Update Release' : 'Create Release'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
