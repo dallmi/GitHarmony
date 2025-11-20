@@ -17,6 +17,7 @@ import { calculateAbsenceImpact } from './absenceService'
  */
 export function calculateMemberVelocity(username, allIssues, memberDefaultCapacity = 40, lookbackIterations = 3) {
   if (!username || !allIssues || allIssues.length === 0) {
+    console.log(`[Velocity] No issues provided for ${username}`)
     return {
       hoursPerStoryPoint: null,
       iterationsAnalyzed: 0,
@@ -28,12 +29,19 @@ export function calculateMemberVelocity(username, allIssues, memberDefaultCapaci
   }
 
   // Get all closed issues assigned to this member with iterations
-  const memberIssues = allIssues.filter(issue =>
-    issue.assignee?.username === username &&
-    issue.state === 'closed' &&
-    issue.iteration?.start_date &&
-    issue.iteration?.due_date
-  )
+  // Check both assignee and assignees array for compatibility
+  const memberIssues = allIssues.filter(issue => {
+    const isAssigned =
+      issue.assignee?.username === username ||
+      issue.assignees?.some(a => a.username === username)
+
+    return isAssigned &&
+      issue.state === 'closed' &&
+      issue.iteration?.start_date &&
+      issue.iteration?.due_date
+  })
+
+  console.log(`[Velocity] Found ${memberIssues.length} closed issues for ${username} out of ${allIssues.length} total issues`)
 
   if (memberIssues.length === 0) {
     return {
@@ -50,8 +58,23 @@ export function calculateMemberVelocity(username, allIssues, memberDefaultCapaci
   const iterationMap = new Map()
   memberIssues.forEach(issue => {
     const iterationName = getSprintFromLabels(issue.labels, issue.iteration)
-    const sp = issue.labels?.find(l => l.startsWith('sp::'))?.replace('sp::', '') || '0'
-    const storyPoints = parseInt(sp)
+
+    // Try to find story points - check both "sp::" and "SP::" and also check weight field
+    let storyPoints = 0
+    if (issue.labels) {
+      const spLabel = issue.labels.find(l =>
+        typeof l === 'string' && (l.startsWith('sp::') || l.startsWith('SP::'))
+      )
+      if (spLabel) {
+        const spValue = spLabel.replace(/^sp::/i, '')
+        storyPoints = parseInt(spValue) || 0
+      }
+    }
+
+    // Fallback to weight field if no SP label found
+    if (storyPoints === 0 && issue.weight) {
+      storyPoints = parseInt(issue.weight) || 0
+    }
 
     if (iterationName && storyPoints > 0) {
       if (!iterationMap.has(iterationName)) {
@@ -68,6 +91,8 @@ export function calculateMemberVelocity(username, allIssues, memberDefaultCapaci
       iteration.issues.push(issue)
     }
   })
+
+  console.log(`[Velocity] Found ${iterationMap.size} iterations with story points for ${username}`)
 
   // Sort iterations by end date (most recent first) and take the last N
   const iterations = Array.from(iterationMap.values())
@@ -143,7 +168,7 @@ export function calculateMemberVelocity(username, allIssues, memberDefaultCapaci
     dataQuality = iterations.length === 1 ? 'low' : 'moderate'
   }
 
-  return {
+  const result = {
     hoursPerStoryPoint: hoursPerStoryPoint ? Math.round(hoursPerStoryPoint * 10) / 10 : null,
     iterationsAnalyzed: iterations.length,
     totalStoryPoints,
@@ -151,6 +176,15 @@ export function calculateMemberVelocity(username, allIssues, memberDefaultCapaci
     dataQuality,
     iterations: iterationDetails
   }
+
+  console.log(`[Velocity] ${username} velocity calc result:`, {
+    hoursPerSP: result.hoursPerStoryPoint,
+    iterations: result.iterationsAnalyzed,
+    storyPoints: result.totalStoryPoints,
+    quality: result.dataQuality
+  })
+
+  return result
 }
 
 /**
@@ -218,6 +252,7 @@ export function getHoursPerStoryPoint(username, allIssues, memberDefaultCapacity
 
   // Priority 1: Use member's own velocity if quality is good enough
   if (memberVelocity.hoursPerStoryPoint && memberVelocity.iterationsAnalyzed >= 2) {
+    console.log(`[Velocity] ${username} using INDIVIDUAL velocity: ${memberVelocity.hoursPerStoryPoint} h/SP from ${memberVelocity.iterationsAnalyzed} iterations`)
     return {
       hours: memberVelocity.hoursPerStoryPoint,
       source: 'individual',
@@ -228,6 +263,7 @@ export function getHoursPerStoryPoint(username, allIssues, memberDefaultCapacity
 
   // Priority 2: Use team average if available
   if (teamAverage && teamAverage.hoursPerStoryPoint) {
+    console.log(`[Velocity] ${username} using TEAM AVERAGE: ${teamAverage.hoursPerStoryPoint} h/SP (individual had ${memberVelocity.iterationsAnalyzed} iterations)`)
     return {
       hours: teamAverage.hoursPerStoryPoint,
       source: 'team-average',
@@ -237,6 +273,7 @@ export function getHoursPerStoryPoint(username, allIssues, memberDefaultCapacity
   }
 
   // Priority 3: Fall back to static value
+  console.log(`[Velocity] ${username} using STATIC: ${staticHoursPerSP} h/SP (no historical data)`)
   return {
     hours: staticHoursPerSP,
     source: 'static',
