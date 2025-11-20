@@ -12,6 +12,7 @@ import { exportVelocityToCSV, downloadCSV } from '../utils/csvExportUtils'
 import { useIterationFilter } from '../contexts/IterationFilterContext'
 import { getTeamAbsenceStats } from '../services/absenceService'
 import { loadTeamConfig } from '../services/teamConfigService'
+import { loadVelocityConfig } from '../services/velocityConfigService'
 
 /**
  * Velocity & Burndown Analytics View
@@ -23,6 +24,19 @@ export default function VelocityView({ issues: allIssues }) {
 
   // Toggle between issue count and story points
   const [viewMode, setViewMode] = useState('issues') // 'issues' or 'points'
+
+  // Load velocity configuration
+  const [velocityConfig, setVelocityConfig] = useState(() => loadVelocityConfig())
+
+  // Listen for velocity config changes
+  React.useEffect(() => {
+    const handleConfigChange = () => {
+      setVelocityConfig(loadVelocityConfig())
+    }
+
+    window.addEventListener('velocityConfigChanged', handleConfigChange)
+    return () => window.removeEventListener('velocityConfigChanged', handleConfigChange)
+  }, [])
   // Get velocity root cause analysis
   const getVelocityRootCause = (velocityData, trend, avgVelocity, currentSprintName, allIssues, viewMode) => {
     if (!velocityData || velocityData.length < 4) return { causes: [], actions: [] }
@@ -279,7 +293,8 @@ export default function VelocityView({ issues: allIssues }) {
     }
 
     // Calculate trend and average using current sprint to avoid future sprints
-    const avgVelocity = calculateAverageVelocity(velocityData, 3, currentSprint)
+    // Use configured lookback iterations instead of hard-coded 3
+    const avgVelocity = calculateAverageVelocity(velocityData, velocityConfig.velocityLookbackIterations || 3, currentSprint)
 
     const burndownIssues = calculateBurndown(issues, currentSprint, 'issues')
     const burndownPoints = calculateBurndown(issues, currentSprint, 'points')
@@ -293,7 +308,7 @@ export default function VelocityView({ issues: allIssues }) {
       burndownPoints,
       prediction
     }
-  }, [issues, selectedIterations, isFiltered])
+  }, [issues, selectedIterations, isFiltered, velocityConfig])
 
   if (!analytics || analytics.velocityData.length === 0) {
     return (
@@ -413,7 +428,9 @@ export default function VelocityView({ issues: allIssues }) {
         </div>
 
         <div className="card">
-          <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>Avg. Velocity (Last 3)</div>
+          <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
+            Avg. Velocity (Last {velocityConfig.velocityLookbackIterations || 3})
+          </div>
           <div style={{ fontSize: '32px', fontWeight: '600', color: '#2563EB' }}>
             {viewMode === 'points' ? avgVelocity.byPoints : avgVelocity.byIssues}{' '}
             <span style={{ fontSize: '16px', color: '#6B7280' }}>
