@@ -269,10 +269,11 @@ export function calculateTeamAverageVelocity(teamMembers, allIssues, lookbackIte
  * @param {number} staticHoursPerSP - Static fallback value for story points
  * @param {number} staticHoursPerIssue - Static fallback value for issue count
  * @param {string} metricType - 'points' or 'issues'
+ * @param {number} lookbackIterations - Number of iterations to analyze (default: 3)
  * @returns {Object} Hours per metric unit with metadata
  */
-export function getHoursPerStoryPoint(username, allIssues, memberDefaultCapacity, teamAverage, staticHoursPerSP = 6, staticHoursPerIssue = 8, metricType = 'points') {
-  const memberVelocity = calculateMemberVelocity(username, allIssues, memberDefaultCapacity, 3, metricType)
+export function getHoursPerStoryPoint(username, allIssues, memberDefaultCapacity, teamAverage, staticHoursPerSP = 6, staticHoursPerIssue = 8, metricType = 'points', lookbackIterations = 3) {
+  const memberVelocity = calculateMemberVelocity(username, allIssues, memberDefaultCapacity, lookbackIterations, metricType)
 
   const hoursPerMetric = metricType === 'issues' ? memberVelocity.hoursPerIssue : memberVelocity.hoursPerStoryPoint
   const teamAverageHours = metricType === 'issues' ? teamAverage?.hoursPerIssue : teamAverage?.hoursPerStoryPoint

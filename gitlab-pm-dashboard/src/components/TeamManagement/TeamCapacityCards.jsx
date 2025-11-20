@@ -219,7 +219,8 @@ export default function TeamCapacityCards({ teamMembers, issues, allIssues, mile
           teamAverageVelocity,
           velocityConfig.staticHoursPerStoryPoint,
           velocityConfig.staticHoursPerIssue,
-          velocityConfig.metricType
+          velocityConfig.metricType,
+          velocityConfig.velocityLookbackIterations
         )
         hoursPerSP = velocityData.hours
       }
