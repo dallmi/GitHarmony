@@ -6,10 +6,15 @@
 /**
  * Common label patterns for different phases
  * Updated to match actual GitLab labels in use
+ *
+ * Workflow understanding:
+ * - Backlog: Issues that haven't been analyzed yet
+ * - Analysis: Issues being analyzed, refined, or ready for work after analysis
+ * - InProgress: Active development work
  */
 export const DEFAULT_PHASE_PATTERNS = {
-  backlog: ['backlog', 'new', 'open', 'todo', 'to do', 'ready for work', 'awaiting refinement'],
-  analysis: ['analysis', 'analyzing', 'refinement', 'planning', 'design', 'in analysis', 'in discovery'],
+  backlog: ['backlog', 'new', 'open', 'todo', 'to do'],
+  analysis: ['analysis', 'analyzing', 'refinement', 'planning', 'design', 'in analysis', 'in discovery', 'ready for work', 'awaiting refinement'],
   inProgress: ['in progress', 'doing', 'wip', 'development', 'started', 'active'],
   review: ['review', 'code review', 'peer review', 'reviewing', 'in review'],
   testing: ['in testing', 'testing', 'qa', 'test', 'validation', 'verification'],
