@@ -67,6 +67,9 @@ function getAllStorageKeys() {
     viewPreference: 'view_preference',
     favoriteViews: 'favorite_views',
 
+    // Velocity Configuration
+    velocityConfig: 'velocityConfig',
+
     // UI State
     qualityShowOpenOnly: 'quality.showOpenOnly',
     qualityLegendCollapsed: 'quality.legendCollapsed',
@@ -396,7 +399,10 @@ export function createBackup(options = {}) {
   addIfExists('viewPreference', keys.viewPreference)
   addIfExists('favoriteViews', keys.favoriteViews)
 
-  // 14. UI State
+  // 14. Velocity Configuration
+  addIfExists('velocityConfig', keys.velocityConfig)
+
+  // 15. UI State
   const uiState = {}
   const qualityShowOpenOnly = loadFromStorage(keys.qualityShowOpenOnly)
   const qualityLegendCollapsed = loadFromStorage(keys.qualityLegendCollapsed)
@@ -945,6 +951,17 @@ export function restoreFromBackup(backup, options = {}) {
           if (overwrite || !loadFromStorage(keys.favoriteViews)) {
             saveToStorage(keys.favoriteViews, data)
             result.restored.push('favoriteViews')
+          }
+          break
+
+        case 'velocityConfig':
+          if (overwrite || !loadFromStorage(keys.velocityConfig)) {
+            saveToStorage(keys.velocityConfig, data)
+            result.restored.push('velocityConfig')
+            // Trigger velocity config changed event so components update
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new Event('velocityConfigChanged'))
+            }
           }
           break
 
