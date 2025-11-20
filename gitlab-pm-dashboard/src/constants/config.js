@@ -131,13 +131,13 @@ export const VELOCITY_CONFIG = {
   // Mode: 'dynamic' uses historical velocity, 'static' uses fixed hours per SP
   mode: 'dynamic', // 'dynamic' or 'static'
 
-  // Metric: 'storyPoints' or 'issueCount' - what to base velocity on
-  metricType: 'storyPoints', // 'storyPoints' or 'issueCount'
+  // Metric: 'points' or 'issues' - what to base velocity on (matches VelocityView)
+  metricType: 'points', // 'points' or 'issues'
 
   // Static hours per story point (used when mode = 'static' or as fallback)
   staticHoursPerStoryPoint: 6,
 
-  // Static hours per issue (used when metricType = 'issueCount')
+  // Static hours per issue (used when metricType = 'issues')
   staticHoursPerIssue: 8,
 
   // Number of iterations to analyze for velocity calculation
