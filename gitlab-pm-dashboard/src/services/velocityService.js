@@ -31,6 +31,7 @@ export function calculateVelocity(issues) {
 /**
  * Calculate average velocity over last N sprints
  * Returns both issue count and story points averages
+ * IMPORTANT: Only includes COMPLETED sprints in the average (excludes current/ongoing sprint)
  * @param {Array} velocityData - Array of sprint velocity data
  * @param {number} lastNSprints - Number of sprints to average (default: 3)
  * @param {string} currentSprintName - Optional: name of current sprint to use as end point
@@ -40,18 +41,26 @@ export function calculateAverageVelocity(velocityData, lastNSprints = 3, current
     return { byIssues: 0, byPoints: 0 }
   }
 
-  // Find the current sprint index (to avoid using future sprints)
-  let currentIndex = velocityData.length - 1
+  // Filter out incomplete sprints (only include completed sprints)
+  const today = new Date()
+  const completedSprints = velocityData.filter(sprint => {
+    if (!sprint.endDate) return false
+    const endDate = new Date(sprint.endDate)
+    return endDate < today // Sprint has ended
+  })
+
+  // If a current sprint name is specified, use it as the endpoint
+  let sprintsToAnalyze = completedSprints
   if (currentSprintName) {
-    const foundIndex = velocityData.findIndex(s => s.sprint === currentSprintName)
-    if (foundIndex >= 0) {
-      currentIndex = foundIndex
+    const currentIndex = completedSprints.findIndex(s => s.sprint === currentSprintName)
+    if (currentIndex >= 0) {
+      // Take completed sprints up to and including the specified sprint
+      sprintsToAnalyze = completedSprints.slice(0, currentIndex + 1)
     }
   }
 
-  // Take N sprints up to and including current sprint
-  const startIndex = Math.max(0, currentIndex - lastNSprints + 1)
-  const recentSprints = velocityData.slice(startIndex, currentIndex + 1)
+  // Take the most recent N completed sprints
+  const recentSprints = sprintsToAnalyze.slice(-lastNSprints)
 
   if (recentSprints.length === 0) {
     return { byIssues: 0, byPoints: 0 }
