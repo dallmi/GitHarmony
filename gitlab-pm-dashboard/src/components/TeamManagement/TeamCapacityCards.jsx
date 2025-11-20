@@ -104,7 +104,12 @@ export default function TeamCapacityCards({ teamMembers, issues, allIssues, mile
     // Use allIssues if available (for velocity calculation), otherwise fall back to issues
     const issuesForVelocity = allIssues || issues
     if (!issuesForVelocity) return null
-    return calculateTeamAverageVelocity(teamMembers, issuesForVelocity, velocityConfig.velocityLookbackIterations)
+    return calculateTeamAverageVelocity(
+      teamMembers,
+      issuesForVelocity,
+      velocityConfig.velocityLookbackIterations,
+      velocityConfig.metricType
+    )
   }, [teamMembers, allIssues, issues, velocityConfig, velocityConfigKey])
 
   // Calculate member capacity and workload
@@ -127,6 +132,9 @@ export default function TeamCapacityCards({ teamMembers, issues, allIssues, mile
         const sp = issue.labels?.find(l => l.startsWith('sp::'))?.replace('sp::', '') || '0'
         return sum + parseInt(sp)
       }, 0)
+
+      // Calculate issue count (for issue-based metric)
+      const issueCount = memberIssues.length
 
       // Get member's default capacity (weekly)
       const memberDefaultCapacity = member.defaultCapacity !== undefined && member.defaultCapacity !== null ? member.defaultCapacity : 40
@@ -195,9 +203,11 @@ export default function TeamCapacityCards({ teamMembers, issues, allIssues, mile
       // Calculate actual available capacity for sprint (sprint capacity - absences)
       const currentCapacity = Math.max(0, sprintCapacity - absenceHours)
 
-      // Get hours per story point using velocity-based calculation or static value
+      // Get hours per story point/issue using velocity-based calculation or static value
       let velocityData = null
-      let hoursPerSP = velocityConfig.staticHoursPerStoryPoint // Default fallback
+      let hoursPerSP = velocityConfig.metricType === 'points'
+        ? velocityConfig.staticHoursPerStoryPoint
+        : velocityConfig.staticHoursPerIssue // Default fallback based on metric type
 
       if (velocityConfig.mode === 'dynamic') {
         // Use allIssues for velocity calculation (to analyze historical data across all iterations)
@@ -207,13 +217,16 @@ export default function TeamCapacityCards({ teamMembers, issues, allIssues, mile
           issuesForVelocity,
           memberDefaultCapacity,
           teamAverageVelocity,
-          velocityConfig.staticHoursPerStoryPoint
+          velocityConfig.staticHoursPerStoryPoint,
+          velocityConfig.staticHoursPerIssue,
+          velocityConfig.metricType
         )
         hoursPerSP = velocityData.hours
       }
 
-      // Calculate utilization based on actual available capacity
-      const hoursAllocated = storyPoints * hoursPerSP
+      // Calculate utilization based on actual available capacity and selected metric
+      const metricValue = velocityConfig.metricType === 'points' ? storyPoints : issueCount
+      const hoursAllocated = metricValue * hoursPerSP
       const utilization = currentCapacity > 0 ? Math.round((hoursAllocated / currentCapacity) * 100) : 0
 
       // Determine status
@@ -244,6 +257,8 @@ export default function TeamCapacityCards({ teamMembers, issues, allIssues, mile
       return {
         ...member,
         storyPoints,
+        issueCount,
+        metricValue, // The value used for capacity calculation (either storyPoints or issueCount)
         hoursAllocated,
         hoursPerStoryPoint: hoursPerSP,
         velocityData,
@@ -257,7 +272,6 @@ export default function TeamCapacityCards({ teamMembers, issues, allIssues, mile
         utilization,
         status,
         statusColor,
-        issueCount: memberIssues.length,
         issueStates,
         issues: memberIssues
       }
@@ -604,7 +618,7 @@ export default function TeamCapacityCards({ teamMembers, issues, allIssues, mile
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <strong>Velocity:</strong> {member.hoursPerStoryPoint}h per SP
+              <strong>Velocity:</strong> {member.hoursPerStoryPoint}h per {velocityConfig.metricType === 'points' ? 'SP' : 'issue'}
             </div>
             <div style={{
               fontSize: '10px',
@@ -637,9 +651,16 @@ export default function TeamCapacityCards({ teamMembers, issues, allIssues, mile
           <span style={{ color: '#6B7280' }}>
             <strong>{member.issueCount}</strong> {showOnlyOpen ? 'open' : 'total'} issues
           </span>
-          <span style={{ color: '#6B7280' }}>
-            <strong>{member.storyPoints}</strong> SP
-          </span>
+          {velocityConfig.metricType === 'points' && (
+            <span style={{ color: '#6B7280' }}>
+              <strong>{member.storyPoints}</strong> SP
+            </span>
+          )}
+          {velocityConfig.metricType === 'issues' && (
+            <span style={{ color: '#6B7280', fontWeight: '600' }}>
+              Using issue count for capacity
+            </span>
+          )}
         </div>
         <div style={{ display: 'flex', gap: '6px' }}>
           {member.issueStates.blocked > 0 && (

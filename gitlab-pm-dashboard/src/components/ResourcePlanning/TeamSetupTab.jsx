@@ -353,12 +353,14 @@ export default function TeamSetupTab({ isCrossProject, onTeamUpdate, issues = []
           </div>
           {velocityConfig.mode === 'static' && (
             <div style={{ color: '#6B7280' }}>
-              Using {velocityConfig.staticHoursPerStoryPoint}h per story point
+              Using {velocityConfig.metricType === 'points'
+                ? `${velocityConfig.staticHoursPerStoryPoint}h per story point`
+                : `${velocityConfig.staticHoursPerIssue}h per issue`}
             </div>
           )}
           {velocityConfig.mode === 'dynamic' && (
             <div style={{ color: '#6B7280' }}>
-              Based on last {velocityConfig.velocityLookbackIterations} iterations
+              Based on last {velocityConfig.velocityLookbackIterations} iterations ({velocityConfig.metricType === 'points' ? 'story points' : 'issue count'})
             </div>
           )}
         </div>
@@ -443,10 +445,81 @@ export default function TeamSetupTab({ isCrossProject, onTeamUpdate, issues = []
               </div>
             </div>
 
+            {/* Metric Type Selection */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: '#374151',
+                marginBottom: '8px'
+              }}>
+                Velocity Metric
+              </label>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <label style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '12px',
+                  background: velocityConfig.metricType === 'points' ? '#F0FDF4' : 'white',
+                  border: `2px solid ${velocityConfig.metricType === 'points' ? '#10B981' : '#D1D5DB'}`,
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}>
+                  <input
+                    type="radio"
+                    name="metricType"
+                    value="points"
+                    checked={velocityConfig.metricType === 'points'}
+                    onChange={(e) => handleVelocityConfigChange('metricType', e.target.value)}
+                    style={{ marginRight: '8px' }}
+                  />
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937' }}>
+                      Story Points
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
+                      Track velocity based on story points completed
+                    </div>
+                  </div>
+                </label>
+                <label style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '12px',
+                  background: velocityConfig.metricType === 'issues' ? '#F0FDF4' : 'white',
+                  border: `2px solid ${velocityConfig.metricType === 'issues' ? '#10B981' : '#D1D5DB'}`,
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}>
+                  <input
+                    type="radio"
+                    name="metricType"
+                    value="issues"
+                    checked={velocityConfig.metricType === 'issues'}
+                    onChange={(e) => handleVelocityConfigChange('metricType', e.target.value)}
+                    style={{ marginRight: '8px' }}
+                  />
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937' }}>
+                      Issue Count
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
+                      Track velocity based on number of issues completed
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
             {/* Static Hours Configuration */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
+              gridTemplateColumns: '1fr 1fr 1fr',
               gap: '16px',
               marginBottom: '16px'
             }}>
@@ -480,6 +553,39 @@ export default function TeamSetupTab({ isCrossProject, onTeamUpdate, issues = []
                 />
                 <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>
                   Used as fallback when velocity data is unavailable
+                </div>
+              </div>
+
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '6px'
+                }}>
+                  Static Hours per Issue
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="40"
+                  step="0.5"
+                  value={velocityConfig.staticHoursPerIssue}
+                  onChange={(e) => handleVelocityConfigChange('staticHoursPerIssue', parseFloat(e.target.value))}
+                  disabled={velocityConfig.mode === 'dynamic'}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    background: velocityConfig.mode === 'dynamic' ? '#F3F4F6' : 'white',
+                    opacity: velocityConfig.mode === 'dynamic' ? 0.6 : 1
+                  }}
+                />
+                <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>
+                  Used with issue count metric type
                 </div>
               </div>
 
