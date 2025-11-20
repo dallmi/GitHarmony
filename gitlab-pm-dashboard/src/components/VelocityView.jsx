@@ -677,9 +677,23 @@ export default function VelocityView({ issues: allIssues }) {
                 </div>
 
                 {/* X-axis labels */}
-                <div style={{ position: 'absolute', left: '50px', right: 0, bottom: 0, height: '40px', display: 'flex', gap: '8px', padding: '0 10px' }}>
+                <div style={{ position: 'absolute', left: '50px', right: 0, bottom: 0, height: '40px', display: 'flex', gap: '8px', padding: '0 10px', overflow: 'hidden' }}>
                   {velocityDataForChart.map((sprint) => (
-                    <div key={sprint.sprint} style={{ flex: 1, fontSize: '11px', color: '#6B7280', textAlign: 'center', paddingTop: '8px', lineHeight: '1.2' }}>
+                    <div
+                      key={sprint.sprint}
+                      style={{
+                        flex: 1,
+                        fontSize: velocityDataForChart.length > 10 ? '9px' : '11px',
+                        color: '#6B7280',
+                        textAlign: 'center',
+                        paddingTop: '8px',
+                        lineHeight: '1.2',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
+                      title={sprint.sprint}
+                    >
                       {sprint.sprint}
                     </div>
                   ))}
