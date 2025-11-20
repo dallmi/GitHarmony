@@ -35,10 +35,11 @@ export function calculateVelocity(issues) {
  * @param {Array} velocityData - Array of sprint velocity data
  * @param {number} lastNSprints - Number of sprints to average (default: 3)
  * @param {string} currentSprintName - Optional: name of current sprint to use as end point
+ * @returns {Object} { byIssues, byPoints, sprintsUsed } - Averages and actual sprint count
  */
 export function calculateAverageVelocity(velocityData, lastNSprints = 3, currentSprintName = null) {
   if (!velocityData || velocityData.length === 0) {
-    return { byIssues: 0, byPoints: 0 }
+    return { byIssues: 0, byPoints: 0, sprintsUsed: 0 }
   }
 
   // Filter out incomplete sprints (only include completed sprints)
@@ -63,7 +64,7 @@ export function calculateAverageVelocity(velocityData, lastNSprints = 3, current
   const recentSprints = sprintsToAnalyze.slice(-lastNSprints)
 
   if (recentSprints.length === 0) {
-    return { byIssues: 0, byPoints: 0 }
+    return { byIssues: 0, byPoints: 0, sprintsUsed: 0 }
   }
 
   const totalVelocity = recentSprints.reduce((sum, s) => sum + s.velocity, 0)
@@ -71,7 +72,8 @@ export function calculateAverageVelocity(velocityData, lastNSprints = 3, current
 
   return {
     byIssues: Math.round(totalVelocity / recentSprints.length),
-    byPoints: Math.round(totalPoints / recentSprints.length)
+    byPoints: Math.round(totalPoints / recentSprints.length),
+    sprintsUsed: recentSprints.length
   }
 }
 

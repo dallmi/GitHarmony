@@ -430,7 +430,7 @@ export default function VelocityView({ issues: allIssues }) {
 
         <div className="card">
           <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
-            Avg. Velocity (Last {velocityConfig.analyticsLookbackIterations || velocityConfig.velocityLookbackIterations || 3})
+            Avg. Velocity (Last {avgVelocity.sprintsUsed || 0}{avgVelocity.sprintsUsed !== (velocityConfig.analyticsLookbackIterations || velocityConfig.velocityLookbackIterations || 3) ? ` of ${velocityConfig.analyticsLookbackIterations || velocityConfig.velocityLookbackIterations || 3}` : ''})
           </div>
           <div style={{ fontSize: '32px', fontWeight: '600', color: '#2563EB' }}>
             {viewMode === 'points' ? avgVelocity.byPoints : avgVelocity.byIssues}{' '}
