@@ -87,6 +87,7 @@ export function calculateAverageVelocityLegacy(velocityData, lastNSprints = 3) {
 /**
  * Calculate velocity trend (positive = improving, negative = declining)
  * Returns both short-term (sprint-to-sprint) and long-term (moving average) trends
+ * IMPORTANT: Only includes COMPLETED sprints in trend calculations (excludes current/ongoing sprint)
  * @param {Array} velocityData - Array of sprint velocity data
  * @param {string} currentSprintName - Optional: name of current sprint to use instead of most recent
  * @param {string} mode - 'issues' or 'points' (default: 'issues')
@@ -97,10 +98,22 @@ export function calculateVelocityTrend(velocityData, currentSprintName = null, m
     return { shortTerm: 0, longTerm: 0 }
   }
 
+  // Filter out incomplete sprints (only include completed sprints)
+  const today = new Date()
+  const completedSprints = velocityData.filter(sprint => {
+    if (!sprint.endDate) return false
+    const endDate = new Date(sprint.endDate)
+    return endDate < today // Sprint has ended
+  })
+
+  if (completedSprints.length < 2) {
+    return { shortTerm: 0, longTerm: 0 }
+  }
+
   // Find the current sprint index (to avoid using future sprints)
-  let currentIndex = velocityData.length - 1
+  let currentIndex = completedSprints.length - 1
   if (currentSprintName) {
-    const foundIndex = velocityData.findIndex(s => s.sprint === currentSprintName)
+    const foundIndex = completedSprints.findIndex(s => s.sprint === currentSprintName)
     if (foundIndex >= 0) {
       currentIndex = foundIndex
     }
@@ -115,8 +128,8 @@ export function calculateVelocityTrend(velocityData, currentSprintName = null, m
   const getVelocityValue = (sprint) => mode === 'points' ? (sprint.velocityPoints || 0) : sprint.velocity
 
   // SHORT-TERM TREND: Current sprint vs previous sprint
-  const currentSprint = velocityData[currentIndex]
-  const previousSprint = velocityData[currentIndex - 1]
+  const currentSprint = completedSprints[currentIndex]
+  const previousSprint = completedSprints[currentIndex - 1]
 
   let shortTerm = 0
   const previousValue = getVelocityValue(previousSprint)
@@ -132,13 +145,13 @@ export function calculateVelocityTrend(velocityData, currentSprintName = null, m
   if (currentIndex >= 3) {
     // Recent 3 sprints (including current)
     const recentStart = Math.max(0, currentIndex - 2)
-    const recentSprints = velocityData.slice(recentStart, currentIndex + 1)
+    const recentSprints = completedSprints.slice(recentStart, currentIndex + 1)
     const recentAvg = recentSprints.reduce((sum, s) => sum + getVelocityValue(s), 0) / recentSprints.length
 
     // Previous 3 sprints (before the recent group)
     const previousStart = Math.max(0, recentStart - 3)
     const previousEnd = recentStart
-    const previousSprints = velocityData.slice(previousStart, previousEnd)
+    const previousSprints = completedSprints.slice(previousStart, previousEnd)
 
     if (previousSprints.length > 0) {
       const previousAvg = previousSprints.reduce((sum, s) => sum + getVelocityValue(s), 0) / previousSprints.length
