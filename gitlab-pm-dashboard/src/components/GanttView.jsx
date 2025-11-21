@@ -235,9 +235,11 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
     }
   }, [epics, epicAnalysis, epicIssuesMap])
 
-  // Available years for filter
+  // Available years for filter - include both issues and epics
   const availableYears = useMemo(() => {
     const years = new Set()
+
+    // Add years from issues
     issues.forEach(issue => {
       const year = new Date(issue.created_at).getFullYear()
       years.add(year)
@@ -245,8 +247,27 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
         years.add(new Date(issue.due_date).getFullYear())
       }
     })
+
+    // Add years from epics
+    epics.forEach(epic => {
+      if (epic.start_date) {
+        years.add(new Date(epic.start_date).getFullYear())
+      }
+      if (epic.due_date) {
+        years.add(new Date(epic.due_date).getFullYear())
+      }
+      if (epic.created_at) {
+        years.add(new Date(epic.created_at).getFullYear())
+      }
+    })
+
+    // Always include current year and next year to ensure future planning
+    const currentYear = new Date().getFullYear()
+    years.add(currentYear)
+    years.add(currentYear + 1)
+
     return Array.from(years).sort((a, b) => b - a)
-  }, [issues])
+  }, [issues, epics])
 
   const toggleEpic = (epicId) => {
     const newExpanded = new Set(expandedEpics)
