@@ -799,9 +799,31 @@ export default function CommunicationsTab({
                     {/* Quarter Selector */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <label style={{ fontSize: '12px', color: '#374151', fontWeight: '500', marginRight: '8px' }}>
-                        Quarters:
+                        Period:
                       </label>
                       <div style={{ display: 'flex', gap: '6px' }}>
+                        {/* Full Year Button */}
+                        <button
+                          onClick={() => setGanttQuarters([1, 2, 3, 4])}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '4px',
+                            border: '1px solid',
+                            borderColor: ganttQuarters.length === 4 ? '#10B981' : '#D1D5DB',
+                            background: ganttQuarters.length === 4 ? '#10B981' : 'white',
+                            color: ganttQuarters.length === 4 ? 'white' : '#374151',
+                            fontSize: '12px',
+                            fontWeight: '500',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          Full Year
+                        </button>
+
+                        <div style={{ width: '1px', background: '#E5E7EB', margin: '0 4px' }} />
+
+                        {/* Quarter Buttons */}
                         {[1, 2, 3, 4].map(quarter => (
                           <button
                             key={quarter}
@@ -858,15 +880,105 @@ export default function CommunicationsTab({
                         </div>
                         <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#6B7280' }}>
                           {(() => {
-                            const months = []
-                            const current = new Date(ganttRange.start)
-                            while (current <= ganttRange.end) {
-                              months.push(current.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }))
-                              current.setMonth(current.getMonth() + 1)
+                            // Calculate the duration in days
+                            const durationDays = Math.ceil((ganttRange.end - ganttRange.start) / (1000 * 60 * 60 * 24))
+
+                            // Smart display logic based on timeframe
+                            if (ganttQuarters.length === 1) {
+                              // Single quarter: show weeks
+                              const weeks = []
+                              const current = new Date(ganttRange.start)
+                              let weekNum = 1
+
+                              while (current <= ganttRange.end) {
+                                const weekStart = new Date(current)
+                                const weekEnd = new Date(current)
+                                weekEnd.setDate(weekEnd.getDate() + 6)
+
+                                if (weekEnd > ganttRange.end) {
+                                  weekEnd.setTime(ganttRange.end.getTime())
+                                }
+
+                                weeks.push({
+                                  label: `W${weekNum}`,
+                                  tooltip: `${weekStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - ${weekEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+                                })
+
+                                current.setDate(current.getDate() + 7)
+                                weekNum++
+                              }
+
+                              return weeks.map((week, i) => (
+                                <div
+                                  key={i}
+                                  style={{ flex: 1, textAlign: 'center', cursor: 'help' }}
+                                  title={week.tooltip}
+                                >
+                                  {week.label}
+                                </div>
+                              ))
+                            } else if (ganttQuarters.length === 2) {
+                              // Two quarters: show months with week indicators
+                              const monthsData = []
+                              const current = new Date(ganttRange.start)
+
+                              while (current <= ganttRange.end) {
+                                const monthLabel = current.toLocaleDateString('en-GB', { month: 'short' })
+                                const monthStart = new Date(current)
+                                const monthEnd = new Date(current.getFullYear(), current.getMonth() + 1, 0)
+
+                                // Calculate weeks in this month
+                                const weeks = []
+                                let weekDate = new Date(monthStart)
+                                weekDate.setDate(1) // Start from first of month
+
+                                while (weekDate <= monthEnd && weekDate <= ganttRange.end) {
+                                  weeks.push(weekDate.getDate())
+                                  weekDate.setDate(weekDate.getDate() + 7)
+                                }
+
+                                monthsData.push({
+                                  month: monthLabel,
+                                  weeks: weeks
+                                })
+
+                                current.setMonth(current.getMonth() + 1)
+                              }
+
+                              return (
+                                <div style={{ display: 'flex', flex: 1 }}>
+                                  {monthsData.map((item, i) => (
+                                    <div key={i} style={{ flex: 1, borderRight: i < monthsData.length - 1 ? '1px solid #E5E7EB' : 'none' }}>
+                                      <div style={{ textAlign: 'center', fontWeight: '600', marginBottom: '4px' }}>
+                                        {item.month}
+                                      </div>
+                                      <div style={{ display: 'flex', fontSize: '9px', color: '#9CA3AF' }}>
+                                        {item.weeks.map((week, wi) => (
+                                          <div key={wi} style={{ flex: 1, textAlign: 'center' }}>{week}</div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )
+                            } else {
+                              // Three or four quarters: show months
+                              const months = []
+                              const current = new Date(ganttRange.start)
+
+                              while (current <= ganttRange.end) {
+                                const isFirstOfYear = current.getMonth() === 0
+                                const label = isFirstOfYear
+                                  ? current.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+                                  : current.toLocaleDateString('en-GB', { month: 'short' })
+                                months.push(label)
+                                current.setMonth(current.getMonth() + 1)
+                              }
+
+                              return months.map((month, i) => (
+                                <div key={i} style={{ flex: 1, textAlign: 'center' }}>{month}</div>
+                              ))
                             }
-                            return months.map((month, i) => (
-                              <div key={i} style={{ flex: 1, textAlign: 'center' }}>{month}</div>
-                            ))
                           })()}
                         </div>
                       </div>
