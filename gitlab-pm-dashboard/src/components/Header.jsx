@@ -1,6 +1,6 @@
 import React from 'react'
 
-export default function Header({ stats, healthScore, onRefresh, onConfigure, onChangeRole, loading }) {
+export default function Header({ stats, healthScore, onRefresh, onConfigure, onChangeRole, onDebug, loading }) {
   return (
     <div className="header">
       <div style={{
@@ -80,6 +80,14 @@ export default function Header({ stats, healthScore, onRefresh, onConfigure, onC
             title="Change your role to customize navigation"
           >
             Change Role
+          </button>
+
+          <button
+            className="btn btn-secondary"
+            onClick={onDebug}
+            title="Open debug panel (Ctrl+Alt+D or Cmd+Alt+D)"
+          >
+            🔍 Debug
           </button>
 
           <button

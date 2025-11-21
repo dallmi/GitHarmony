@@ -41,6 +41,7 @@ function App() {
 
   const [showConfigModal, setShowConfigModal] = useState(!configured)
   const [showRoleModal, setShowRoleModal] = useState(false)
+  const [showDebugPanel, setShowDebugPanel] = useState(false)
   const [useGroupedNav, setUseGroupedNav] = useState(getViewPreference() === 'grouped')
   console.log('App: showConfigModal:', !configured)
 
@@ -84,6 +85,7 @@ function App() {
           onRefresh={refresh}
           onConfigure={() => setShowConfigModal(true)}
           onChangeRole={() => setShowRoleModal(true)}
+          onDebug={() => setShowDebugPanel(true)}
           loading={loading}
         />
 
@@ -221,8 +223,11 @@ function App() {
         onClose={() => setShowRoleModal(false)}
       />
 
-      {/* Debug Panel - Press Ctrl+Shift+D to toggle */}
-      <DebugPanel />
+      {/* Debug Panel - Press Ctrl+Alt+D to toggle */}
+      <DebugPanel
+        externalVisible={showDebugPanel}
+        onToggle={setShowDebugPanel}
+      />
       </div>
     </IterationFilterProvider>
   )

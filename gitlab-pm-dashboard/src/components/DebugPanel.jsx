@@ -3,18 +3,30 @@ import { loadConfig, getAllProjects, getAllGroups } from '../services/storageSer
 
 /**
  * Debug Panel - Shows diagnostic information
- * Press Ctrl+Shift+D to toggle
+ * Press Ctrl+Alt+D to toggle (or Cmd+Alt+D on Mac)
  */
-export default function DebugPanel() {
+export default function DebugPanel({ externalVisible, onToggle }) {
   const [visible, setVisible] = useState(false)
   const [debugInfo, setDebugInfo] = useState({})
 
-  // Toggle panel with Ctrl+Shift+D
+  // Use external visibility if provided
+  const isVisible = externalVisible !== undefined ? externalVisible : visible
+  const toggleVisible = onToggle || setVisible
+
+  // Toggle panel with Ctrl+Alt+D (or Cmd+Alt+D on Mac)
   useEffect(() => {
     const handleKeyPress = (e) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-        setVisible(!visible)
-        if (!visible) {
+      // Use metaKey for Mac (Cmd) or ctrlKey for Windows/Linux
+      const modifierKey = e.metaKey || e.ctrlKey
+      if (modifierKey && e.altKey && (e.key === 'd' || e.key === 'D')) {
+        e.preventDefault() // Prevent any default browser behavior
+        const newVisible = !isVisible
+        if (onToggle) {
+          onToggle(newVisible)
+        } else {
+          setVisible(newVisible)
+        }
+        if (newVisible) {
           collectDebugInfo()
         }
       }
@@ -22,7 +34,7 @@ export default function DebugPanel() {
 
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [visible])
+  }, [isVisible, onToggle])
 
   const collectDebugInfo = () => {
     console.log('🔍 DEBUG PANEL: Collecting diagnostic information...')
@@ -131,7 +143,7 @@ export default function DebugPanel() {
     URL.revokeObjectURL(url)
   }
 
-  if (!visible) return null
+  if (!isVisible) return null
 
   return (
     <div style={{
@@ -165,7 +177,7 @@ export default function DebugPanel() {
             🔍 Debug Panel
           </h3>
           <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#9CA3AF' }}>
-            Press Ctrl+Shift+D to close
+            Press Ctrl+Alt+D (or Cmd+Alt+D) to close
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -212,7 +224,13 @@ export default function DebugPanel() {
             Export
           </button>
           <button
-            onClick={() => setVisible(false)}
+            onClick={() => {
+              if (onToggle) {
+                onToggle(false)
+              } else {
+                setVisible(false)
+              }
+            }}
             style={{
               padding: '6px 12px',
               background: '#DC2626',
