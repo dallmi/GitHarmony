@@ -951,14 +951,8 @@ export default function CommunicationsTab({
                           <button
                             key={quarter}
                             onClick={() => {
-                              if (ganttQuarters.includes(quarter)) {
-                                // Don't allow deselecting the last quarter
-                                if (ganttQuarters.length > 1) {
-                                  setGanttQuarters(ganttQuarters.filter(q => q !== quarter))
-                                }
-                              } else {
-                                setGanttQuarters([...ganttQuarters, quarter].sort())
-                              }
+                              // Clicking a quarter selects only that quarter
+                              setGanttQuarters([quarter])
                             }}
                             style={{
                               padding: '6px 12px',
