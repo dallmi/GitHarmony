@@ -30,6 +30,17 @@ export default function CommunicationsTab({
   const [ganttYear, setGanttYear] = useState(new Date().getFullYear())
   const [ganttQuarters, setGanttQuarters] = useState([1, 2, 3, 4]) // All quarters by default
 
+  // Custom date input state for European format
+  const [dateInputValue, setDateInputValue] = useState(() => {
+    const now = new Date()
+    const day = String(now.getDate()).padStart(2, '0')
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const year = now.getFullYear()
+    const hours = String(now.getHours()).padStart(2, '0')
+    const minutes = String(now.getMinutes()).padStart(2, '0')
+    return `${day}.${month}.${year} ${hours}:${minutes}`
+  })
+
   // Form state - simplified with progressive disclosure
   const [communicationForm, setCommunicationForm] = useState({
     type: 'email',
@@ -245,10 +256,12 @@ export default function CommunicationsTab({
   }
 
   const resetForm = () => {
+    const now = new Date()
+    const newDate = now.toISOString().slice(0, 16)
     setCommunicationForm({
       type: 'email',
       title: '',
-      date: new Date().toISOString().slice(0, 16),
+      date: newDate,
       priority: 'medium',
       description: '',
       stakeholderIds: [],
@@ -278,6 +291,8 @@ export default function CommunicationsTab({
       rootCause: ''
     })
     setShowAdvanced(false)
+    // Reset the date input to European format
+    setDateInputValue(formatToEuropeanDate(newDate))
   }
 
   const getTypeColor = (type) => {
@@ -297,6 +312,56 @@ export default function CommunicationsTab({
       case 'medium': return '#3B82F6'
       case 'low': return '#6B7280'
       default: return '#6B7280'
+    }
+  }
+
+  // Parse European date format (DD.MM.YYYY HH:MM) to ISO string
+  const parseEuropeanDate = (dateStr) => {
+    const regex = /^(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{1,2})$/
+    const match = dateStr.match(regex)
+
+    if (!match) return null
+
+    const [, day, month, year, hours, minutes] = match
+    const date = new Date(year, month - 1, day, hours, minutes)
+
+    if (isNaN(date.getTime())) return null
+
+    return date.toISOString().slice(0, 16)
+  }
+
+  // Format ISO date to European format
+  const formatToEuropeanDate = (isoDate) => {
+    if (!isoDate) return ''
+    const date = new Date(isoDate)
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    return `${day}.${month}.${year} ${hours}:${minutes}`
+  }
+
+  // Handle date input change
+  const handleDateInputChange = (value) => {
+    setDateInputValue(value)
+
+    // Try to parse and update the form if valid
+    const parsed = parseEuropeanDate(value)
+    if (parsed) {
+      setCommunicationForm({ ...communicationForm, date: parsed })
+    }
+  }
+
+  // Handle date input blur - format the date properly
+  const handleDateInputBlur = () => {
+    const parsed = parseEuropeanDate(dateInputValue)
+    if (parsed) {
+      setCommunicationForm({ ...communicationForm, date: parsed })
+      setDateInputValue(formatToEuropeanDate(parsed))
+    } else {
+      // Reset to current form date if invalid
+      setDateInputValue(formatToEuropeanDate(communicationForm.date))
     }
   }
 
@@ -1195,25 +1260,26 @@ export default function CommunicationsTab({
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '6px' }}>
-                  Date & Time (DD.MM.YYYY HH:MM)
+                  Date & Time
                 </label>
                 <input
-                  type="datetime-local"
-                  value={communicationForm.date}
-                  onChange={(e) => setCommunicationForm({ ...communicationForm, date: e.target.value })}
-                  onFocus={(e) => {
-                    // Force locale format hint
-                    e.target.setAttribute('lang', 'de-DE')
-                    e.target.setAttribute('data-locale', 'de-DE')
-                  }}
+                  type="text"
+                  value={dateInputValue}
+                  onChange={(e) => handleDateInputChange(e.target.value)}
+                  onBlur={handleDateInputBlur}
+                  placeholder="DD.MM.YYYY HH:MM"
                   style={{
                     width: '100%',
                     padding: '8px 12px',
                     border: '1px solid #D1D5DB',
                     borderRadius: '6px',
-                    fontSize: '14px'
+                    fontSize: '14px',
+                    fontFamily: 'monospace'
                   }}
                 />
+                <small style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px', display: 'block' }}>
+                  Format: DD.MM.YYYY HH:MM (e.g., 21.11.2025 14:30)
+                </small>
               </div>
 
               <div>
