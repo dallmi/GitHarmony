@@ -30,15 +30,14 @@ export default function CommunicationsTab({
   const [ganttYear, setGanttYear] = useState(new Date().getFullYear())
   const [ganttQuarters, setGanttQuarters] = useState([1, 2, 3, 4]) // All quarters by default
 
-  // Custom date input state for European format
-  const [dateInputValue, setDateInputValue] = useState(() => {
-    const now = new Date()
-    const day = String(now.getDate()).padStart(2, '0')
-    const month = String(now.getMonth() + 1).padStart(2, '0')
-    const year = now.getFullYear()
-    const hours = String(now.getHours()).padStart(2, '0')
-    const minutes = String(now.getMinutes()).padStart(2, '0')
-    return `${day}.${month}.${year} ${hours}:${minutes}`
+  // Custom dropdown date picker state for European format
+  const now = new Date()
+  const [datePickerState, setDatePickerState] = useState({
+    day: now.getDate(),
+    month: now.getMonth() + 1,
+    year: now.getFullYear(),
+    hour: now.getHours(),
+    minute: now.getMinutes()
   })
 
   // Form state - simplified with progressive disclosure
@@ -291,8 +290,14 @@ export default function CommunicationsTab({
       rootCause: ''
     })
     setShowAdvanced(false)
-    // Reset the date input to European format
-    setDateInputValue(formatToEuropeanDate(newDate))
+    // Reset the date picker to current time
+    setDatePickerState({
+      day: now.getDate(),
+      month: now.getMonth() + 1,
+      year: now.getFullYear(),
+      hour: now.getHours(),
+      minute: now.getMinutes()
+    })
   }
 
   const getTypeColor = (type) => {
@@ -315,55 +320,79 @@ export default function CommunicationsTab({
     }
   }
 
-  // Parse European date format (DD.MM.YYYY HH:MM) to ISO string
-  const parseEuropeanDate = (dateStr) => {
-    const regex = /^(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{1,2})$/
-    const match = dateStr.match(regex)
-
-    if (!match) return null
-
-    const [, day, month, year, hours, minutes] = match
-    const date = new Date(year, month - 1, day, hours, minutes)
-
-    if (isNaN(date.getTime())) return null
-
-    return date.toISOString().slice(0, 16)
+  // Update communicationForm date from picker state
+  const updateDateFromPicker = () => {
+    const { day, month, year, hour, minute } = datePickerState
+    const date = new Date(year, month - 1, day, hour, minute)
+    if (!isNaN(date.getTime())) {
+      setCommunicationForm({
+        ...communicationForm,
+        date: date.toISOString().slice(0, 16)
+      })
+    }
   }
 
-  // Format ISO date to European format
-  const formatToEuropeanDate = (isoDate) => {
-    if (!isoDate) return ''
+  // Update picker state when form date changes
+  const updatePickerFromDate = (isoDate) => {
+    if (!isoDate) return
     const date = new Date(isoDate)
-    const day = String(date.getDate()).padStart(2, '0')
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const year = date.getFullYear()
-    const hours = String(date.getHours()).padStart(2, '0')
-    const minutes = String(date.getMinutes()).padStart(2, '0')
-    return `${day}.${month}.${year} ${hours}:${minutes}`
-  }
-
-  // Handle date input change
-  const handleDateInputChange = (value) => {
-    setDateInputValue(value)
-
-    // Try to parse and update the form if valid
-    const parsed = parseEuropeanDate(value)
-    if (parsed) {
-      setCommunicationForm({ ...communicationForm, date: parsed })
+    if (!isNaN(date.getTime())) {
+      setDatePickerState({
+        day: date.getDate(),
+        month: date.getMonth() + 1,
+        year: date.getFullYear(),
+        hour: date.getHours(),
+        minute: date.getMinutes()
+      })
     }
   }
 
-  // Handle date input blur - format the date properly
-  const handleDateInputBlur = () => {
-    const parsed = parseEuropeanDate(dateInputValue)
-    if (parsed) {
-      setCommunicationForm({ ...communicationForm, date: parsed })
-      setDateInputValue(formatToEuropeanDate(parsed))
-    } else {
-      // Reset to current form date if invalid
-      setDateInputValue(formatToEuropeanDate(communicationForm.date))
+  // Handle dropdown changes
+  const handleDatePickerChange = (field, value) => {
+    const newState = { ...datePickerState, [field]: parseInt(value) }
+    setDatePickerState(newState)
+
+    // Update form date immediately
+    const { day, month, year, hour, minute } = newState
+    const date = new Date(year, month - 1, day, hour, minute)
+    if (!isNaN(date.getTime())) {
+      setCommunicationForm({
+        ...communicationForm,
+        date: date.toISOString().slice(0, 16)
+      })
     }
   }
+
+  // Get days in month
+  const getDaysInMonth = (month, year) => {
+    return new Date(year, month, 0).getDate()
+  }
+
+  // Generate options for dropdowns
+  const generateDayOptions = () => {
+    const daysInMonth = getDaysInMonth(datePickerState.month, datePickerState.year)
+    const options = []
+    for (let i = 1; i <= daysInMonth; i++) {
+      options.push(i)
+    }
+    return options
+  }
+
+  const monthNames = [
+    'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+    'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
+  ]
+
+  const generateYearOptions = () => {
+    const currentYear = new Date().getFullYear()
+    const options = []
+    for (let i = currentYear - 5; i <= currentYear + 5; i++) {
+      options.push(i)
+    }
+    return options
+  }
+
+
 
   // Calculate duration for Gantt chart items
   const getItemDuration = (item) => {
@@ -1262,23 +1291,107 @@ export default function CommunicationsTab({
                 <label style={{ fontSize: '13px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '6px' }}>
                   Date & Time
                 </label>
-                <input
-                  type="text"
-                  value={dateInputValue}
-                  onChange={(e) => handleDateInputChange(e.target.value)}
-                  onBlur={handleDateInputBlur}
-                  placeholder="DD.MM.YYYY HH:MM"
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontFamily: 'monospace'
-                  }}
-                />
+
+                {/* European format dropdown date picker */}
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  {/* Day */}
+                  <select
+                    value={datePickerState.day}
+                    onChange={(e) => handleDatePickerChange('day', e.target.value)}
+                    style={{
+                      padding: '8px 6px',
+                      border: '1px solid #D1D5DB',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      width: '60px'
+                    }}
+                  >
+                    {generateDayOptions().map(day => (
+                      <option key={day} value={day}>{String(day).padStart(2, '0')}</option>
+                    ))}
+                  </select>
+
+                  <span style={{ color: '#6B7280', fontSize: '14px' }}>.</span>
+
+                  {/* Month */}
+                  <select
+                    value={datePickerState.month}
+                    onChange={(e) => handleDatePickerChange('month', e.target.value)}
+                    style={{
+                      padding: '8px 6px',
+                      border: '1px solid #D1D5DB',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      width: '120px'
+                    }}
+                  >
+                    {monthNames.map((name, index) => (
+                      <option key={index + 1} value={index + 1}>
+                        {String(index + 1).padStart(2, '0')} - {name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <span style={{ color: '#6B7280', fontSize: '14px' }}>.</span>
+
+                  {/* Year */}
+                  <select
+                    value={datePickerState.year}
+                    onChange={(e) => handleDatePickerChange('year', e.target.value)}
+                    style={{
+                      padding: '8px 6px',
+                      border: '1px solid #D1D5DB',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      width: '80px'
+                    }}
+                  >
+                    {generateYearOptions().map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+
+                  <span style={{ color: '#6B7280', fontSize: '14px', marginLeft: '8px' }}></span>
+
+                  {/* Hour */}
+                  <select
+                    value={datePickerState.hour}
+                    onChange={(e) => handleDatePickerChange('hour', e.target.value)}
+                    style={{
+                      padding: '8px 6px',
+                      border: '1px solid #D1D5DB',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      width: '60px'
+                    }}
+                  >
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={i}>{String(i).padStart(2, '0')}</option>
+                    ))}
+                  </select>
+
+                  <span style={{ color: '#6B7280', fontSize: '14px' }}>:</span>
+
+                  {/* Minute */}
+                  <select
+                    value={datePickerState.minute}
+                    onChange={(e) => handleDatePickerChange('minute', e.target.value)}
+                    style={{
+                      padding: '8px 6px',
+                      border: '1px solid #D1D5DB',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      width: '60px'
+                    }}
+                  >
+                    {Array.from({ length: 60 }, (_, i) => (
+                      <option key={i} value={i}>{String(i).padStart(2, '0')}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <small style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px', display: 'block' }}>
-                  Format: DD.MM.YYYY HH:MM (e.g., 21.11.2025 14:30)
+                  European format: DD.MM.YYYY HH:MM
                 </small>
               </div>
 
