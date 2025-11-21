@@ -26,6 +26,10 @@ export default function CommunicationsTab({
   const [selectedItem, setSelectedItem] = useState(null)
   const [ganttRange, setGanttRange] = useState({ start: null, end: null })
 
+  // Gantt specific filters
+  const [ganttYear, setGanttYear] = useState(new Date().getFullYear())
+  const [ganttQuarters, setGanttQuarters] = useState([1, 2, 3, 4]) // All quarters by default
+
   // Form state - simplified with progressive disclosure
   const [communicationForm, setCommunicationForm] = useState({
     type: 'email',
@@ -331,35 +335,68 @@ export default function CommunicationsTab({
     return { startDate, endDate }
   }
 
+  // Calculate date range based on year and quarters
+  const getQuarterDateRange = (year, quarters) => {
+    const minQuarter = Math.min(...quarters)
+    const maxQuarter = Math.max(...quarters)
+
+    const start = new Date(year, (minQuarter - 1) * 3, 1)
+    const end = new Date(year, maxQuarter * 3, 0) // Last day of the last quarter
+
+    return { start, end }
+  }
+
+  // Get available years from data
+  const availableYears = useMemo(() => {
+    const years = new Set()
+    const currentYear = new Date().getFullYear()
+
+    filteredHistory.forEach(item => {
+      const itemDate = new Date(item.sentAt || item.createdAt || item.decisionDate)
+      years.add(itemDate.getFullYear())
+    })
+
+    // Always include current year and next year
+    years.add(currentYear)
+    years.add(currentYear + 1)
+    years.add(currentYear - 1)
+
+    return Array.from(years).sort((a, b) => b - a)
+  }, [filteredHistory])
+
   // Prepare data for Gantt chart
   const ganttData = useMemo(() => {
     if (timelineView !== 'gantt') return []
 
-    const items = filteredHistory.map(item => {
-      const { startDate, endDate } = getItemDuration(item)
-      return {
-        ...item,
-        startDate,
-        endDate,
-        duration: Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) // days
-      }
-    })
+    // Get date range based on selected year and quarters
+    const { start: rangeStart, end: rangeEnd } = getQuarterDateRange(ganttYear, ganttQuarters)
 
-    // Calculate date range for the chart
-    if (items.length > 0) {
-      const allDates = items.flatMap(item => [item.startDate, item.endDate])
-      const minDate = new Date(Math.min(...allDates))
-      const maxDate = new Date(Math.max(...allDates))
+    // Filter items to those within the selected date range
+    const items = filteredHistory
+      .map(item => {
+        const { startDate, endDate } = getItemDuration(item)
+        return {
+          ...item,
+          startDate,
+          endDate,
+          duration: Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) // days
+        }
+      })
+      .filter(item => {
+        // Show items that overlap with the selected date range
+        return item.startDate <= rangeEnd && item.endDate >= rangeStart
+      })
 
-      // Add padding
-      minDate.setDate(minDate.getDate() - 7)
-      maxDate.setDate(maxDate.getDate() + 7)
+    // Set the gantt range to the quarter range with some padding
+    const paddedStart = new Date(rangeStart)
+    const paddedEnd = new Date(rangeEnd)
+    paddedStart.setDate(paddedStart.getDate() - 7)
+    paddedEnd.setDate(paddedEnd.getDate() + 7)
 
-      setGanttRange({ start: minDate, end: maxDate })
-    }
+    setGanttRange({ start: paddedStart, end: paddedEnd })
 
     return items
-  }, [filteredHistory, timelineView])
+  }, [filteredHistory, timelineView, ganttYear, ganttQuarters])
 
   return (
     <div>
@@ -725,6 +762,85 @@ export default function CommunicationsTab({
                     <p style={{ fontSize: '12px', color: '#6B7280' }}>
                       Showing {ganttData.length} items with duration information
                     </p>
+                  </div>
+
+                  {/* Year and Quarter Filters */}
+                  <div style={{
+                    marginBottom: '20px',
+                    padding: '16px',
+                    background: '#F9FAFB',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '20px'
+                  }}>
+                    {/* Year Selector */}
+                    <div>
+                      <label style={{ fontSize: '12px', color: '#374151', fontWeight: '500', marginRight: '8px' }}>
+                        Year:
+                      </label>
+                      <select
+                        value={ganttYear}
+                        onChange={(e) => setGanttYear(parseInt(e.target.value))}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '4px',
+                          border: '1px solid #D1D5DB',
+                          fontSize: '13px',
+                          background: 'white'
+                        }}
+                      >
+                        {availableYears.map(year => (
+                          <option key={year} value={year}>{year}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Quarter Selector */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <label style={{ fontSize: '12px', color: '#374151', fontWeight: '500', marginRight: '8px' }}>
+                        Quarters:
+                      </label>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        {[1, 2, 3, 4].map(quarter => (
+                          <button
+                            key={quarter}
+                            onClick={() => {
+                              if (ganttQuarters.includes(quarter)) {
+                                // Don't allow deselecting the last quarter
+                                if (ganttQuarters.length > 1) {
+                                  setGanttQuarters(ganttQuarters.filter(q => q !== quarter))
+                                }
+                              } else {
+                                setGanttQuarters([...ganttQuarters, quarter].sort())
+                              }
+                            }}
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: '4px',
+                              border: '1px solid',
+                              borderColor: ganttQuarters.includes(quarter) ? '#3B82F6' : '#D1D5DB',
+                              background: ganttQuarters.includes(quarter) ? '#3B82F6' : 'white',
+                              color: ganttQuarters.includes(quarter) ? 'white' : '#374151',
+                              fontSize: '12px',
+                              fontWeight: '500',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            Q{quarter}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Date Range Info */}
+                    <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#6B7280' }}>
+                      {(() => {
+                        const range = getQuarterDateRange(ganttYear, ganttQuarters)
+                        return `${range.start.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} - ${range.end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`
+                      })()}
+                    </div>
                   </div>
 
                   {/* Gantt Chart */}
