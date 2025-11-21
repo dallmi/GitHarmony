@@ -18,11 +18,13 @@ export default function CommunicationsTab({
   onStakeholderSelect
 }) {
   const [viewMode, setViewMode] = useState('timeline') // 'timeline' or 'create'
+  const [timelineView, setTimelineView] = useState('list') // 'list' or 'gantt'
   const [filterType, setFilterType] = useState('all')
   const [filterDateRange, setFilterDateRange] = useState('all') // all, today, week, month
   const [searchQuery, setSearchQuery] = useState('')
   const [showQuickCreate, setShowQuickCreate] = useState(false)
   const [selectedItem, setSelectedItem] = useState(null)
+  const [ganttRange, setGanttRange] = useState({ start: null, end: null })
 
   // Form state - simplified with progressive disclosure
   const [communicationForm, setCommunicationForm] = useState({
@@ -294,6 +296,71 @@ export default function CommunicationsTab({
     }
   }
 
+  // Calculate duration for Gantt chart items
+  const getItemDuration = (item) => {
+    const startDate = new Date(item.sentAt || item.createdAt || item.decisionDate)
+    let endDate = null
+
+    // Determine end date based on type
+    if (item.type === 'incident' && item.resolutionDate) {
+      endDate = new Date(item.resolutionDate)
+    } else if (item.type === 'scope_change' && item.newDate) {
+      endDate = new Date(item.newDate)
+    } else if (item.type === 'decision' && item.implementationDate) {
+      endDate = new Date(item.implementationDate)
+    } else if (item.timeImpact) {
+      // Parse time impact (e.g., "+2 days", "1 week")
+      const impact = item.timeImpact.toLowerCase()
+      endDate = new Date(startDate)
+      if (impact.includes('day')) {
+        const days = parseInt(impact.match(/\d+/)?.[0] || 1)
+        endDate.setDate(endDate.getDate() + days)
+      } else if (impact.includes('week')) {
+        const weeks = parseInt(impact.match(/\d+/)?.[0] || 1)
+        endDate.setDate(endDate.getDate() + (weeks * 7))
+      }
+    }
+
+    // Default duration for items without explicit end date
+    if (!endDate) {
+      endDate = new Date(startDate)
+      // Single-day events show as 1-day bars
+      endDate.setDate(endDate.getDate() + 1)
+    }
+
+    return { startDate, endDate }
+  }
+
+  // Prepare data for Gantt chart
+  const ganttData = useMemo(() => {
+    if (timelineView !== 'gantt') return []
+
+    const items = filteredHistory.map(item => {
+      const { startDate, endDate } = getItemDuration(item)
+      return {
+        ...item,
+        startDate,
+        endDate,
+        duration: Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) // days
+      }
+    })
+
+    // Calculate date range for the chart
+    if (items.length > 0) {
+      const allDates = items.flatMap(item => [item.startDate, item.endDate])
+      const minDate = new Date(Math.min(...allDates))
+      const maxDate = new Date(Math.max(...allDates))
+
+      // Add padding
+      minDate.setDate(minDate.getDate() - 7)
+      maxDate.setDate(maxDate.getDate() + 7)
+
+      setGanttRange({ start: minDate, end: maxDate })
+    }
+
+    return items
+  }, [filteredHistory, timelineView])
+
   return (
     <div>
       {/* Header with view toggle */}
@@ -379,7 +446,7 @@ export default function CommunicationsTab({
       {/* Timeline View */}
       {viewMode === 'timeline' && (
         <>
-          {/* Filters Bar */}
+          {/* Filters Bar with View Toggle */}
           <div style={{
             marginBottom: '20px',
             padding: '16px',
@@ -388,8 +455,16 @@ export default function CommunicationsTab({
             display: 'flex',
             gap: '12px',
             flexWrap: 'wrap',
-            alignItems: 'center'
+            alignItems: 'center',
+            justifyContent: 'space-between'
           }}>
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              flex: 1
+            }}>
             {/* Type Filter */}
             <select
               value={filterType}
@@ -446,10 +521,52 @@ export default function CommunicationsTab({
             <div style={{ fontSize: '13px', color: '#6B7280' }}>
               {filteredHistory.length} {filteredHistory.length === 1 ? 'item' : 'items'}
             </div>
-          </div>
+            </div>
 
-          {/* Timeline List */}
-          {groupedHistory.length === 0 ? (
+            {/* View Toggle (List/Gantt) */}
+            <div style={{
+              display: 'flex',
+              background: 'white',
+              border: '1px solid #D1D5DB',
+              borderRadius: '6px',
+              padding: '2px'
+            }}>
+              <button
+                onClick={() => setTimelineView('list')}
+                style={{
+                  padding: '4px 12px',
+                  background: timelineView === 'list' ? '#374151' : 'transparent',
+                  color: timelineView === 'list' ? 'white' : '#6B7280',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                List
+              </button>
+              <button
+                onClick={() => setTimelineView('gantt')}
+                style={{
+                  padding: '4px 12px',
+                  background: timelineView === 'gantt' ? '#374151' : 'transparent',
+                  color: timelineView === 'gantt' ? 'white' : '#6B7280',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Gantt
+              </button>
+            </div>
+
+          {/* Timeline Content - List or Gantt */}
+          {timelineView === 'list' && groupedHistory.length === 0 ? (
             <div className="card text-center" style={{ padding: '60px 20px' }}>
               <h3 style={{ marginBottom: '8px', color: '#374151' }}>No Communications Yet</h3>
               <p style={{ color: '#6B7280', marginBottom: '16px' }}>
@@ -462,7 +579,7 @@ export default function CommunicationsTab({
                 Create First Entry
               </button>
             </div>
-          ) : (
+          ) : timelineView === 'list' ? (
             <div>
               {groupedHistory.map(([date, items]) => (
                 <div key={date} style={{ marginBottom: '32px' }}>
@@ -591,7 +708,184 @@ export default function CommunicationsTab({
                 </div>
               ))}
             </div>
+          ) : (
+            // Gantt Chart View
+            <div className="card" style={{ padding: '20px', overflowX: 'auto' }}>
+              {ganttData.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#6B7280' }}>
+                  No data available for Gantt chart
+                </div>
+              ) : (
+                <div>
+                  {/* Gantt Chart Header */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
+                      Communication Timeline
+                    </h3>
+                    <p style={{ fontSize: '12px', color: '#6B7280' }}>
+                      Showing {ganttData.length} items with duration information
+                    </p>
+                  </div>
+
+                  {/* Gantt Chart */}
+                  <div style={{ position: 'relative', minWidth: '800px' }}>
+                    {/* Date Header */}
+                    {ganttRange.start && ganttRange.end && (
+                      <div style={{
+                        display: 'flex',
+                        borderBottom: '2px solid #E5E7EB',
+                        marginBottom: '8px',
+                        paddingBottom: '8px'
+                      }}>
+                        <div style={{ width: '200px', fontSize: '12px', fontWeight: '600', color: '#374151' }}>
+                          Item
+                        </div>
+                        <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#6B7280' }}>
+                          {(() => {
+                            const months = []
+                            const current = new Date(ganttRange.start)
+                            while (current <= ganttRange.end) {
+                              months.push(current.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }))
+                              current.setMonth(current.getMonth() + 1)
+                            }
+                            return months.map((month, i) => (
+                              <div key={i} style={{ flex: 1, textAlign: 'center' }}>{month}</div>
+                            ))
+                          })()}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Gantt Rows */}
+                    {ganttData.map((item, index) => {
+                      const totalDays = ganttRange.end ? Math.ceil((ganttRange.end - ganttRange.start) / (1000 * 60 * 60 * 24)) : 1
+                      const startOffset = Math.ceil((item.startDate - ganttRange.start) / (1000 * 60 * 60 * 24))
+                      const widthPercent = (item.duration / totalDays) * 100
+                      const leftPercent = (startOffset / totalDays) * 100
+
+                      return (
+                        <div
+                          key={item.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            marginBottom: '4px',
+                            minHeight: '32px',
+                            background: index % 2 === 0 ? 'white' : '#F9FAFB',
+                            borderRadius: '4px'
+                          }}
+                        >
+                          {/* Item Label */}
+                          <div style={{
+                            width: '200px',
+                            padding: '6px 12px',
+                            fontSize: '12px',
+                            color: '#374151',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            <span style={{
+                              padding: '1px 4px',
+                              background: getTypeColor(item.type) + '20',
+                              color: getTypeColor(item.type),
+                              borderRadius: '2px',
+                              fontSize: '10px',
+                              fontWeight: '600',
+                              marginRight: '6px'
+                            }}>
+                              {getTypeLabel(item.type).substring(0, 3).toUpperCase()}
+                            </span>
+                            {item.subject || item.title || 'Untitled'}
+                          </div>
+
+                          {/* Gantt Bar */}
+                          <div style={{ flex: 1, position: 'relative', height: '24px' }}>
+                            <div
+                              style={{
+                                position: 'absolute',
+                                left: `${leftPercent}%`,
+                                width: `${Math.max(widthPercent, 0.5)}%`,
+                                height: '20px',
+                                background: getTypeColor(item.type),
+                                opacity: 0.8,
+                                borderRadius: '3px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                transition: 'opacity 0.2s ease'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                              onMouseLeave={(e) => e.currentTarget.style.opacity = '0.8'}
+                              title={`${item.subject || item.title}\n${item.startDate.toLocaleDateString()} - ${item.endDate.toLocaleDateString()}\n(${item.duration} day${item.duration !== 1 ? 's' : ''})`}
+                            >
+                              {widthPercent > 5 && (
+                                <span style={{ fontSize: '10px', color: 'white', fontWeight: '500' }}>
+                                  {item.duration}d
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+
+                    {/* Today Line */}
+                    {ganttRange.start && ganttRange.end && (
+                      <div style={{
+                        position: 'absolute',
+                        left: `${200 + ((new Date() - ganttRange.start) / (ganttRange.end - ganttRange.start)) * (100 - (200 / 8))}px`,
+                        top: 0,
+                        bottom: 0,
+                        width: '2px',
+                        background: '#EF4444',
+                        opacity: 0.5,
+                        pointerEvents: 'none',
+                        zIndex: 10
+                      }}>
+                        <div style={{
+                          position: 'absolute',
+                          top: '-20px',
+                          left: '-20px',
+                          fontSize: '10px',
+                          color: '#EF4444',
+                          fontWeight: '600',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          Today
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Legend */}
+                  <div style={{
+                    marginTop: '24px',
+                    paddingTop: '16px',
+                    borderTop: '1px solid #E5E7EB',
+                    display: 'flex',
+                    gap: '20px',
+                    flexWrap: 'wrap',
+                    fontSize: '11px'
+                  }}>
+                    {Object.values(COMMUNICATION_TYPES).slice(0, 5).map(type => (
+                      <div key={type.id} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{
+                          width: '12px',
+                          height: '12px',
+                          background: type.color,
+                          borderRadius: '2px'
+                        }} />
+                        <span style={{ color: '#6B7280' }}>{type.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
+          </div>
         </>
       )}
 
