@@ -1191,6 +1191,11 @@ export default function CommunicationsTab({
                   type="datetime-local"
                   value={communicationForm.date}
                   onChange={(e) => setCommunicationForm({ ...communicationForm, date: e.target.value })}
+                  onFocus={(e) => {
+                    // Force locale format hint
+                    e.target.setAttribute('lang', 'de-DE')
+                    e.target.setAttribute('data-locale', 'de-DE')
+                  }}
                   style={{
                     width: '100%',
                     padding: '8px 12px',
