@@ -421,7 +421,16 @@ export default function CommunicationsTab({
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           {/* Quick Create Button */}
           <button
-            onClick={() => setViewMode(viewMode === 'timeline' ? 'create' : 'timeline')}
+            onClick={() => {
+              if (viewMode === 'create') {
+                // When going back to timeline, reset Gantt filters to show current period
+                const now = new Date()
+                const currentQuarter = Math.ceil((now.getMonth() + 1) / 3)
+                setGanttYear(now.getFullYear())
+                setGanttQuarters([currentQuarter])
+              }
+              setViewMode(viewMode === 'timeline' ? 'create' : 'timeline')
+            }}
             className="btn btn-primary"
             style={{
               padding: '8px 16px',
@@ -483,25 +492,17 @@ export default function CommunicationsTab({
       {/* Timeline View */}
       {viewMode === 'timeline' && (
         <>
-          {/* Filters Bar with View Toggle */}
+          {/* Filters Bar */}
           <div style={{
-            marginBottom: '20px',
+            marginBottom: '16px',
             padding: '16px',
             background: '#F9FAFB',
             borderRadius: '8px',
             display: 'flex',
             gap: '12px',
             flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between'
+            alignItems: 'center'
           }}>
-            <div style={{
-              display: 'flex',
-              gap: '12px',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              flex: 1
-            }}>
             {/* Type Filter */}
             <select
               value={filterType}
@@ -558,9 +559,14 @@ export default function CommunicationsTab({
             <div style={{ fontSize: '13px', color: '#6B7280' }}>
               {filteredHistory.length} {filteredHistory.length === 1 ? 'item' : 'items'}
             </div>
-            </div>
+          </div>
 
-            {/* View Toggle (List/Gantt) */}
+          {/* View Toggle (List/Gantt) */}
+          <div style={{
+            marginBottom: '20px',
+            display: 'flex',
+            justifyContent: 'center'
+          }}>
             <div style={{
               display: 'flex',
               background: 'white',
@@ -571,36 +577,37 @@ export default function CommunicationsTab({
               <button
                 onClick={() => setTimelineView('list')}
                 style={{
-                  padding: '4px 12px',
+                  padding: '6px 16px',
                   background: timelineView === 'list' ? '#374151' : 'transparent',
                   color: timelineView === 'list' ? 'white' : '#6B7280',
                   border: 'none',
                   borderRadius: '4px',
-                  fontSize: '12px',
+                  fontSize: '13px',
                   fontWeight: '500',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease'
                 }}
               >
-                List
+                List View
               </button>
               <button
                 onClick={() => setTimelineView('gantt')}
                 style={{
-                  padding: '4px 12px',
+                  padding: '6px 16px',
                   background: timelineView === 'gantt' ? '#374151' : 'transparent',
                   color: timelineView === 'gantt' ? 'white' : '#6B7280',
                   border: 'none',
                   borderRadius: '4px',
-                  fontSize: '12px',
+                  fontSize: '13px',
                   fontWeight: '500',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease'
                 }}
               >
-                Gantt
+                Gantt View
               </button>
             </div>
+          </div>
 
           {/* Timeline Content - List or Gantt */}
           {timelineView === 'list' && groupedHistory.length === 0 ? (
@@ -1113,7 +1120,6 @@ export default function CommunicationsTab({
               )}
             </div>
           )}
-          </div>
         </>
       )}
 
