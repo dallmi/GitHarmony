@@ -28,6 +28,7 @@ import CrossTeamCoordinationView from './components/CrossTeamCoordinationView'
 import ResourcePlanningView from './components/ResourcePlanningView'
 import TeamManagementView from './components/TeamManagementView'
 import ReleasePlanningView from './components/ReleasePlanningView'
+import DebugPanel from './components/DebugPanel'
 
 function App() {
   console.log('App: Component initializing...')
@@ -219,6 +220,9 @@ function App() {
         show={showRoleModal}
         onClose={() => setShowRoleModal(false)}
       />
+
+      {/* Debug Panel - Press Ctrl+Shift+D to toggle */}
+      <DebugPanel />
       </div>
     </IterationFilterProvider>
   )
