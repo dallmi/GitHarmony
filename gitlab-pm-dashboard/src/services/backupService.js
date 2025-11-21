@@ -182,16 +182,18 @@ export function createBackup(options = {}) {
 
   // 1. Core GitLab Configuration
   const gitlabToken = loadFromStorage(keys.gitlabToken)
+  const defaultToken = loadFromStorage('gitlab_default_token') // Load default token
   const gitlabUrl = loadFromStorage(keys.gitlabUrl)
   const projectId = loadFromStorage(keys.projectId)
   const groupPath = loadFromStorage(keys.groupPath)
   const filter2025 = loadFromStorage(keys.filter2025)
   const mode = loadFromStorage(keys.mode)
 
-  if (gitlabToken || gitlabUrl || projectId || groupPath || filter2025 || mode) {
+  if (gitlabToken || defaultToken || gitlabUrl || projectId || groupPath || filter2025 || mode) {
     data.gitlabConfig = {
       gitlabUrl,
       gitlabToken: includeTokens ? gitlabToken : (gitlabToken ? maskToken(gitlabToken) : null),
+      defaultToken: includeTokens ? defaultToken : (defaultToken ? maskToken(defaultToken) : null), // Include default token
       projectId,
       groupPath,
       filter2025,
@@ -693,6 +695,7 @@ export function restoreFromBackup(backup, options = {}) {
           if (overwrite || !loadFromStorage(keys.gitlabUrl)) {
             if (data.gitlabUrl) saveToStorage(keys.gitlabUrl, data.gitlabUrl)
             if (data.gitlabToken) saveToStorage(keys.gitlabToken, data.gitlabToken)
+            if (data.defaultToken) saveToStorage('gitlab_default_token', data.defaultToken) // Restore default token
             if (data.projectId) saveToStorage(keys.projectId, data.projectId)
             if (data.groupPath) saveToStorage(keys.groupPath, data.groupPath)
             if (data.filter2025 !== null && data.filter2025 !== undefined) saveToStorage(keys.filter2025, data.filter2025)
