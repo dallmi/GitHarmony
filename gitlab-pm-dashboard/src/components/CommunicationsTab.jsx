@@ -1125,7 +1125,7 @@ export default function CommunicationsTab({
 
       {/* Create View */}
       {viewMode === 'create' && (
-        <div className="card">
+        <div className="card" lang="de-DE">
           <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '20px' }}>
             Create New Entry
           </h3>
@@ -1185,13 +1185,12 @@ export default function CommunicationsTab({
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '6px' }}>
-                  Date & Time
+                  Date & Time (DD.MM.YYYY HH:MM)
                 </label>
                 <input
                   type="datetime-local"
                   value={communicationForm.date}
                   onChange={(e) => setCommunicationForm({ ...communicationForm, date: e.target.value })}
-                  lang="de-DE"
                   style={{
                     width: '100%',
                     padding: '8px 12px',
