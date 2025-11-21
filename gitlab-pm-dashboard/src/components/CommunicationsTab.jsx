@@ -1061,37 +1061,47 @@ export default function CommunicationsTab({
                                 </span>
                               )}
                             </div>
+
+                            {/* Today Line for this row */}
+                            {index === 0 && (() => {
+                              const today = new Date()
+                              const totalDays = Math.ceil((ganttRange.end - ganttRange.start) / (1000 * 60 * 60 * 24))
+                              const todayOffset = Math.ceil((today - ganttRange.start) / (1000 * 60 * 60 * 24))
+                              const todayPercent = (todayOffset / totalDays) * 100
+
+                              if (today >= ganttRange.start && today <= ganttRange.end) {
+                                return (
+                                  <div style={{
+                                    position: 'absolute',
+                                    left: `${todayPercent}%`,
+                                    top: '-8px',
+                                    bottom: '-1000px',
+                                    width: '2px',
+                                    background: '#EF4444',
+                                    opacity: 0.5,
+                                    pointerEvents: 'none',
+                                    zIndex: 10
+                                  }}>
+                                    <div style={{
+                                      position: 'absolute',
+                                      top: '-12px',
+                                      left: '-20px',
+                                      fontSize: '10px',
+                                      color: '#EF4444',
+                                      fontWeight: '600',
+                                      whiteSpace: 'nowrap'
+                                    }}>
+                                      Today
+                                    </div>
+                                  </div>
+                                )
+                              }
+                              return null
+                            })()}
                           </div>
                         </div>
                       )
                     })}
-
-                    {/* Today Line */}
-                    {ganttRange.start && ganttRange.end && (
-                      <div style={{
-                        position: 'absolute',
-                        left: `${200 + ((new Date() - ganttRange.start) / (ganttRange.end - ganttRange.start)) * (100 - (200 / 8))}px`,
-                        top: 0,
-                        bottom: 0,
-                        width: '2px',
-                        background: '#EF4444',
-                        opacity: 0.5,
-                        pointerEvents: 'none',
-                        zIndex: 10
-                      }}>
-                        <div style={{
-                          position: 'absolute',
-                          top: '-20px',
-                          left: '-20px',
-                          fontSize: '10px',
-                          color: '#EF4444',
-                          fontWeight: '600',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          Today
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   {/* Legend */}
