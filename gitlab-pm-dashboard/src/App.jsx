@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { isConfigured, loadConfig, getActiveProjectId } from './services/storageService'
 import useGitLabData from './hooks/useGitLabData'
 import useHealthScore from './hooks/useHealthScore'
@@ -36,6 +36,26 @@ function App() {
   const [activeView, setActiveView] = useState('executive')
   console.log('App: activeView state initialized:', activeView)
 
+  // Log whenever activeView changes
+  useEffect(() => {
+    console.log('🔄 ACTIVE VIEW CHANGED TO:', activeView)
+    console.log('Timestamp:', new Date().toISOString())
+  }, [activeView])
+
+  // Wrapper for setActiveView with detailed logging
+  const handleViewChange = (newView) => {
+    console.log('=== VIEW CHANGE REQUESTED ===')
+    console.log('Current view:', activeView)
+    console.log('New view:', newView)
+    console.log('Type of newView:', typeof newView)
+    try {
+      setActiveView(newView)
+      console.log('✅ setActiveView called successfully')
+    } catch (err) {
+      console.error('❌ Error calling setActiveView:', err)
+    }
+  }
+
   const configured = isConfigured()
   console.log('App: Configuration check:', configured)
 
@@ -71,7 +91,7 @@ function App() {
     // Refresh data after switching project
     refresh()
     // Switch to executive view
-    setActiveView('executive')
+    handleViewChange('executive')
   }
 
   console.log('App: About to render, current state:', { activeView, showConfigModal, configured, issuesCount: issues?.length, loading })
@@ -92,7 +112,7 @@ function App() {
         {useGroupedNav ? (
           <GroupedTabs
             activeView={activeView}
-            onViewChange={setActiveView}
+            onViewChange={handleViewChange}
             onProjectChange={isConfigured() ? (projectId) => {
               if (projectId === 'cross-project') {
                 // Cross-project mode: trigger data refresh to aggregate all projects
@@ -105,7 +125,7 @@ function App() {
             } : null}
           />
         ) : (
-          <Tabs activeView={activeView} onViewChange={setActiveView} />
+          <Tabs activeView={activeView} onViewChange={handleViewChange} />
         )}
 
         {/* Iteration Filter - Shows on views that benefit from iteration filtering */}
@@ -200,7 +220,7 @@ function App() {
             {activeView === 'epicmanagement' && <EpicManagementView epics={epics} issues={issues} crossProjectData={crossProjectData} />}
             {activeView === 'riskmanagement' && <RiskManagementView epics={epics} issues={issues} />}
             {activeView === 'roadmap' && <RoadmapView issues={issues} milestones={milestones} />}
-            {activeView === 'sprintmanagement' && <SprintManagementView issues={issues} onNavigate={setActiveView} />}
+            {activeView === 'sprintmanagement' && <SprintManagementView issues={issues} onNavigate={handleViewChange} />}
             {activeView === 'velocity' && <VelocityView issues={issues} />}
             {activeView === 'resourceplanning' && <ResourcePlanningView issues={issues} milestones={milestones} />}
             {activeView === 'teammanagement' && <TeamManagementView issues={issues} milestones={milestones} crossProjectMode={getActiveProjectId() === 'cross-project'} />}

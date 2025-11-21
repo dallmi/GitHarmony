@@ -28,8 +28,15 @@ export default function GroupedTabs({ activeView, onViewChange, onProjectChange 
   }
 
   const handleViewClick = (viewId) => {
-    onViewChange(viewId)
-    setExpandedGroup(null) // Close dropdown after selection
+    console.log('📑 GROUPED TAB VIEW CLICKED:', viewId)
+    console.log('onViewChange type:', typeof onViewChange)
+    console.log('onViewChange function:', onViewChange)
+    if (typeof onViewChange === 'function') {
+      onViewChange(viewId)
+      setExpandedGroup(null) // Close dropdown after selection
+    } else {
+      console.error('❌ onViewChange is not a function!')
+    }
   }
 
   const handleKeyDown = (e, groupId, views) => {
