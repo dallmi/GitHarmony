@@ -227,7 +227,15 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div
+      className="modal-overlay"
+      onMouseDown={(e) => {
+        // Only close if clicking directly on the overlay, not when releasing from text selection
+        if (e.target === e.currentTarget) {
+          onClose()
+        }
+      }}
+    >
       <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '800px' }}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -874,7 +882,12 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
             <button
               className="btn btn-primary"
               onClick={handleSave}
-              disabled={!gitlabUrl || !projectId || !token}
+              disabled={
+                !gitlabUrl ||
+                !token ||
+                (mode === 'project' && !projectId) ||
+                (mode === 'group' && groupPaths.filter(p => p.trim()).length === 0)
+              }
             >
               Save Configuration
             </button>
