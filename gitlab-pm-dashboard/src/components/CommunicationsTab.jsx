@@ -26,8 +26,16 @@ export default function CommunicationsTab({
   const [selectedItem, setSelectedItem] = useState(null)
   const [ganttRange, setGanttRange] = useState({ start: null, end: null })
 
-  // Gantt specific filters
-  const [ganttYear, setGanttYear] = useState(new Date().getFullYear())
+  // Gantt specific filters - initialize with the year that has the most recent data
+  const [ganttYear, setGanttYear] = useState(() => {
+    // If we have history, use the year of the most recent item
+    if (history && history.length > 0) {
+      const mostRecent = history[0] // Assuming history is sorted by date descending
+      const date = new Date(mostRecent.sentAt || mostRecent.createdAt || mostRecent.decisionDate)
+      return date.getFullYear()
+    }
+    return new Date().getFullYear()
+  })
   const [ganttQuarters, setGanttQuarters] = useState([1, 2, 3, 4]) // All quarters by default
 
   // Custom dropdown date picker state for European format
@@ -518,9 +526,18 @@ export default function CommunicationsTab({
             onClick={() => {
               if (viewMode === 'create') {
                 // When going back to timeline, reset Gantt filters to show current period
+                // But use the year that actually has data
                 const now = new Date()
                 const currentQuarter = Math.ceil((now.getMonth() + 1) / 3)
-                setGanttYear(now.getFullYear())
+
+                // If we have history, check what year has the most recent data
+                if (filteredHistory && filteredHistory.length > 0) {
+                  const mostRecent = filteredHistory[0]
+                  const date = new Date(mostRecent.sentAt || mostRecent.createdAt || mostRecent.decisionDate)
+                  setGanttYear(date.getFullYear())
+                } else {
+                  setGanttYear(now.getFullYear())
+                }
                 setGanttQuarters([currentQuarter])
               }
               setViewMode(viewMode === 'timeline' ? 'create' : 'timeline')
@@ -851,7 +868,12 @@ export default function CommunicationsTab({
             <div className="card" style={{ padding: '20px', overflowX: 'auto' }}>
               {ganttData.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '40px', color: '#6B7280' }}>
-                  No data available for Gantt chart
+                  <div style={{ marginBottom: '12px', fontSize: '14px' }}>
+                    No communications found for {ganttQuarters.length === 1 ? `Q${ganttQuarters[0]}` : ganttQuarters.length === 4 ? 'the year' : `Q${ganttQuarters.join(', Q')}`} {ganttYear}
+                  </div>
+                  <div style={{ fontSize: '12px' }}>
+                    Try selecting a different time period or year
+                  </div>
                 </div>
               ) : (
                 <div>
