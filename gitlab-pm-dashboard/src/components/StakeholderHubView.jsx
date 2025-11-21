@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import CommunicationsTab from './CommunicationsTab'
 import {
   getStakeholders,
   saveStakeholder,
@@ -42,7 +43,8 @@ export default function StakeholderHubView({ stats, healthScore }) {
   const [history, setHistory] = useState(getCommunicationHistoryForProject())
   const [templates, setTemplates] = useState(getTemplates())
   const [decisions, setDecisions] = useState(getDecisions())
-  const [activeTab, setActiveTab] = useState('communications') // communications, timeline, decisions, stakeholders, templates
+  const [activeTab, setActiveTab] = useState('communications') // communications, stakeholders, templates
+  const [viewMode, setViewMode] = useState('timeline') // 'timeline' or 'create' within communications tab
   const [showAddStakeholder, setShowAddStakeholder] = useState(false)
   const [showComposeModal, setShowComposeModal] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState(null)
@@ -1098,26 +1100,31 @@ export default function StakeholderHubView({ stats, healthScore }) {
 
       {/* Tabs */}
       <div style={{ borderBottom: '2px solid #E5E7EB', marginBottom: '30px' }}>
-        <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
           {[
             { id: 'communications', label: 'Communications' },
-            { id: 'timeline', label: 'Timeline' },
-            { id: 'decisions', label: 'Decisions' },
             { id: 'stakeholders', label: 'Stakeholders' },
             { id: 'templates', label: 'Templates' }
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => {
+                setActiveTab(tab.id)
+                // Reset view mode when switching tabs
+                if (tab.id === 'communications') {
+                  setViewMode('timeline')
+                }
+              }}
               style={{
                 padding: '12px 0',
                 background: 'none',
                 border: 'none',
-                borderBottom: activeTab === tab.id ? '2px solid #E60000' : '2px solid transparent',
+                borderBottom: activeTab === tab.id ? '3px solid #374151' : '3px solid transparent',
                 fontSize: '14px',
                 fontWeight: '600',
-                color: activeTab === tab.id ? '#E60000' : '#6B7280',
-                cursor: 'pointer'
+                color: activeTab === tab.id ? '#111827' : '#6B7280',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
               }}
             >
               {tab.label}
@@ -1318,8 +1325,26 @@ export default function StakeholderHubView({ stats, healthScore }) {
         </>
       )}
 
-      {/* Communications Tab */}
+      {/* Communications Tab - Unified with Timeline */}
       {activeTab === 'communications' && (
+        <CommunicationsTab
+          history={[...history, ...decisions.map(d => ({ ...d, type: 'decision' }))]}
+          stakeholders={stakeholders}
+          onHistoryUpdate={() => {
+            setHistory(getCommunicationHistoryForProject())
+            setDecisions(getDecisions())
+          }}
+          onStakeholderSelect={(id) => {
+            const s = stakeholders.find(st => st.id === id)
+            if (s && !selectedStakeholders.find(sel => sel.id === s.id)) {
+              setSelectedStakeholders([...selectedStakeholders, s])
+            }
+          }}
+        />
+      )}
+
+      {/* OLD Communications content - TO BE REMOVED */}
+      {false && (
         <>
           <div style={{ marginBottom: '20px' }}>
             <h2 style={{ fontSize: '20px', fontWeight: '600' }}>Log Communication</h2>
@@ -2399,8 +2424,8 @@ export default function StakeholderHubView({ stats, healthScore }) {
         </>
       )}
 
-      {/* Decisions Tab */}
-      {activeTab === 'decisions' && (
+      {/* Decisions Tab - NOW INTEGRATED INTO COMMUNICATIONS */}
+      {false && activeTab === 'decisions' && (
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
             <h2 style={{ fontSize: '20px', fontWeight: '600' }}>Decision Log</h2>
@@ -2658,8 +2683,8 @@ export default function StakeholderHubView({ stats, healthScore }) {
         </>
       )}
 
-      {/* Timeline Tab */}
-      {activeTab === 'timeline' && (
+      {/* Timeline Tab - NOW INTEGRATED INTO COMMUNICATIONS */}
+      {false && activeTab === 'timeline' && (
         <>
           <div style={{ marginBottom: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>

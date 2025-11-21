@@ -84,11 +84,13 @@ export function getCommunicationHistoryForProject(projectId = null) {
  */
 export const COMMUNICATION_TYPES = {
   EMAIL: { id: 'email', label: 'Email', color: '#3B82F6', icon: '' },
+  DECISION: { id: 'decision', label: 'Decision', color: '#059669', icon: '' },
+  MEETING_NOTES: { id: 'meeting_notes', label: 'Meeting Notes', color: '#64748B', icon: '' },
   REQUIREMENTS_SIGNOFF: { id: 'requirements_signoff', label: 'Requirements Sign-Off', color: '#10B981', icon: '' },
   INCIDENT: { id: 'incident', label: 'Incident', color: '#DC2626', icon: '' },
   SCOPE_CHANGE: { id: 'scope_change', label: 'Scope Change', color: '#F59E0B', icon: '' },
   PRIORITIZATION: { id: 'prioritization', label: 'Prioritization', color: '#8B5CF6', icon: '' },
-  MEETING_NOTES: { id: 'meeting_notes', label: 'Meeting Notes', color: '#64748B', icon: '' },
+  STATUS_UPDATE: { id: 'status_update', label: 'Status Update', color: '#0EA5E9', icon: '' },
   OTHER: { id: 'other', label: 'Other', color: '#6B7280', icon: '' }
 }
 
