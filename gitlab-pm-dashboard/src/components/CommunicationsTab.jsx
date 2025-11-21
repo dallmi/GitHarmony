@@ -502,6 +502,378 @@ export default function CommunicationsTab({
 
   return (
     <div>
+      {/* Modal for Communication Details */}
+      {selectedItem && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setSelectedItem(null)}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '8px',
+              maxWidth: '700px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{
+              padding: '20px 24px',
+              borderBottom: '1px solid #E5E7EB',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start'
+            }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <span style={{
+                    padding: '4px 10px',
+                    background: getTypeColor(selectedItem.type) + '20',
+                    color: getTypeColor(selectedItem.type),
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    textTransform: 'uppercase'
+                  }}>
+                    {getTypeLabel(selectedItem.type)}
+                  </span>
+                  {selectedItem.priority && (
+                    <span style={{
+                      padding: '4px 10px',
+                      background: getPriorityColor(selectedItem.priority) + '20',
+                      color: getPriorityColor(selectedItem.priority),
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      textTransform: 'uppercase'
+                    }}>
+                      {selectedItem.priority}
+                    </span>
+                  )}
+                </div>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+                  {selectedItem.subject || selectedItem.title || 'Untitled'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedItem(null)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '24px',
+                  color: '#6B7280',
+                  cursor: 'pointer',
+                  padding: '0 4px',
+                  lineHeight: '1'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '24px' }}>
+              {/* Date and Time */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  Date & Time
+                </label>
+                <div style={{ fontSize: '14px', color: '#374151' }}>
+                  {new Date(selectedItem.sentAt || selectedItem.createdAt || selectedItem.decisionDate).toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              </div>
+
+              {/* Type-specific fields */}
+              {selectedItem.type === 'email' && (
+                <>
+                  {selectedItem.from && (
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                        From
+                      </label>
+                      <div style={{ fontSize: '14px', color: '#374151' }}>
+                        {selectedItem.from}
+                      </div>
+                    </div>
+                  )}
+                  {selectedItem.to && (
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                        To
+                      </label>
+                      <div style={{ fontSize: '14px', color: '#374151' }}>
+                        {selectedItem.to}
+                      </div>
+                    </div>
+                  )}
+                  {selectedItem.cc && (
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                        CC
+                      </label>
+                      <div style={{ fontSize: '14px', color: '#374151' }}>
+                        {selectedItem.cc}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {selectedItem.type === 'decision' && (
+                <>
+                  {selectedItem.approvedBy && selectedItem.approvedBy.length > 0 && (
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                        Approved By
+                      </label>
+                      <div style={{ fontSize: '14px', color: '#374151' }}>
+                        {Array.isArray(selectedItem.approvedBy) ? selectedItem.approvedBy.join(', ') : selectedItem.approvedBy}
+                      </div>
+                    </div>
+                  )}
+                  {selectedItem.documentUrl && (
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                        Document
+                      </label>
+                      <a href={selectedItem.documentUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '14px', color: '#3B82F6', textDecoration: 'underline' }}>
+                        View Document {selectedItem.documentVersion && `(v${selectedItem.documentVersion})`}
+                      </a>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {selectedItem.type === 'meeting_notes' && (
+                <>
+                  {selectedItem.attendees && (
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                        Attendees
+                      </label>
+                      <div style={{ fontSize: '14px', color: '#374151' }}>
+                        {selectedItem.attendees}
+                      </div>
+                    </div>
+                  )}
+                  {selectedItem.actionItems && (
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                        Action Items
+                      </label>
+                      <div style={{ fontSize: '14px', color: '#374151', whiteSpace: 'pre-wrap' }}>
+                        {selectedItem.actionItems}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {selectedItem.type === 'incident' && (
+                <>
+                  {selectedItem.severity && (
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                        Severity
+                      </label>
+                      <span style={{
+                        padding: '4px 10px',
+                        background: getPriorityColor(selectedItem.severity) + '20',
+                        color: getPriorityColor(selectedItem.severity),
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        textTransform: 'uppercase'
+                      }}>
+                        {selectedItem.severity}
+                      </span>
+                    </div>
+                  )}
+                  {selectedItem.itoTicketNumber && (
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                        ITO Ticket
+                      </label>
+                      <div style={{ fontSize: '14px', color: '#374151' }}>
+                        {selectedItem.itoTicketLink ? (
+                          <a href={selectedItem.itoTicketLink} target="_blank" rel="noopener noreferrer" style={{ color: '#3B82F6', textDecoration: 'underline' }}>
+                            {selectedItem.itoTicketNumber}
+                          </a>
+                        ) : (
+                          selectedItem.itoTicketNumber
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {selectedItem.resolution && (
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                        Resolution
+                      </label>
+                      <div style={{ fontSize: '14px', color: '#374151', whiteSpace: 'pre-wrap' }}>
+                        {selectedItem.resolution}
+                      </div>
+                    </div>
+                  )}
+                  {selectedItem.resolutionDate && (
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                        Resolution Date
+                      </label>
+                      <div style={{ fontSize: '14px', color: '#374151' }}>
+                        {new Date(selectedItem.resolutionDate).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'long',
+                          year: 'numeric'
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Content/Description */}
+              {(selectedItem.content || selectedItem.description || selectedItem.body) && (
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                    {selectedItem.type === 'email' ? 'Message' : selectedItem.type === 'meeting_notes' ? 'Notes' : 'Description'}
+                  </label>
+                  <div style={{
+                    fontSize: '14px',
+                    color: '#374151',
+                    lineHeight: '1.6',
+                    whiteSpace: 'pre-wrap',
+                    padding: '12px',
+                    background: '#F9FAFB',
+                    borderRadius: '6px',
+                    border: '1px solid #E5E7EB'
+                  }}>
+                    {selectedItem.content || selectedItem.description || selectedItem.body}
+                  </div>
+                </div>
+              )}
+
+              {/* Stakeholders */}
+              {selectedItem.stakeholderIds && selectedItem.stakeholderIds.length > 0 && (
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                    Related Stakeholders
+                  </label>
+                  <div style={{ fontSize: '14px', color: '#374151' }}>
+                    {selectedItem.stakeholderIds.length} stakeholder(s)
+                  </div>
+                </div>
+              )}
+
+              {/* Linked Issues/Epics */}
+              {((selectedItem.linkedIssues && selectedItem.linkedIssues.length > 0) || (selectedItem.linkedEpics && selectedItem.linkedEpics.length > 0)) && (
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                    Linked Items
+                  </label>
+                  <div style={{ fontSize: '14px', color: '#374151' }}>
+                    {selectedItem.linkedIssues && selectedItem.linkedIssues.length > 0 && (
+                      <div>{selectedItem.linkedIssues.length} issue(s)</div>
+                    )}
+                    {selectedItem.linkedEpics && selectedItem.linkedEpics.length > 0 && (
+                      <div>{selectedItem.linkedEpics.length} epic(s)</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Tags */}
+              {selectedItem.tags && selectedItem.tags.length > 0 && (
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                    Tags
+                  </label>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {selectedItem.tags.map((tag, index) => (
+                      <span key={index} style={{
+                        padding: '4px 10px',
+                        background: '#E5E7EB',
+                        color: '#374151',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: '500'
+                      }}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Additional fields */}
+              {selectedItem.timeImpact && (
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                    Time Impact
+                  </label>
+                  <div style={{ fontSize: '14px', color: '#374151' }}>
+                    {selectedItem.timeImpact}
+                  </div>
+                </div>
+              )}
+
+              {selectedItem.rootCause && (
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                    Root Cause
+                  </label>
+                  <div style={{ fontSize: '14px', color: '#374151', whiteSpace: 'pre-wrap' }}>
+                    {selectedItem.rootCause}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              padding: '16px 24px',
+              borderTop: '1px solid #E5E7EB',
+              display: 'flex',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => setSelectedItem(null)}
+                className="btn btn-primary"
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header with view toggle */}
       <div style={{
         display: 'flex',
@@ -1100,6 +1472,7 @@ export default function CommunicationsTab({
                           {/* Gantt Bar */}
                           <div style={{ flex: 1, position: 'relative', height: '24px' }}>
                             <div
+                              onClick={() => setSelectedItem(item)}
                               style={{
                                 position: 'absolute',
                                 left: `${leftPercent}%`,
