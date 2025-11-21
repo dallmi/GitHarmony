@@ -555,7 +555,7 @@ export default function CommunicationsTab({
             {viewMode === 'timeline' ? '+ New Entry' : '← Back to Timeline'}
           </button>
 
-          {/* View Mode Toggle */}
+          {/* List/Gantt View Toggle - Only show in timeline mode */}
           {viewMode === 'timeline' && (
             <div style={{
               display: 'flex',
@@ -564,36 +564,36 @@ export default function CommunicationsTab({
               padding: '2px'
             }}>
               <button
-                onClick={() => setViewMode('timeline')}
+                onClick={() => setTimelineView('list')}
                 style={{
                   padding: '6px 12px',
-                  background: viewMode === 'timeline' ? 'white' : 'transparent',
+                  background: timelineView === 'list' ? 'white' : 'transparent',
                   border: 'none',
                   borderRadius: '4px',
                   fontSize: '13px',
                   fontWeight: '500',
-                  color: viewMode === 'timeline' ? '#111827' : '#6B7280',
+                  color: timelineView === 'list' ? '#111827' : '#6B7280',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease'
                 }}
               >
-                Timeline
+                List View
               </button>
               <button
-                onClick={() => setViewMode('create')}
+                onClick={() => setTimelineView('gantt')}
                 style={{
                   padding: '6px 12px',
-                  background: viewMode === 'create' ? 'white' : 'transparent',
+                  background: timelineView === 'gantt' ? 'white' : 'transparent',
                   border: 'none',
                   borderRadius: '4px',
                   fontSize: '13px',
                   fontWeight: '500',
-                  color: viewMode === 'create' ? '#111827' : '#6B7280',
+                  color: timelineView === 'gantt' ? '#111827' : '#6B7280',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease'
                 }}
               >
-                Create
+                Gantt View
               </button>
             </div>
           )}
@@ -669,54 +669,6 @@ export default function CommunicationsTab({
             {/* Results Count */}
             <div style={{ fontSize: '13px', color: '#6B7280' }}>
               {filteredHistory.length} {filteredHistory.length === 1 ? 'item' : 'items'}
-            </div>
-          </div>
-
-          {/* View Toggle (List/Gantt) */}
-          <div style={{
-            marginBottom: '20px',
-            display: 'flex',
-            justifyContent: 'center'
-          }}>
-            <div style={{
-              display: 'flex',
-              background: 'white',
-              border: '1px solid #D1D5DB',
-              borderRadius: '6px',
-              padding: '2px'
-            }}>
-              <button
-                onClick={() => setTimelineView('list')}
-                style={{
-                  padding: '6px 16px',
-                  background: timelineView === 'list' ? '#374151' : 'transparent',
-                  color: timelineView === 'list' ? 'white' : '#6B7280',
-                  border: 'none',
-                  borderRadius: '4px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                List View
-              </button>
-              <button
-                onClick={() => setTimelineView('gantt')}
-                style={{
-                  padding: '6px 16px',
-                  background: timelineView === 'gantt' ? '#374151' : 'transparent',
-                  color: timelineView === 'gantt' ? 'white' : '#6B7280',
-                  border: 'none',
-                  borderRadius: '4px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                Gantt View
-              </button>
             </div>
           </div>
 
