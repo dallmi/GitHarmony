@@ -21,6 +21,10 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
   const [token, setToken] = useState(existingConfig.token || '')
   const [filter2025, setFilter2025] = useState(existingConfig.filter2025 || false)
 
+  // Default token that can be reused across all configurations
+  const [defaultToken, setDefaultToken] = useState(existingConfig.defaultToken || existingConfig.token || '')
+  const [useDefaultToken, setUseDefaultToken] = useState(false)
+
   // Portfolio management state
   const [projects, setProjects] = useState(getAllProjects())
   const [showAddForm, setShowAddForm] = useState(false)
@@ -56,7 +60,8 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
       groupPaths: filteredGroupPaths, // New format supporting multiple paths
       token,
       mode,
-      filter2025
+      filter2025,
+      defaultToken // Save default token for reuse
     }
 
     saveConfig(config)
@@ -410,8 +415,51 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
                 </div>
               </div>
 
+              {/* Default Token Section */}
+              <div className="form-group" style={{ background: '#EFF6FF', padding: '16px', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
+                <label className="form-label" style={{ color: '#1E40AF', marginBottom: '8px' }}>
+                  💡 Default Access Token (Recommended)
+                </label>
+                <input
+                  type="password"
+                  className="form-input"
+                  value={defaultToken}
+                  onChange={e => setDefaultToken(e.target.value)}
+                  placeholder="glpat-xxxxxxxxxxxxxxxxxxxx"
+                  style={{ marginBottom: '12px' }}
+                />
+                <div className="text-small" style={{ color: '#1E40AF', marginBottom: '8px' }}>
+                  Save your token here once, then use "Copy Default Token" buttons below to reuse it across all projects, groups, and pods.
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    if (defaultToken) {
+                      setToken(defaultToken)
+                      alert('Default token copied to current connection!')
+                    }
+                  }}
+                  style={{ fontSize: '12px', padding: '6px 12px' }}
+                >
+                  📋 Apply to Current Connection
+                </button>
+              </div>
+
               <div className="form-group">
-                <label className="form-label">Access Token</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label className="form-label" style={{ margin: 0 }}>Access Token</label>
+                  {defaultToken && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setToken(defaultToken)}
+                      style={{ fontSize: '11px', padding: '4px 8px' }}
+                    >
+                      📋 Copy Default Token
+                    </button>
+                  )}
+                </div>
                 <input
                   type="password"
                   className="form-input"
@@ -571,7 +619,19 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
                     </div>
 
                     <div className="form-group">
-                      <label className="form-label">Access Token</label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <label className="form-label" style={{ margin: 0 }}>Access Token</label>
+                        {defaultToken && (
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={() => setFormData({ ...formData, token: defaultToken })}
+                            style={{ fontSize: '11px', padding: '4px 8px' }}
+                          >
+                            📋 Copy Default Token
+                          </button>
+                        )}
+                      </div>
                       <input
                         type="password"
                         className="form-input"
@@ -735,7 +795,19 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Access Token</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label className="form-label" style={{ margin: 0 }}>Access Token</label>
+                      {defaultToken && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => setGroupFormData({ ...groupFormData, token: defaultToken })}
+                          style={{ fontSize: '11px', padding: '4px 8px' }}
+                        >
+                          📋 Copy Default Token
+                        </button>
+                      )}
+                    </div>
                     <input
                       type="password"
                       className="form-input"
