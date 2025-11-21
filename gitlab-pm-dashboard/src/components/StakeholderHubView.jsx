@@ -1450,6 +1450,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                             type="datetime-local"
                             value={communicationForm.date}
                             onChange={(e) => setCommunicationForm({ ...communicationForm, date: e.target.value })}
+                            lang="de-DE"
                             style={{
                               maxWidth: '300px',
                               padding: '8px 12px',
@@ -1512,6 +1513,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                         type="datetime-local"
                         value={communicationForm.date}
                         onChange={(e) => setCommunicationForm({ ...communicationForm, date: e.target.value })}
+                        lang="de-DE"
                         style={{
                           maxWidth: '300px',
                           padding: '8px 12px',
@@ -1592,6 +1594,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                         type="datetime-local"
                         value={communicationForm.signOffDate || communicationForm.date}
                         onChange={(e) => setCommunicationForm({ ...communicationForm, signOffDate: e.target.value, date: e.target.value })}
+                        lang="de-DE"
                         style={{
                           maxWidth: '300px',
                           padding: '8px 12px',
@@ -1672,6 +1675,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                         type="datetime-local"
                         value={communicationForm.date}
                         onChange={(e) => setCommunicationForm({ ...communicationForm, date: e.target.value })}
+                        lang="de-DE"
                         style={{
                           maxWidth: '300px',
                           padding: '8px 12px',
@@ -1752,6 +1756,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                         type="datetime-local"
                         value={communicationForm.date}
                         onChange={(e) => setCommunicationForm({ ...communicationForm, date: e.target.value })}
+                        lang="de-DE"
                         style={{
                           maxWidth: '300px',
                           padding: '8px 12px',
@@ -1832,6 +1837,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                         type="datetime-local"
                         value={communicationForm.resolutionDate || ''}
                         onChange={(e) => setCommunicationForm({ ...communicationForm, resolutionDate: e.target.value })}
+                        lang="de-DE"
                         style={{
                           maxWidth: '300px',
                           padding: '8px 12px',
@@ -1955,6 +1961,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                         type="datetime-local"
                         value={communicationForm.date}
                         onChange={(e) => setCommunicationForm({ ...communicationForm, date: e.target.value })}
+                        lang="de-DE"
                         style={{
                           maxWidth: '300px',
                           padding: '8px 12px',
@@ -2035,6 +2042,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                         type="datetime-local"
                         value={communicationForm.date}
                         onChange={(e) => setCommunicationForm({ ...communicationForm, date: e.target.value })}
+                        lang="de-DE"
                         style={{
                           maxWidth: '300px',
                           padding: '8px 12px',
@@ -2141,6 +2149,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                           type="date"
                           value={communicationForm.originalDate}
                           onChange={(e) => setCommunicationForm({ ...communicationForm, originalDate: e.target.value })}
+                          lang="de-DE"
                           style={{
                             width: '100%',
                             padding: '8px 12px',
@@ -2158,6 +2167,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                           type="date"
                           value={communicationForm.newDate}
                           onChange={(e) => setCommunicationForm({ ...communicationForm, newDate: e.target.value })}
+                          lang="de-DE"
                           style={{
                             width: '100%',
                             padding: '8px 12px',
