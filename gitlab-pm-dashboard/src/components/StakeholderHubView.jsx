@@ -2428,6 +2428,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                   value={decisionForm.decisionDate}
                   onChange={(e) => setDecisionForm({ ...decisionForm, decisionDate: e.target.value })}
                   style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '6px' }}
+                  lang="de-DE"
                 />
               </div>
 
@@ -2488,6 +2489,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                     value={decisionForm.signOffDate}
                     onChange={(e) => setDecisionForm({ ...decisionForm, signOffDate: e.target.value })}
                     style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '6px' }}
+                    lang="de-DE"
                   />
                 </div>
               </div>
