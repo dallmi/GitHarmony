@@ -866,28 +866,17 @@ export default function CommunicationsTab({
           ) : (
             // Gantt Chart View
             <div className="card" style={{ padding: '20px', overflowX: 'auto' }}>
-              {ganttData.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#6B7280' }}>
-                  <div style={{ marginBottom: '12px', fontSize: '14px' }}>
-                    No communications found for {ganttQuarters.length === 1 ? `Q${ganttQuarters[0]}` : ganttQuarters.length === 4 ? 'the year' : `Q${ganttQuarters.join(', Q')}`} {ganttYear}
-                  </div>
-                  <div style={{ fontSize: '12px' }}>
-                    Try selecting a different time period or year
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  {/* Gantt Chart Header */}
-                  <div style={{ marginBottom: '20px' }}>
-                    <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
-                      Communication Timeline
-                    </h3>
-                    <p style={{ fontSize: '12px', color: '#6B7280' }}>
-                      Showing {ganttData.length} items with duration information
-                    </p>
-                  </div>
+              {/* Gantt Chart Header */}
+              <div style={{ marginBottom: '20px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
+                  Communication Timeline
+                </h3>
+                <p style={{ fontSize: '12px', color: '#6B7280' }}>
+                  {ganttData.length > 0 ? `Showing ${ganttData.length} items with duration information` : 'Select a time period to view communications'}
+                </p>
+              </div>
 
-                  {/* Year and Quarter Filters */}
+              {/* Year and Quarter Filters - Always visible */}
                   <div style={{
                     marginBottom: '20px',
                     padding: '16px',
@@ -982,6 +971,18 @@ export default function CommunicationsTab({
                     </div>
                   </div>
 
+              {/* Gantt Chart Content or Empty State */}
+              {ganttData.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#6B7280' }}>
+                  <div style={{ marginBottom: '12px', fontSize: '14px' }}>
+                    No communications found for {ganttQuarters.length === 1 ? `Q${ganttQuarters[0]}` : ganttQuarters.length === 4 ? 'the year' : `Q${ganttQuarters.join(', Q')}`} {ganttYear}
+                  </div>
+                  <div style={{ fontSize: '12px' }}>
+                    Try selecting a different time period or year
+                  </div>
+                </div>
+              ) : (
+                <>
                   {/* Gantt Chart */}
                   <div style={{ position: 'relative', minWidth: '800px' }}>
                     {/* Date Header */}
@@ -1236,7 +1237,7 @@ export default function CommunicationsTab({
                       </div>
                     ))}
                   </div>
-                </div>
+                </>
               )}
             </div>
           )}
