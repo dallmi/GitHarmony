@@ -349,22 +349,46 @@ export default function useGitLabData() {
 
   // Auto-fetch on config change or when entering cross-project/group/pod mode
   useEffect(() => {
+    console.log('🔄 useGitLabData: useEffect triggered (config changed)')
+    console.log('  Current config:', config)
+
     const activeProjectId = getActiveProjectId()
     const activeGroupId = getActiveGroupId()
+    const configured = isConfigured()
+
+    console.log('  activeProjectId:', activeProjectId)
+    console.log('  activeGroupId:', activeGroupId)
+    console.log('  isConfigured():', configured)
 
     // Fetch if in pod mode OR cross-project mode OR project group mode OR if single project is configured
-    if (activeGroupId || activeProjectId === 'cross-project' || activeProjectId?.startsWith('group:') || (config && isConfigured())) {
+    if (activeGroupId || activeProjectId === 'cross-project' || activeProjectId?.startsWith('group:') || (config && configured)) {
+      console.log('✅ Conditions met, calling fetchData()')
       fetchData()
+    } else {
+      console.log('❌ Conditions NOT met, skipping fetchData()')
+      console.log('  Reasons:')
+      console.log('    - activeGroupId:', !!activeGroupId)
+      console.log('    - cross-project mode:', activeProjectId === 'cross-project')
+      console.log('    - group mode:', activeProjectId?.startsWith('group:'))
+      console.log('    - config exists:', !!config)
+      console.log('    - isConfigured:', configured)
     }
   }, [config, fetchData])
 
   // Refresh function for manual reloading
   const refresh = useCallback(() => {
+    console.log('🔄 REFRESH CALLED')
+    console.log('  Current config state:', config)
+
     // Reload config from storage before fetching (important for portfolio switching)
     const freshConfig = loadConfig()
-    console.log('useGitLabData: Refreshing with fresh config:', freshConfig)
+    console.log('  Fresh config from localStorage:', freshConfig)
     console.log('  Fresh groupPath:', freshConfig.groupPath)
+    console.log('  Fresh projectId:', freshConfig.projectId)
+    console.log('  Fresh token exists:', !!freshConfig.token)
+
     setConfig(freshConfig)
+    console.log('  Config state updated, useEffect should trigger...')
     // fetchData will be called automatically via the useEffect when config changes
   }, [])
 
