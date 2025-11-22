@@ -10,7 +10,7 @@ import {
 import { useIterationFilter } from '../contexts/IterationFilterContext'
 import SearchBar from './SearchBar'
 import { searchIssues } from '../utils/searchUtils'
-import { exportIssuesToCSV, downloadCSV as downloadCSVUtil } from '../utils/csvExportUtils'
+import { exportIssuesToCSV, downloadCSV as downloadCSVUtil } from '../services/exportService'
 import { loadTeamConfig } from '../services/teamConfigService'
 import QualityCriteriaConfigModal from './QualityCriteriaConfigModal'
 import DoDComplianceSection from './DoDComplianceSection'

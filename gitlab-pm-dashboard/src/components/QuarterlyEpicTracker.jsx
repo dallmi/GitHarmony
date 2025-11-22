@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import SearchBar from './SearchBar'
 import { searchEpics } from '../utils/searchUtils'
-import { exportEpicsToCSV, downloadCSV } from '../utils/csvExportUtils'
+import { exportEpicsToCSV, downloadCSV } from '../services/exportService'
 
 /**
  * Quarterly Epic Tracker with RAG Status

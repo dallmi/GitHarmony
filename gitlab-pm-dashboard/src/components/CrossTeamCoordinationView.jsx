@@ -25,7 +25,7 @@ import {
   formatForecastDate,
   exportForecastCSV
 } from '../services/forecastService'
-import { downloadCSV } from '../utils/csvExportUtils'
+import { downloadCSV } from '../services/exportService'
 
 /**
  * Cross-Team Coordination View

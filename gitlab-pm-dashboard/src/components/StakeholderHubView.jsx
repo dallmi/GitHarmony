@@ -29,9 +29,7 @@ import {
   getReprioritizationHistory,
   getBlockersReport
 } from '../services/stakeholderService'
-import { parseEmlFile, detectEmailTags, extractReferences } from '../utils/emailParser'
-import { parseMsgFile, isMsgFile } from '../utils/msgParser'
-import { parseHtmlEmail } from '../utils/htmlEmailParser'
+import { parseEmlFile, parseMsgFile, parseHtmlEmail } from '../services/emailService'
 import { loadConfig } from '../services/storageService'
 
 /**

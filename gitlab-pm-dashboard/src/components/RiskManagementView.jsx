@@ -2,7 +2,7 @@ import React from 'react'
 import RiskAnalysisView from './RiskAnalysisView'
 import RiskRegisterView from './RiskRegisterView'
 import useRisks from '../hooks/useRisks'
-import { exportRisksToCSV, downloadCSV } from '../utils/csvExportUtils'
+import { exportRisksToCSV, downloadCSV } from '../services/exportService'
 
 /**
  * Unified Risk Management View

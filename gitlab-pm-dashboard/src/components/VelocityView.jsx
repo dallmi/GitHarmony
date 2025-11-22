@@ -8,7 +8,7 @@ import {
   getCurrentSprint,
   calculateSprintCapacityImpact
 } from '../services/velocityService'
-import { exportVelocityToCSV, downloadCSV } from '../utils/csvExportUtils'
+import { exportVelocityToCSV, downloadCSV } from '../services/exportService'
 import { useIterationFilter } from '../contexts/IterationFilterContext'
 import { getTeamAbsenceStats } from '../services/absenceService'
 import { loadTeamConfig } from '../services/teamConfigService'
