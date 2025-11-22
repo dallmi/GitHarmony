@@ -1,0 +1,1230 @@
+import React, { useMemo, useState } from 'react'
+import {
+  calculateVelocity,
+  calculateAverageVelocity,
+  calculateVelocityTrend,
+  calculateBurndown,
+  predictCompletion,
+  getCurrentSprint,
+  calculateSprintCapacityImpact
+} from '../services/velocityService'
+import { exportVelocityToCSV, downloadCSV } from '../utils/csvExportUtils'
+import { useIterationFilter } from '../contexts/IterationFilterContext'
+import { getTeamAbsenceStats } from '../services/absenceService'
+import { loadTeamConfig } from '../services/teamConfigService'
+import { loadVelocityConfig } from '../services/velocityConfigService'
+
+/**
+ * Velocity & Burndown Analytics View
+ * Shows sprint velocity, trends, burndown chart, and predictive analytics
+ */
+export default function VelocityView({ issues: allIssues }) {
+  // Use filtered issues from iteration context
+  const { filteredIssues: issues, selectedIterations, isFiltered } = useIterationFilter()
+
+  // Toggle between issue count and story points
+  const [viewMode, setViewMode] = useState('issues') // 'issues' or 'points'
+
+  // Load velocity configuration
+  const [velocityConfig, setVelocityConfig] = useState(() => loadVelocityConfig())
+
+  // Listen for velocity config changes
+  React.useEffect(() => {
+    const handleConfigChange = () => {
+      setVelocityConfig(loadVelocityConfig())
+    }
+
+    window.addEventListener('velocityConfigChanged', handleConfigChange)
+    return () => window.removeEventListener('velocityConfigChanged', handleConfigChange)
+  }, [])
+  // Get velocity root cause analysis
+  const getVelocityRootCause = (velocityData, trend, avgVelocity, currentSprintName, allIssues, viewMode) => {
+    if (!velocityData || velocityData.length < 4) return { causes: [], actions: [] }
+
+    const causes = []
+    const actions = []
+
+    // Use current sprint if specified, otherwise fall back to most recent
+    let recentIndex = velocityData.length - 1
+    if (currentSprintName) {
+      const currentIndex = velocityData.findIndex(s => s.sprint === currentSprintName)
+      if (currentIndex >= 0) {
+        recentIndex = currentIndex
+      }
+    }
+
+    // Need at least 4 sprints for meaningful long-term analysis
+    if (recentIndex < 3) return { causes: [], actions: [] }
+
+    // Determine unit labels and values based on view mode
+    const unit = viewMode === 'points' ? 'point' : 'issue'
+    const units = viewMode === 'points' ? 'points' : 'issues'
+    const avgVelocityValue = viewMode === 'points' ? avgVelocity.byPoints : avgVelocity.byIssues
+
+    // Extract long-term trend for analysis (handle both object and number)
+    const trendValue = typeof trend === 'object' ? trend.longTerm : trend
+    const shortTermValue = typeof trend === 'object' ? trend.shortTerm : 0
+
+    // Calculate recent 3 sprints average and previous 3 sprints average
+    const recentStart = Math.max(0, recentIndex - 2)
+    const recentSprints = velocityData.slice(recentStart, recentIndex + 1)
+    const recentAvg = recentSprints.reduce((sum, s) => {
+      const val = viewMode === 'points' ? s.velocityPoints : s.velocity
+      return sum + val
+    }, 0) / recentSprints.length
+
+    const previousStart = Math.max(0, recentStart - 3)
+    const previousEnd = recentStart
+    const previousSprints = velocityData.slice(previousStart, previousEnd)
+    const previousAvg = previousSprints.length > 0
+      ? previousSprints.reduce((sum, s) => {
+          const val = viewMode === 'points' ? s.velocityPoints : s.velocity
+          return sum + val
+        }, 0) / previousSprints.length
+      : 0
+
+    // Identify outlier sprints in the 6-sprint window
+    const allSixSprints = velocityData.slice(previousStart, recentIndex + 1)
+    const sixSprintAvg = allSixSprints.reduce((sum, s) => {
+      const val = viewMode === 'points' ? s.velocityPoints : s.velocity
+      return sum + val
+    }, 0) / allSixSprints.length
+
+    // Find sprints that are significantly below average (>30% below)
+    const outliers = allSixSprints
+      .map((sprint, idx) => {
+        const val = viewMode === 'points' ? sprint.velocityPoints : sprint.velocity
+        const deviation = ((val - sixSprintAvg) / sixSprintAvg) * 100
+        return { sprint, val, deviation, globalIndex: previousStart + idx }
+      })
+      .filter(item => item.deviation < -30)
+      .sort((a, b) => a.deviation - b.deviation) // Most problematic first
+
+    // Check capacity impact for outlier sprints
+    const outliersWithReasons = outliers.map(outlier => {
+      let capacityImpact = null
+      if (allIssues && outlier.sprint.sprint) {
+        capacityImpact = calculateSprintCapacityImpact(
+          allIssues,
+          outlier.sprint.sprint,
+          getTeamAbsenceStats,
+          loadTeamConfig
+        )
+      }
+      return { ...outlier, capacityImpact }
+    })
+
+    // LONG-TERM ANALYSIS: Focus on 6-sprint trend
+    if (trendValue < -10) {
+      // Significant long-term decline
+      const dropPercent = Math.abs(trendValue)
+      const dropAmount = Math.round(previousAvg - recentAvg)
+
+      causes.push({
+        severity: 'critical',
+        category: 'velocity-decline',
+        description: `Long-term velocity declining by ${dropPercent}% over last 6 sprints`,
+        impact: `Average dropped from ${Math.round(previousAvg)} to ${Math.round(recentAvg)} ${units}/sprint (${dropAmount} ${units} less per sprint)`
+      })
+
+      // Identify problematic sprints with root causes
+      if (outliersWithReasons.length > 0) {
+        outliersWithReasons.forEach((outlier, idx) => {
+          const sprintName = outlier.sprint.sprint
+          const capacityReason = outlier.capacityImpact && outlier.capacityImpact.lossPercentage >= 15
+            ? ` due to ${outlier.capacityImpact.lossPercentage}% capacity reduction (${outlier.capacityImpact.absenceCount} team member(s) absent)`
+            : ''
+
+          const completionIssue = outlier.sprint.completionRate < 70
+            ? ` and low completion rate (${outlier.sprint.completionRate}%)`
+            : ''
+
+          causes.push({
+            severity: 'warning',
+            category: 'outlier-sprint',
+            description: `Sprint "${sprintName}" dragged velocity down by ${Math.abs(Math.round(outlier.deviation))}%${capacityReason}${completionIssue}`,
+            impact: `Only ${Math.round(outlier.val)} ${units} completed vs ${Math.round(sixSprintAvg)} average`
+          })
+        })
+
+        // Check if capacity issues explain the trend
+        const capacityRelatedOutliers = outliersWithReasons.filter(o =>
+          o.capacityImpact && o.capacityImpact.lossPercentage >= 15
+        )
+
+        if (capacityRelatedOutliers.length > 0) {
+          actions.push({
+            priority: 'high',
+            title: 'Adjust for capacity fluctuations',
+            description: `${capacityRelatedOutliers.length} sprint(s) had significant absences. Factor in planned time off when setting expectations and improve capacity planning.`,
+            estimatedImpact: 'Context-aware performance assessment'
+          })
+        }
+      }
+
+      // Check recent sprint completion rates
+      const recentLowCompletion = recentSprints.filter(s => s.completionRate < 70)
+      if (recentLowCompletion.length >= 2) {
+        causes.push({
+          severity: 'warning',
+          category: 'completion-rate',
+          description: `${recentLowCompletion.length} of last 3 sprints had completion rate below 70%`,
+          impact: 'Team consistently overcommitting'
+        })
+        actions.push({
+          priority: 'high',
+          title: 'Reduce sprint scope',
+          description: 'Team is taking on too much work. Reduce planned work by 20-30% for next 2 sprints',
+          estimatedImpact: 'Improve completion rate to 80%+ and stabilize velocity'
+        })
+      }
+
+      actions.push({
+        priority: 'high',
+        title: 'Investigate systemic issues',
+        description: 'Long-term decline suggests deeper problems. Review: technical debt, process bottlenecks, team morale, or changing requirements complexity.',
+        estimatedImpact: 'Identify and address root causes'
+      })
+    } else if (trendValue > 10) {
+      // Improving long-term velocity
+      const increasePercent = trendValue
+      const increaseAmount = Math.round(recentAvg - previousAvg)
+
+      causes.push({
+        severity: 'info',
+        category: 'velocity-improvement',
+        description: `Long-term velocity improving by ${increasePercent}% over last 6 sprints`,
+        impact: `Average increased from ${Math.round(previousAvg)} to ${Math.round(recentAvg)} ${units}/sprint (+${increaseAmount} ${units} per sprint)`
+      })
+
+      // Check if improvement is consistent
+      const recentHighCompletion = recentSprints.filter(s => s.completionRate > 85)
+      if (recentHighCompletion.length >= 2) {
+        causes.push({
+          severity: 'info',
+          category: 'high-completion',
+          description: `${recentHighCompletion.length} of last 3 sprints exceeded 85% completion rate`,
+          impact: 'Team efficiently delivering planned work'
+        })
+        actions.push({
+          priority: 'low',
+          title: 'Consider scope increase',
+          description: 'Team showing consistent high performance. Test capacity with 10-15% scope increase',
+          estimatedImpact: 'Optimize team utilization'
+        })
+      }
+
+      actions.push({
+        priority: 'low',
+        title: 'Document and replicate success',
+        description: 'Capture improvements made over last 6 sprints (process changes, tooling, team dynamics) to sustain growth',
+        estimatedImpact: 'Maintain upward velocity trend'
+      })
+    } else {
+      // Stable long-term velocity
+      causes.push({
+        severity: 'info',
+        category: 'velocity-stable',
+        description: `Velocity stable over last 6 sprints at ~${Math.round(recentAvg)} ${units}/sprint`,
+        impact: 'Predictable and reliable delivery rate'
+      })
+
+      // Check if there are concerning outliers despite overall stability
+      if (outliers.length > 0) {
+        const outlierSprint = outliers[0]
+        causes.push({
+          severity: 'info',
+          category: 'outlier-sprint',
+          description: `Sprint "${outlierSprint.sprint.sprint}" was ${Math.abs(Math.round(outlierSprint.deviation))}% below average but overall trend remains stable`,
+          impact: 'One-time disruption, not a systemic issue'
+        })
+      }
+
+      if (recentAvg < 5 && recentSprints.some(s => s.totalIssues > 10)) {
+        causes.push({
+          severity: 'warning',
+          category: 'low-velocity',
+          description: `Velocity stable but low at ${Math.round(recentAvg)} ${units}/sprint despite significant work planned`,
+          impact: 'Team may be overloaded or work items too large'
+        })
+        actions.push({
+          priority: 'medium',
+          title: 'Break down work items',
+          description: viewMode === 'points'
+            ? 'Split large stories into smaller chunks (aim for 1-5 point stories)'
+            : 'Split large issues into smaller chunks (aim for 1-3 day issues)',
+          estimatedImpact: 'Increase throughput and visibility'
+        })
+      }
+    }
+
+    // Add short-term context as additional info
+    if (Math.abs(shortTermValue) > 20 && Math.abs(shortTermValue - trendValue) > 15) {
+      causes.push({
+        severity: 'info',
+        category: 'short-term-note',
+        description: `Note: Sprint-to-sprint change is ${shortTermValue >= 0 ? '+' : ''}${shortTermValue}% which differs from long-term trend`,
+        impact: 'Recent sprint may be an outlier - focus on 6-sprint trend for strategic decisions'
+      })
+    }
+
+    return { causes, actions }
+  }
+
+  const analytics = useMemo(() => {
+    if (!issues || issues.length === 0) {
+      return null
+    }
+
+    const velocityData = calculateVelocity(issues)
+
+    // Determine current sprint FIRST (before calculating trend/average)
+    // This ensures we don't include future sprints in calculations
+    let currentSprint
+    if (isFiltered && selectedIterations.length === 1) {
+      // Single iteration selected - use it for burndown
+      currentSprint = selectedIterations[0]
+    } else if (isFiltered && selectedIterations.length > 1) {
+      // Multiple iterations selected - use the most recent one
+      currentSprint = selectedIterations[0] // They're sorted newest first
+    } else {
+      // No filter or "All" selected - auto-detect current sprint
+      currentSprint = getCurrentSprint(issues)
+    }
+
+    // Calculate trend and average using current sprint to avoid future sprints
+    // Use analytics-specific lookback iterations (separate from Team Management)
+    const analyticsLookback = velocityConfig.analyticsLookbackIterations || velocityConfig.velocityLookbackIterations || 3
+    const avgVelocity = calculateAverageVelocity(velocityData, analyticsLookback, currentSprint)
+
+    const burndownIssues = calculateBurndown(issues, currentSprint, 'issues')
+    const burndownPoints = calculateBurndown(issues, currentSprint, 'points')
+    const prediction = predictCompletion(issues, avgVelocity.byIssues)
+
+    return {
+      velocityData,
+      avgVelocity,
+      currentSprint,
+      burndownIssues,
+      burndownPoints,
+      prediction
+    }
+  }, [issues, selectedIterations, isFiltered, velocityConfig])
+
+  if (!analytics || analytics.velocityData.length === 0) {
+    return (
+      <div className="container">
+        <div className="card text-center" style={{ padding: '60px 20px' }}>
+          <h3 className="mb-2">No Velocity Data</h3>
+          <p className="text-muted">Add "Sprint X" labels to your issues to track velocity and burndown.</p>
+        </div>
+      </div>
+    )
+  }
+
+  const { velocityData: fullVelocityData, avgVelocity, currentSprint, burndownIssues, burndownPoints, prediction } = analytics
+
+  // Limit chart display to trailing 12 months or last 12 sprints to prevent overflow
+  const velocityDataForChart = React.useMemo(() => {
+    if (!fullVelocityData || fullVelocityData.length === 0) return []
+
+    // Try to filter by 12 months first
+    const twelveMonthsAgo = new Date()
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12)
+
+    const recentData = fullVelocityData.filter(sprint => {
+      if (!sprint.endDate) return false
+      const endDate = new Date(sprint.endDate)
+      return endDate >= twelveMonthsAgo
+    })
+
+    // If we have data within 12 months, use it; otherwise fall back to last 12 sprints
+    if (recentData.length > 0) {
+      return recentData
+    }
+
+    // Fall back to last 12 sprints
+    return fullVelocityData.slice(-12)
+  }, [fullVelocityData])
+
+  // Use full data for trend calculations (need historical context)
+  const velocityData = fullVelocityData
+
+  // Calculate trend based on current view mode
+  const trend = calculateVelocityTrend(velocityData, currentSprint, viewMode)
+
+  // Select burndown based on view mode
+  const burndown = viewMode === 'points' ? burndownPoints : burndownIssues
+
+  // Helper to get trend color and icon
+  const getTrendDisplay = (trendValue) => {
+    if (trendValue > 10) return { color: '#059669', icon: '↑', label: 'Improving' }
+    if (trendValue < -10) return { color: '#DC2626', icon: '↓', label: 'Declining' }
+    return { color: '#D97706', icon: '→', label: 'Stable' }
+  }
+
+  // Handle trend being either an object or a number (backwards compatibility)
+  const shortTerm = typeof trend === 'object' ? trend.shortTerm : trend
+  const longTerm = typeof trend === 'object' ? trend.longTerm : 0
+  const hasLongTerm = typeof trend === 'object' && velocityData.length >= 4
+
+  const shortTermDisplay = getTrendDisplay(shortTerm)
+  const longTermDisplay = getTrendDisplay(longTerm)
+
+  // Calculate max values for chart scaling based on view mode (use chart data, not full data)
+  const maxVelocity = Math.max(...velocityDataForChart.map((s) => viewMode === 'points' ? s.velocityPoints : s.velocity), 10)
+  const maxBurndown = burndown.total || 10
+
+  const handleExportCSV = () => {
+    const csvContent = exportVelocityToCSV(velocityData)
+    const date = new Date().toISOString().split('T')[0]
+    downloadCSV(csvContent, `velocity-data-${date}.csv`)
+  }
+
+  return (
+    <div className="container-fluid">
+      {/* Header with Mode Toggle and Export Button */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+        <div>
+          <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>Velocity & Burndown Analytics</h2>
+          <p style={{ fontSize: '14px', color: '#6B7280' }}>
+            Sprint velocity, trends, burndown chart, and predictive analytics
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          {/* View Mode Toggle */}
+          <div style={{
+            display: 'flex',
+            background: '#F3F4F6',
+            borderRadius: '8px',
+            padding: '4px'
+          }}>
+            <button
+              onClick={() => setViewMode('issues')}
+              style={{
+                padding: '6px 16px',
+                background: viewMode === 'issues' ? 'white' : 'transparent',
+                color: viewMode === 'issues' ? '#1F2937' : '#6B7280',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: viewMode === 'issues' ? '600' : '400',
+                boxShadow: viewMode === 'issues' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              Issue Count
+            </button>
+            <button
+              onClick={() => setViewMode('points')}
+              style={{
+                padding: '6px 16px',
+                background: viewMode === 'points' ? 'white' : 'transparent',
+                color: viewMode === 'points' ? '#1F2937' : '#6B7280',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: viewMode === 'points' ? '600' : '400',
+                boxShadow: viewMode === 'points' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              Story Points
+            </button>
+          </div>
+
+          <button
+            className="btn btn-primary"
+            onClick={handleExportCSV}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <span>Export CSV</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+        <div className="card">
+          <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>Current Sprint</div>
+          <div style={{ fontSize: '32px', fontWeight: '600', color: '#1F2937' }}>
+            Sprint {currentSprint || 'N/A'}
+          </div>
+        </div>
+
+        <div className="card">
+          <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
+            Avg. Velocity (Last {avgVelocity.sprintsUsed || 0}{avgVelocity.sprintsUsed !== (velocityConfig.analyticsLookbackIterations || velocityConfig.velocityLookbackIterations || 3) ? ` of ${velocityConfig.analyticsLookbackIterations || velocityConfig.velocityLookbackIterations || 3}` : ''})
+          </div>
+          <div style={{ fontSize: '32px', fontWeight: '600', color: '#2563EB' }}>
+            {viewMode === 'points' ? avgVelocity.byPoints : avgVelocity.byIssues}{' '}
+            <span style={{ fontSize: '16px', color: '#6B7280' }}>
+              {viewMode === 'points' ? 'points/sprint' : 'issues/sprint'}
+            </span>
+          </div>
+          {/* Show both metrics in small text */}
+          <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '4px' }}>
+            {viewMode === 'points'
+              ? `${avgVelocity.byIssues} issues/sprint`
+              : `${avgVelocity.byPoints} points/sprint`
+            }
+          </div>
+        </div>
+
+        <div className="card">
+          <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>Velocity Trend</div>
+          {/* Long-term trend (primary display) */}
+          {hasLongTerm ? (
+            <>
+              <div style={{ fontSize: '32px', fontWeight: '600', color: longTermDisplay.color, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>{longTermDisplay.icon}</span>
+                <span>{Math.abs(longTerm)}%</span>
+              </div>
+              <div style={{ fontSize: '12px', color: longTermDisplay.color, marginTop: '4px' }}>
+                {longTermDisplay.label} (6-Sprint Trend)
+              </div>
+              {/* Short-term trend (secondary info) */}
+              <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #E5E7EB' }}>
+                <span style={{ fontWeight: '600' }}>Sprint-to-Sprint: </span>
+                <span style={{ color: shortTermDisplay.color, fontWeight: '600' }}>
+                  {shortTermDisplay.icon} {Math.abs(shortTerm)}%
+                </span>
+                <span> ({shortTermDisplay.label})</span>
+              </div>
+            </>
+          ) : (
+            /* Fallback to short-term if long-term unavailable */
+            <>
+              <div style={{ fontSize: '32px', fontWeight: '600', color: shortTermDisplay.color, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>{shortTermDisplay.icon}</span>
+                <span>{Math.abs(shortTerm)}%</span>
+              </div>
+              <div style={{ fontSize: '12px', color: shortTermDisplay.color, marginTop: '4px' }}>
+                {shortTermDisplay.label} (Sprint-to-Sprint)
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="card">
+          <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>Predicted Completion</div>
+          <div style={{ fontSize: '20px', fontWeight: '600', color: '#059669' }}>
+            {prediction ? new Date(prediction.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'}
+          </div>
+          {prediction && (
+            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
+              {prediction.sprintsRemaining} sprints ({prediction.confidence}% confidence)
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Velocity Root Cause Analysis */}
+      {(() => {
+        const { causes, actions } = getVelocityRootCause(velocityData, trend, avgVelocity, currentSprint, issues, viewMode)
+
+        if (causes.length === 0) return null
+
+        return (
+          <div className="card" style={{ marginBottom: '20px', background: '#F9FAFB' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
+              Velocity Analysis
+            </h3>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              {/* Root Causes */}
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937', marginBottom: '12px' }}>
+                  Analysis:
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {causes.map((cause, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: '12px',
+                        background: 'white',
+                        borderRadius: '6px',
+                        borderLeft: `4px solid ${
+                          cause.severity === 'critical' ? '#DC2626' :
+                          cause.severity === 'warning' ? '#D97706' :
+                          '#2563EB'
+                        }`
+                      }}
+                    >
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>
+                        {cause.description}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                        {cause.impact}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recommended Actions */}
+              {actions.length > 0 && (
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937', marginBottom: '12px' }}>
+                    Recommended Actions:
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {actions.map((action, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          padding: '12px',
+                          background: 'white',
+                          borderRadius: '6px',
+                          borderLeft: '4px solid #2563EB'
+                        }}
+                      >
+                        <div style={{ fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>
+                          {action.title}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>
+                          {action.description}
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
+                          Expected impact: {action.estimatedImpact}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+        {/* Velocity Chart */}
+        <div className="card">
+          <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
+            Sprint Velocity
+            {fullVelocityData.length > velocityDataForChart.length && (
+              <span style={{ fontSize: '12px', fontWeight: '400', color: '#6B7280', marginLeft: '8px' }}>
+                (Last {velocityDataForChart.length} of {fullVelocityData.length} sprints)
+              </span>
+            )}
+          </h2>
+
+          {velocityDataForChart.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#6B7280' }}>
+              No velocity data available
+            </div>
+          ) : (
+            <div>
+              {/* Chart */}
+              <div style={{ position: 'relative', height: '300px', marginBottom: '20px' }}>
+                {/* Y-axis labels */}
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 40, width: '40px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: '12px', color: '#6B7280', textAlign: 'right', paddingRight: '8px' }}>
+                  <div>{maxVelocity}</div>
+                  <div>{Math.round(maxVelocity * 0.75)}</div>
+                  <div>{Math.round(maxVelocity * 0.5)}</div>
+                  <div>{Math.round(maxVelocity * 0.25)}</div>
+                  <div>0</div>
+                </div>
+
+                {/* Chart area */}
+                <div style={{ position: 'absolute', left: '50px', right: 0, top: 0, bottom: 40, borderLeft: '2px solid #E5E7EB', borderBottom: '2px solid #E5E7EB', display: 'flex', alignItems: 'flex-end', gap: '8px', padding: '10px' }}>
+                  {velocityDataForChart.map((sprint, index) => {
+                    const value = viewMode === 'points' ? sprint.velocityPoints : sprint.velocity
+                    const barHeightPercent = (value / maxVelocity) * 100
+
+                    // Find the current sprint index in the filtered chart data
+                    let currentSprintIndex = velocityDataForChart.length - 1
+                    if (currentSprint) {
+                      const foundIndex = velocityDataForChart.findIndex(s => s.sprint === currentSprint)
+                      if (foundIndex >= 0) {
+                        currentSprintIndex = foundIndex
+                      }
+                    }
+
+                    // Only highlight the last 3 sprints up to and including the current sprint
+                    const isRecent = index >= Math.max(0, currentSprintIndex - 2) && index <= currentSprintIndex
+
+                    // Calculate actual pixel height from the container (300px total - 40px for x-axis - 20px padding = 240px chart area)
+                    const chartHeightPx = 240
+                    const barHeightPx = Math.max((barHeightPercent / 100) * chartHeightPx, 24)
+
+                    return (
+                      <div key={sprint.sprint} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end' }}>
+                        {/* Bar */}
+                        <div
+                          style={{
+                            width: '100%',
+                            height: `${barHeightPx}px`,
+                            background: isRecent ? '#2563EB' : '#93C5FD',
+                            borderRadius: '4px 4px 0 0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            fontSize: '12px',
+                            fontWeight: '600'
+                          }}
+                        >
+                          {value}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* X-axis labels */}
+                <div style={{ position: 'absolute', left: '50px', right: 0, bottom: 0, height: '40px', display: 'flex', gap: '8px', padding: '0 10px', overflow: 'hidden' }}>
+                  {velocityDataForChart.map((sprint) => (
+                    <div
+                      key={sprint.sprint}
+                      style={{
+                        flex: 1,
+                        fontSize: velocityDataForChart.length > 10 ? '9px' : '11px',
+                        color: '#6B7280',
+                        textAlign: 'center',
+                        paddingTop: '8px',
+                        lineHeight: '1.2',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
+                      title={sprint.sprint}
+                    >
+                      {sprint.sprint}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Average line indicator */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '12px', background: '#F3F4F6', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '20px', height: '3px', background: '#2563EB' }} />
+                  <span style={{ fontSize: '12px', color: '#6B7280' }}>Recent Sprint</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '20px', height: '3px', background: '#93C5FD' }} />
+                  <span style={{ fontSize: '12px', color: '#6B7280' }}>Previous Sprint</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Burndown Chart */}
+        <div className="card">
+          <div style={{ marginBottom: '16px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>
+              Sprint {currentSprint} Burndown
+            </h2>
+            <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '0' }}>
+              Track daily progress vs. ideal burndown rate
+            </p>
+          </div>
+
+          {isFiltered && selectedIterations.length > 1 ? (
+            <div style={{ textAlign: 'center', padding: '60px 20px', background: '#F9FAFB', borderRadius: '8px' }}>
+              <div style={{ fontSize: '16px', fontWeight: '600', color: '#6B7280', marginBottom: '8px' }}>
+                Multiple Iterations Selected
+              </div>
+              <p style={{ fontSize: '13px', color: '#9CA3AF' }}>
+                Burndown chart shows a single sprint. Please select one iteration to view its burndown chart.
+              </p>
+            </div>
+          ) : burndown.total === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#6B7280' }}>
+              No burndown data for current sprint
+            </div>
+          ) : (
+            <div>
+              {/* Chart */}
+              <div style={{ position: 'relative', height: '300px', marginBottom: '20px' }}>
+                {/* Y-axis labels */}
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 60, width: '40px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: '12px', color: '#6B7280', textAlign: 'right', paddingRight: '8px' }}>
+                  <div>{burndown.total}</div>
+                  <div>{Math.round(burndown.total * 0.75)}</div>
+                  <div>{Math.round(burndown.total * 0.5)}</div>
+                  <div>{Math.round(burndown.total * 0.25)}</div>
+                  <div>0</div>
+                </div>
+
+                {/* Chart area */}
+                <div style={{ position: 'absolute', left: '50px', right: 0, top: 0, bottom: 60, borderLeft: '2px solid #E5E7EB', borderBottom: '2px solid #E5E7EB' }}>
+                  <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
+                    {/* Calculate date-based positioning (needed for both ideal and actual lines) */}
+                    {(() => {
+                      const start = new Date(burndown.sprintStart)
+                      const end = new Date(burndown.sprintEnd)
+                      // Use exact time difference, not ceil, for accurate proportions
+                      const sprintDuration = (end - start) / (24 * 60 * 60 * 1000)
+
+                      // Helper function: convert date to X coordinate as percentage string
+                      const dateToXPos = (dateStr) => {
+                        const date = new Date(dateStr)
+                        // Use exact fractional days for accurate positioning
+                        const daysSinceStart = (date - start) / (24 * 60 * 60 * 1000)
+                        return `${(daysSinceStart / sprintDuration) * 100}%`
+                      }
+
+                      // Helper function: convert remaining issues to Y coordinate as percentage string
+                      const remainingToYPos = (remaining) => {
+                        return `${100 - (remaining / burndown.total) * 100}%`
+                      }
+
+                      return (
+                        <>
+                          {/* Ideal line - Draw line as separate segments using percentage positioning */}
+                          {burndown.ideal.length > 0 && (
+                            <>
+                              {/* Draw lines between points */}
+                              {burndown.ideal.length > 1 && burndown.ideal.slice(0, -1).map((point, i) => {
+                                const nextPoint = burndown.ideal[i + 1]
+                                const x1 = dateToXPos(point.date)
+                                const y1 = remainingToYPos(point.remaining)
+                                const x2 = dateToXPos(nextPoint.date)
+                                const y2 = remainingToYPos(nextPoint.remaining)
+                                return (
+                                  <line
+                                    key={`ideal-line-${i}`}
+                                    x1={x1}
+                                    y1={y1}
+                                    x2={x2}
+                                    y2={y2}
+                                    stroke="#9CA3AF"
+                                    strokeWidth="2"
+                                    strokeDasharray="4,3"
+                                    strokeLinecap="round"
+                                  />
+                                )
+                              })}
+                              {/* Ideal line data points - no hover for consistency */}
+                              {burndown.ideal.map((point, i) => {
+                                const x = dateToXPos(point.date)
+                                const y = remainingToYPos(point.remaining)
+                                return (
+                                  <g key={`ideal-${i}`}>
+                                    <circle
+                                      cx={x}
+                                      cy={y}
+                                      r="3"
+                                      fill="white"
+                                      stroke="#9CA3AF"
+                                      strokeWidth="1.5"
+                                      style={{ pointerEvents: 'none' }}
+                                    />
+                                  </g>
+                                )
+                              })}
+                            </>
+                          )}
+
+                          {/* Actual line - Draw line as separate segments using percentage positioning */}
+                          {burndown.actual.length > 0 && (
+                            <>
+                              {/* Draw lines between points */}
+                              {burndown.actual.length > 1 && burndown.actual.slice(0, -1).map((point, i) => {
+                                const nextPoint = burndown.actual[i + 1]
+                                const x1 = dateToXPos(point.date)
+                                const y1 = remainingToYPos(point.remaining)
+                                const x2 = dateToXPos(nextPoint.date)
+                                const y2 = remainingToYPos(nextPoint.remaining)
+                                return (
+                                  <line
+                                    key={`actual-line-${i}`}
+                                    x1={x1}
+                                    y1={y1}
+                                    x2={x2}
+                                    y2={y2}
+                                    stroke="#DC2626"
+                                    strokeWidth="2.5"
+                                    strokeLinecap="round"
+                                  />
+                                )
+                              })}
+                              {/* Actual line data points with interactive hover */}
+                              {burndown.actual.map((point, i) => {
+                                const x = dateToXPos(point.date)
+                                const y = remainingToYPos(point.remaining)
+                                const dateObj = new Date(point.date)
+                                const dayName = dateObj.toLocaleDateString('de-DE', { weekday: 'long' })
+
+                                // Find ideal point for same date (not same index!)
+                                const idealAtSameDay = burndown.ideal.find(ip => ip.date === point.date)
+                                const diff = idealAtSameDay ? point.remaining - idealAtSameDay.remaining : 0
+                                const completed = burndown.total - point.remaining
+                                const percentComplete = ((completed / burndown.total) * 100).toFixed(0)
+                                const idealCompleted = burndown.total - (idealAtSameDay ? idealAtSameDay.remaining : 0)
+                                const idealPercentComplete = ((idealCompleted / burndown.total) * 100).toFixed(0)
+
+                                const unit = viewMode === 'points' ? 'point' : 'issue'
+                                const units = viewMode === 'points' ? 'points' : 'issues'
+
+                                let statusText = ''
+                                if (diff > 0) {
+                                  statusText = `Behind by ${diff} ${diff > 1 ? units : unit}`
+                                } else if (diff < 0) {
+                                  statusText = `Ahead by ${Math.abs(diff)} ${Math.abs(diff) > 1 ? units : unit}`
+                                } else {
+                                  statusText = 'On track'
+                                }
+
+                                const tooltip = [
+                                  `${dayName}, ${dateObj.toLocaleDateString('de-DE', { month: 'long', day: 'numeric', year: 'numeric' })}`,
+                                  ``,
+                                  `Remaining: ${point.remaining} of ${burndown.total} ${units} (${percentComplete}% complete)`,
+                                  `Ideal: ${idealAtSameDay ? idealAtSameDay.remaining : 0} remaining (${idealPercentComplete}% complete)`,
+                                  ``,
+                                  `Status: ${statusText}`
+                                ].join('\n')
+
+                                return (
+                                  <g key={`actual-${i}`}>
+                                    <title>{tooltip}</title>
+                                    {/* Larger invisible circle for better hover detection */}
+                                    <circle
+                                      cx={x}
+                                      cy={y}
+                                      r="8"
+                                      fill="transparent"
+                                      style={{ cursor: 'pointer', pointerEvents: 'all' }}
+                                    />
+                                    {/* Visible circle */}
+                                    <circle
+                                      cx={x}
+                                      cy={y}
+                                      r="4"
+                                      fill="#DC2626"
+                                      stroke="white"
+                                      strokeWidth="1"
+                                      style={{
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        pointerEvents: 'all'
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        e.target.setAttribute('r', '5')
+                                        e.target.setAttribute('stroke-width', '1.5')
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.target.setAttribute('r', '4')
+                                        e.target.setAttribute('stroke-width', '1')
+                                      }}
+                                    >
+                                      <title>{tooltip}</title>
+                                    </circle>
+                                  </g>
+                                )
+                              })}
+                            </>
+                          )}
+
+                          {/* Week markers and Today line */}
+                          {(() => {
+                            const markers = []
+                            // Need to recalculate totalDays in this scope
+                            const totalDays = Math.ceil(sprintDuration)
+
+                            // Week markers
+                            for (let day = 0; day <= totalDays; day += 7) {
+                              if (day > 0 && day < totalDays) {
+                                const xPos = `${(day / sprintDuration) * 100}%`
+                                markers.push(
+                                  <line
+                                    key={`week-${day}`}
+                                    x1={xPos}
+                                    y1="0%"
+                                    x2={xPos}
+                                    y2="100%"
+                                    stroke="#E5E7EB"
+                                    strokeWidth="0.3"
+                                    strokeDasharray="1,1"
+                                    opacity="0.5"
+                                    vectorEffect="non-scaling-stroke"
+                                  />
+                                )
+                              }
+                            }
+
+                            // Today marker - only if within sprint period
+                            const today = new Date()
+                            today.setHours(0, 0, 0, 0)
+                            if (today >= start && today <= end) {
+                              const daysSinceStart = (today - start) / (24 * 60 * 60 * 1000)
+                              const todayXPos = `${(daysSinceStart / sprintDuration) * 100}%`
+
+                              markers.push(
+                                <g key="today-marker">
+                                  {/* Today line */}
+                                  <line
+                                    x1={todayXPos}
+                                    y1="-5%"
+                                    x2={todayXPos}
+                                    y2="100%"
+                                    stroke="#EF4444"
+                                    strokeWidth="2"
+                                    style={{ cursor: 'default' }}
+                                  >
+                                    <title>{`Today: ${today.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}</title>
+                                  </line>
+                                  {/* Today label */}
+                                  <text
+                                    x={todayXPos}
+                                    y="-1%"
+                                    textAnchor="middle"
+                                    fill="#EF4444"
+                                    fontSize="12"
+                                    fontWeight="600"
+                                    style={{ cursor: 'default' }}
+                                  >
+                                    <title>{`Today: ${today.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}</title>
+                                    TODAY
+                                  </text>
+                                </g>
+                              )
+                            }
+
+                            return markers
+                          })()}
+                        </>
+                      )
+                    })()}
+                  </svg>
+                </div>
+
+                {/* X-axis labels with daily/regular markers */}
+                <div style={{ position: 'absolute', left: '50px', right: 0, bottom: 0, height: '60px' }}>
+                  {/* Date labels - positioned absolutely to match SVG coordinates */}
+                  <div style={{ position: 'relative', paddingTop: '8px', borderTop: '1px solid #E5E7EB', height: '100%' }}>
+                    {burndown.sprintStart && burndown.sprintEnd && (() => {
+                      const start = new Date(burndown.sprintStart)
+                      const end = new Date(burndown.sprintEnd)
+                      const today = new Date()
+                      today.setHours(0, 0, 0, 0)
+                      // Use exact duration for accurate proportions
+                      const sprintDuration = (end - start) / (24 * 60 * 60 * 1000)
+                      const totalDays = Math.ceil(sprintDuration)
+                      const labels = []
+
+                      // Determine optimal interval based on sprint length
+                      let interval
+                      if (totalDays <= 7) {
+                        interval = 1 // Show every day for 1-week sprints
+                      } else if (totalDays <= 14) {
+                        interval = 2 // Show every 2 days for 2-week sprints
+                      } else if (totalDays <= 21) {
+                        interval = 3 // Show every 3 days for 3-week sprints
+                      } else {
+                        interval = 5 // Show every 5 days for longer sprints
+                      }
+
+                      // Start date
+                      labels.push(
+                        <div key="start" style={{ position: 'absolute', left: '0%', fontSize: '11px', color: '#1F2937', textAlign: 'left', transform: 'translateX(0)', fontWeight: '600' }}>
+                          <div>{start.toLocaleDateString('de-DE', { month: 'short', day: 'numeric' })}</div>
+                          <div style={{ fontSize: '9px', color: '#9CA3AF', fontWeight: '400' }}>{start.toLocaleDateString('de-DE', { weekday: 'short' })}</div>
+                        </div>
+                      )
+
+                      // Intermediate markers at regular intervals
+                      for (let day = interval; day < totalDays; day += interval) {
+                        const date = new Date(start.getTime() + day * 24 * 60 * 60 * 1000)
+                        // Use exact fractional position
+                        const xPos = (day / sprintDuration) * 100
+
+                        // Skip if too close to "today" marker (within 3% of chart width)
+                        const todayWithinSprint = today >= start && today <= end
+                        // Use exact fractional days for today position
+                        const todayDaysSinceStart = (today - start) / (24 * 60 * 60 * 1000)
+                        const todayXPos = (todayDaysSinceStart / sprintDuration) * 100
+                        const tooCloseToToday = todayWithinSprint && Math.abs(xPos - todayXPos) < 5
+
+                        if (!tooCloseToToday) {
+                          labels.push(
+                            <div key={`day-${day}`} style={{ position: 'absolute', left: `${xPos}%`, fontSize: '10px', color: '#6B7280', textAlign: 'center', transform: 'translateX(-50%)' }}>
+                              <div>{date.toLocaleDateString('de-DE', { month: 'short', day: 'numeric' })}</div>
+                              <div style={{ fontSize: '8px', color: '#9CA3AF' }}>{date.toLocaleDateString('de-DE', { weekday: 'short' })}</div>
+                            </div>
+                          )
+                        }
+                      }
+
+                      // Today marker (if within sprint) - prominently displayed
+                      if (today >= start && today <= end) {
+                        // Use exact fractional days for accurate positioning
+                        const daysSinceStart = (today - start) / (24 * 60 * 60 * 1000)
+                        const todayXPos = (daysSinceStart / sprintDuration) * 100
+                        labels.push(
+                          <div key="today" style={{ position: 'absolute', left: `${todayXPos}%`, fontSize: '11px', color: '#EF4444', fontWeight: '700', textAlign: 'center', transform: 'translateX(-50%)', zIndex: 10 }}>
+                            <div>Today</div>
+                            <div style={{ fontSize: '9px', fontWeight: '600' }}>{today.toLocaleDateString('de-DE', { weekday: 'short' })}</div>
+                          </div>
+                        )
+                      }
+
+                      // End date
+                      labels.push(
+                        <div key="end" style={{ position: 'absolute', right: '0%', fontSize: '11px', color: '#1F2937', textAlign: 'right', transform: 'translateX(0)', fontWeight: '600' }}>
+                          <div>{end.toLocaleDateString('de-DE', { month: 'short', day: 'numeric' })}</div>
+                          <div style={{ fontSize: '9px', color: '#9CA3AF', fontWeight: '400' }}>{end.toLocaleDateString('de-DE', { weekday: 'short' })}</div>
+                        </div>
+                      )
+
+                      return labels
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Legend */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '12px', background: '#F3F4F6', borderRadius: '8px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '20px', height: '3px', background: '#DC2626' }} />
+                  <span style={{ fontSize: '12px', color: '#6B7280' }}>Actual Progress</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '20px', height: '3px', background: '#D1D5DB', borderTop: '2px dashed #D1D5DB' }} />
+                  <span style={{ fontSize: '12px', color: '#6B7280' }}>Ideal Burndown</span>
+                </div>
+              </div>
+
+              {/* Current Status Summary - Replacing old status indicator */}
+              {burndown.actual.length > 0 && (() => {
+                const latestActual = burndown.actual[burndown.actual.length - 1]
+                const latestIdeal = burndown.ideal[burndown.actual.length - 1] || burndown.ideal[burndown.ideal.length - 1]
+                const remaining = latestActual.remaining
+                const idealRemaining = latestIdeal ? latestIdeal.remaining : 0
+                const diff = remaining - idealRemaining
+                const percentComplete = ((burndown.total - remaining) / burndown.total) * 100
+                const idealPercentComplete = ((burndown.total - idealRemaining) / burndown.total) * 100
+
+                // Determine unit based on view mode
+                const unit = viewMode === 'points' ? 'point' : 'issue'
+                const units = viewMode === 'points' ? 'points' : 'issues'
+
+                return (
+                  <div style={{
+                    padding: '16px 20px',
+                    background: diff > 0 ? '#FEF2F2' : diff < 0 ? '#ECFDF5' : '#F9FAFB',
+                    borderRadius: '8px',
+                    border: `2px solid ${diff > 0 ? '#FEE2E2' : diff < 0 ? '#D1FAE5' : '#E5E7EB'}`,
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', marginBottom: '8px' }}>
+                      Current Sprint Status
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: '8px', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '32px', fontWeight: '700', color: '#1F2937' }}>{remaining}</span>
+                      <span style={{ fontSize: '16px', color: '#6B7280' }}>/ {burndown.total} {units} remaining</span>
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
+                      {percentComplete.toFixed(0)}% complete · Ideal: {idealPercentComplete.toFixed(0)}%
+                    </div>
+                    {diff !== 0 && (
+                      <div style={{
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        color: diff > 0 ? '#DC2626' : '#059669'
+                      }}>
+                        {diff > 0 ? `${diff} ${diff !== 1 ? units : unit} behind schedule` : `${Math.abs(diff)} ${Math.abs(diff) !== 1 ? units : unit} ahead of schedule`}
+                      </div>
+                    )}
+                    {diff === 0 && (
+                      <div style={{ fontSize: '16px', fontWeight: '600', color: '#059669' }}>
+                        On track
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Sprint Details Table */}
+      <div className="card">
+        <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>Sprint History</h2>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid #E5E7EB' }}>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>Sprint</th>
+                <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>
+                  Total<br/>Issues
+                </th>
+                <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>
+                  Completed<br/>Issues
+                </th>
+                <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>
+                  Open<br/>Issues
+                </th>
+                <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>
+                  Velocity<br/>(Issues)
+                </th>
+                <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>
+                  Total<br/>Points
+                </th>
+                <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>
+                  Completed<br/>Points
+                </th>
+                <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>
+                  Velocity<br/>(Points)
+                </th>
+                <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>Completion Rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...velocityData].reverse().map((sprint) => (
+                <tr key={sprint.sprint} style={{ borderBottom: '1px solid #E5E7EB' }}>
+                  <td style={{ padding: '12px', fontWeight: '600' }}>Sprint {sprint.sprint}</td>
+                  <td style={{ padding: '12px', textAlign: 'center' }}>{sprint.totalIssues}</td>
+                  <td style={{ padding: '12px', textAlign: 'center', color: '#059669' }}>{sprint.completedIssues}</td>
+                  <td style={{ padding: '12px', textAlign: 'center', color: '#DC2626' }}>{sprint.openIssues}</td>
+                  <td style={{ padding: '12px', textAlign: 'center', fontWeight: '600', color: '#2563EB' }}>{sprint.velocity}</td>
+                  <td style={{ padding: '12px', textAlign: 'center', color: '#6B7280' }}>{sprint.totalPoints}</td>
+                  <td style={{ padding: '12px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{sprint.completedPoints}</td>
+                  <td style={{ padding: '12px', textAlign: 'center', fontWeight: '600', color: '#8B5CF6' }}>{sprint.velocityPoints}</td>
+                  <td style={{ padding: '12px', textAlign: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {/* Issues completion rate */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                        <div style={{ flex: 1, maxWidth: '100px', height: '6px', background: '#E5E7EB', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              width: `${sprint.completionRate}%`,
+                              height: '100%',
+                              background: sprint.completionRate >= 80 ? '#059669' : sprint.completionRate >= 50 ? '#D97706' : '#DC2626'
+                            }}
+                          />
+                        </div>
+                        <span style={{ fontSize: '12px', fontWeight: '600', minWidth: '40px', color: '#2563EB' }}>{sprint.completionRate}%</span>
+                      </div>
+                      {/* Points completion rate */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                        <div style={{ flex: 1, maxWidth: '100px', height: '6px', background: '#E5E7EB', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              width: `${sprint.completionRatePoints}%`,
+                              height: '100%',
+                              background: sprint.completionRatePoints >= 80 ? '#059669' : sprint.completionRatePoints >= 50 ? '#D97706' : '#DC2626'
+                            }}
+                          />
+                        </div>
+                        <span style={{ fontSize: '12px', fontWeight: '600', minWidth: '40px', color: '#8B5CF6' }}>{sprint.completionRatePoints}%</span>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
