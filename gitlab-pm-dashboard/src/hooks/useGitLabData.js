@@ -52,12 +52,13 @@ export default function useGitLabData() {
         console.log(`useGitLabData: Fetching data for pod "${activePod.name}"...`)
         console.log('  Pod config:', activePod)
 
+        const mainConfig = loadConfig()
         const podConfig = {
           gitlabUrl: activePod.gitlabUrl,
-          token: activePod.token,
+          token: mainConfig.token, // Use centralized token
           groupPath: activePod.groupPath,
           mode: 'group',
-          filter2025: loadConfig().filter2025
+          filter2025: mainConfig.filter2025
         }
 
         const result = await fetchAllData(podConfig)
@@ -104,12 +105,13 @@ export default function useGitLabData() {
         console.log(`useGitLabData: Fetching data for project group "${group.name}" (${groupProjects.length} projects)...`)
 
         // Fetch data from all projects in the group
+        const mainConfig = loadConfig()
         const projectDataPromises = groupProjects.map(async (project) => {
           try {
             console.log(`  Fetching project: ${project.name}`)
             const projectConfig = {
               gitlabUrl: project.gitlabUrl,
-              token: project.token,
+              token: mainConfig.token, // Use centralized token
               projectId: project.projectId,
               groupPath: project.groupPath,
               groupPaths: project.groupPaths, // Support multiple group paths per project
@@ -245,16 +247,17 @@ export default function useGitLabData() {
         console.log(`useGitLabData: Fetching data from ${allProjects.length} projects...`)
 
         // Fetch data from all projects in parallel
+        const mainConfig = loadConfig()
         const projectDataPromises = allProjects.map(async (project) => {
           try {
             console.log(`  Fetching project: ${project.name}`)
             const projectConfig = {
               gitlabUrl: project.gitlabUrl,
-              token: project.token,
+              token: mainConfig.token, // Use centralized token
               projectId: project.projectId,
               groupPath: project.groupPath,
               groupPaths: project.groupPaths, // Support multiple group paths
-              filter2025: loadConfig().filter2025 // Use global filter setting
+              filter2025: mainConfig.filter2025 // Use global filter setting
             }
             const data = await fetchAllData(projectConfig)
 

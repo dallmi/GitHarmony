@@ -30,10 +30,6 @@ export function saveConfig(config) {
   if (config.filter2025 !== undefined) {
     localStorage.setItem(KEYS.FILTER_2025, config.filter2025.toString())
   }
-  // Save default token if provided
-  if (config.defaultToken !== undefined) {
-    localStorage.setItem('gitlab_default_token', config.defaultToken || '')
-  }
 }
 
 /**
@@ -52,8 +48,7 @@ export function loadConfig() {
     projectId: localStorage.getItem(KEYS.PROJECT_ID) || '',
     groupPath: localStorage.getItem(KEYS.GROUP_PATH) || '',
     mode,
-    filter2025,
-    defaultToken: localStorage.getItem('gitlab_default_token') || ''
+    filter2025
   }
 }
 
@@ -134,7 +129,6 @@ export function saveProject(project) {
       id: project.id || Date.now().toString(),
       name: project.name,
       gitlabUrl: project.gitlabUrl,
-      token: project.token,
       projectId: project.projectId,
       groupPath: project.groupPath || '',
       addedAt: new Date().toISOString()
@@ -221,7 +215,6 @@ export function saveGroup(group) {
       id: group.id || Date.now().toString(),
       name: group.name,
       gitlabUrl: group.gitlabUrl,
-      token: group.token,
       groupPath: group.groupPath,
       addedAt: new Date().toISOString()
     })

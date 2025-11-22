@@ -182,18 +182,16 @@ export function createBackup(options = {}) {
 
   // 1. Core GitLab Configuration
   const gitlabToken = loadFromStorage(keys.gitlabToken)
-  const defaultToken = loadFromStorage('gitlab_default_token') // Load default token
   const gitlabUrl = loadFromStorage(keys.gitlabUrl)
   const projectId = loadFromStorage(keys.projectId)
   const groupPath = loadFromStorage(keys.groupPath)
   const filter2025 = loadFromStorage(keys.filter2025)
   const mode = loadFromStorage(keys.mode)
 
-  if (gitlabToken || defaultToken || gitlabUrl || projectId || groupPath || filter2025 || mode) {
+  if (gitlabToken || gitlabUrl || projectId || groupPath || filter2025 || mode) {
     data.gitlabConfig = {
       gitlabUrl,
       gitlabToken: includeTokens ? gitlabToken : (gitlabToken ? maskToken(gitlabToken) : null),
-      defaultToken: includeTokens ? defaultToken : (defaultToken ? maskToken(defaultToken) : null), // Include default token
       projectId,
       groupPath,
       filter2025,
@@ -205,12 +203,12 @@ export function createBackup(options = {}) {
   // 2. Portfolio/Multi-project Configuration
   const portfolioProjects = loadFromStorage(keys.portfolioProjects)
   if (portfolioProjects) {
-    if (!includeTokens && Array.isArray(portfolioProjects)) {
-      // Mask access tokens in portfolio projects
-      data.portfolioProjects = portfolioProjects.map(p => ({
-        ...p,
-        token: p.token ? maskToken(p.token) : null
-      }))
+    // Remove token field from projects since we use centralized token
+    if (Array.isArray(portfolioProjects)) {
+      data.portfolioProjects = portfolioProjects.map(p => {
+        const { token, ...projectWithoutToken } = p
+        return projectWithoutToken
+      })
     } else {
       data.portfolioProjects = portfolioProjects
     }
@@ -225,12 +223,12 @@ export function createBackup(options = {}) {
   // 4. Pods/Multi-group Configuration
   const portfolioGroups = loadFromStorage(keys.portfolioGroups)
   if (portfolioGroups) {
-    if (!includeTokens && Array.isArray(portfolioGroups)) {
-      // Mask access tokens in portfolio groups (pods)
-      data.portfolioGroups = portfolioGroups.map(g => ({
-        ...g,
-        token: g.token ? maskToken(g.token) : null
-      }))
+    // Remove token field from groups since we use centralized token
+    if (Array.isArray(portfolioGroups)) {
+      data.portfolioGroups = portfolioGroups.map(g => {
+        const { token, ...groupWithoutToken } = g
+        return groupWithoutToken
+      })
     } else {
       data.portfolioGroups = portfolioGroups
     }
@@ -624,22 +622,10 @@ export function validateBackup(backup) {
       hasMaskedTokens = true
     }
 
-    // Check portfolio projects tokens
-    if (backup.data.portfolioProjects && Array.isArray(backup.data.portfolioProjects)) {
-      if (backup.data.portfolioProjects.some(p => p.token && p.token.includes('***'))) {
-        hasMaskedTokens = true
-      }
-    }
-
-    // Check portfolio groups (pods) tokens
-    if (backup.data.portfolioGroups && Array.isArray(backup.data.portfolioGroups)) {
-      if (backup.data.portfolioGroups.some(g => g.token && g.token.includes('***'))) {
-        hasMaskedTokens = true
-      }
-    }
+    // No need to check portfolio projects/groups tokens since we use centralized token
 
     if (hasMaskedTokens) {
-      result.warnings.push('Access tokens are masked - you will need to re-enter them manually')
+      result.warnings.push('Access token is masked for security - you will need to re-enter it after import')
     }
   }
 
@@ -695,7 +681,6 @@ export function restoreFromBackup(backup, options = {}) {
           if (overwrite || !loadFromStorage(keys.gitlabUrl)) {
             if (data.gitlabUrl) saveToStorage(keys.gitlabUrl, data.gitlabUrl)
             if (data.gitlabToken) saveToStorage(keys.gitlabToken, data.gitlabToken)
-            if (data.defaultToken) saveToStorage('gitlab_default_token', data.defaultToken) // Restore default token
             if (data.projectId) saveToStorage(keys.projectId, data.projectId)
             if (data.groupPath) saveToStorage(keys.groupPath, data.groupPath)
             if (data.filter2025 !== null && data.filter2025 !== undefined) saveToStorage(keys.filter2025, data.filter2025)

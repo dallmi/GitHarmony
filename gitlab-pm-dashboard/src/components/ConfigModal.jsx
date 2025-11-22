@@ -18,12 +18,9 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
       ? existingConfig.groupPaths
       : (existingConfig.groupPath ? [existingConfig.groupPath] : [''])
   )
+  // Single centralized token for all operations
   const [token, setToken] = useState(existingConfig.token || '')
   const [filter2025, setFilter2025] = useState(existingConfig.filter2025 || false)
-
-  // Default token that can be reused across all configurations
-  const [defaultToken, setDefaultToken] = useState(existingConfig.defaultToken || existingConfig.token || '')
-  const [useDefaultToken, setUseDefaultToken] = useState(false)
 
   // Portfolio management state
   const [projects, setProjects] = useState(getAllProjects())
@@ -32,7 +29,6 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
   const [formData, setFormData] = useState({
     name: '',
     gitlabUrl: 'https://gitlab.com',
-    token: '',
     projectId: '',
     groupPaths: ['']
   })
@@ -44,7 +40,6 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
   const [groupFormData, setGroupFormData] = useState({
     name: '',
     gitlabUrl: 'https://gitlab.com',
-    token: '',
     groupPath: ''
   })
 
@@ -60,8 +55,7 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
       groupPaths: filteredGroupPaths, // New format supporting multiple paths
       token,
       mode,
-      filter2025,
-      defaultToken // Save default token for reuse
+      filter2025
     }
 
     saveConfig(config)
@@ -103,7 +97,7 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
 
   // Portfolio management functions
   const handleAddProject = () => {
-    if (!formData.name || !formData.token || !formData.projectId) {
+    if (!formData.name || !formData.projectId) {
       alert('Please fill in all required fields')
       return
     }
@@ -134,7 +128,6 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
       id: project.id,
       name: project.name,
       gitlabUrl: project.gitlabUrl,
-      token: project.token,
       projectId: project.projectId,
       groupPaths: project.groupPaths && Array.isArray(project.groupPaths) && project.groupPaths.length > 0
         ? project.groupPaths
@@ -149,9 +142,8 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
     setFormData({
       name: '',
       gitlabUrl: 'https://gitlab.com',
-      token: '',
       projectId: '',
-      groupPath: ''
+      groupPaths: ['']
     })
   }
 
@@ -174,8 +166,8 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
 
   // Group/Pod management functions
   const handleAddGroup = () => {
-    if (!groupFormData.name || !groupFormData.token || !groupFormData.groupPath) {
-      alert('Please fill in all required fields (Name, Token, and Group Path/ID)')
+    if (!groupFormData.name || !groupFormData.groupPath) {
+      alert('Please fill in all required fields (Name and Group Path/ID)')
       return
     }
 
@@ -184,7 +176,6 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
     setGroupFormData({
       name: '',
       gitlabUrl: 'https://gitlab.com',
-      token: '',
       groupPath: ''
     })
     setShowAddGroupForm(false)
@@ -197,7 +188,6 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
       id: group.id,
       name: group.name,
       gitlabUrl: group.gitlabUrl,
-      token: group.token,
       groupPath: group.groupPath
     })
     setShowAddGroupForm(true)
@@ -209,7 +199,6 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
     setGroupFormData({
       name: '',
       gitlabUrl: 'https://gitlab.com',
-      token: '',
       groupPath: ''
     })
   }
@@ -415,67 +404,39 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
                 </div>
               </div>
 
-              {/* Default Token Section */}
-              <div className="form-group" style={{ background: '#EFF6FF', padding: '16px', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
-                <label className="form-label" style={{ color: '#1E40AF', marginBottom: '8px' }}>
-                  💡 Default Access Token (Recommended)
+              {/* Centralized Token Field */}
+              <div className="form-group" style={{ background: '#F0F9FF', padding: '16px', borderRadius: '8px', border: '1px solid #93C5FD' }}>
+                <label className="form-label" style={{ color: '#1E40AF', marginBottom: '8px', fontWeight: '600', fontSize: '15px' }}>
+                  🔐 GitLab Access Token (Required)
                 </label>
-                <input
-                  type="password"
-                  className="form-input"
-                  value={defaultToken}
-                  onChange={e => setDefaultToken(e.target.value)}
-                  placeholder="glpat-xxxxxxxxxxxxxxxxxxxx"
-                  style={{ marginBottom: '12px' }}
-                />
-                <div className="text-small" style={{ color: '#1E40AF', marginBottom: '8px' }}>
-                  Save your token here once, then use "Copy Default Token" buttons below to reuse it across all projects, groups, and pods.
-                </div>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    if (defaultToken) {
-                      setToken(defaultToken)
-                      alert('Default token copied to current connection!')
-                    }
-                  }}
-                  style={{ fontSize: '12px', padding: '6px 12px' }}
-                >
-                  📋 Apply to Current Connection
-                </button>
-              </div>
-
-              <div className="form-group">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label className="form-label" style={{ margin: 0 }}>Access Token</label>
-                  {defaultToken && (
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => setToken(defaultToken)}
-                      style={{ fontSize: '11px', padding: '4px 8px' }}
-                    >
-                      📋 Copy Default Token
-                    </button>
-                  )}
-                </div>
                 <input
                   type="password"
                   className="form-input"
                   value={token}
                   onChange={e => setToken(e.target.value)}
                   placeholder="glpat-xxxxxxxxxxxxxxxxxxxx"
+                  style={{ marginBottom: '12px', fontSize: '14px' }}
                 />
-                <div className="text-small text-muted" style={{ marginTop: '4px' }}>
-                  <div style={{ marginBottom: '4px' }}>
-                    <strong>Required:</strong> Personal access token with <code>api</code> and <code>read_api</code> scopes
+                <div style={{ background: 'white', padding: '12px', borderRadius: '6px', border: '1px solid #DBEAFE' }}>
+                  <div style={{ marginBottom: '8px', color: '#1E40AF', fontWeight: '500' }}>
+                    ✨ This single token is automatically used everywhere:
                   </div>
-                  <div style={{ color: '#DC2626', fontSize: '13px' }}>
-                    ⚠️ <strong>For Epic support:</strong> Token must have group-level access. Project-only tokens cannot fetch epics.
+                  <ul style={{ margin: '0', paddingLeft: '20px', color: '#3B82F6', fontSize: '13px' }}>
+                    <li>All projects in the Projects tab</li>
+                    <li>All pods/groups in the Pods tab</li>
+                    <li>Current connection settings</li>
+                    <li>Cross-project data aggregation</li>
+                  </ul>
+                </div>
+                <div className="text-small text-muted" style={{ marginTop: '12px' }}>
+                  <div style={{ marginBottom: '6px' }}>
+                    <strong>Required Scopes:</strong> <code>api</code> and <code>read_api</code>
                   </div>
-                  <div style={{ marginTop: '6px', fontSize: '12px' }}>
-                    Create at: GitLab → User Settings → Access Tokens (not Project Settings)
+                  <div style={{ color: '#DC2626', fontSize: '13px', marginBottom: '6px' }}>
+                    ⚠️ <strong>For Epic support:</strong> Token must have group-level access
+                  </div>
+                  <div style={{ fontSize: '12px' }}>
+                    📍 Create at: GitLab → User Settings → Access Tokens (not Project Settings)
                   </div>
                 </div>
               </div>
@@ -616,29 +577,6 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
                           )}
                         </div>
                       ))}
-                    </div>
-
-                    <div className="form-group">
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                        <label className="form-label" style={{ margin: 0 }}>Access Token</label>
-                        {defaultToken && (
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            onClick={() => setFormData({ ...formData, token: defaultToken })}
-                            style={{ fontSize: '11px', padding: '4px 8px' }}
-                          >
-                            📋 Copy Default Token
-                          </button>
-                        )}
-                      </div>
-                      <input
-                        type="password"
-                        className="form-input"
-                        value={formData.token}
-                        onChange={e => setFormData({ ...formData, token: e.target.value })}
-                        placeholder="glpat-xxxxxxxxxxxxxxxxxxxx"
-                      />
                     </div>
 
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -791,32 +729,6 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
                     />
                     <div className="text-small text-muted" style={{ marginTop: '4px' }}>
                       Use numeric group ID (e.g., "12345") or group path (e.g., "GMDP Nova"). All projects in subgroups will be included automatically.
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <label className="form-label" style={{ margin: 0 }}>Access Token</label>
-                      {defaultToken && (
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          onClick={() => setGroupFormData({ ...groupFormData, token: defaultToken })}
-                          style={{ fontSize: '11px', padding: '4px 8px' }}
-                        >
-                          📋 Copy Default Token
-                        </button>
-                      )}
-                    </div>
-                    <input
-                      type="password"
-                      className="form-input"
-                      value={groupFormData.token}
-                      onChange={e => setGroupFormData({ ...groupFormData, token: e.target.value })}
-                      placeholder="glpat-xxxxxxxxxxxxxxxxxxxx"
-                    />
-                    <div className="text-small text-muted" style={{ marginTop: '4px' }}>
-                      Requires read_api scope
                     </div>
                   </div>
 
