@@ -11,7 +11,7 @@
 /**
  * Forecast initiative completion date based on velocity
  */
-export function forecastInitiativeCompletion(initiative, issues, teamName = null) {
+export function forecastInitiativeCompletion(initiative, issues) {
   // Get issues for this initiative
   const initiativeIssues = initiative.issues.filter(i => i.state === 'opened')
 
@@ -96,7 +96,7 @@ export function forecastInitiativeCompletion(initiative, issues, teamName = null
 /**
  * Calculate historical velocity for an initiative
  */
-function calculateInitiativeVelocity(initiative, allIssues) {
+function calculateInitiativeVelocity(initiative) {
   const closedIssues = initiative.issues.filter(i => i.state === 'closed')
 
   if (closedIssues.length === 0) {
@@ -232,7 +232,7 @@ function calculateConfidence(trend, consistency) {
 /**
  * Calculate variance (optimistic/pessimistic scenarios)
  */
-function calculateVariance(weeksRemaining, consistency, confidence) {
+function calculateVariance(weeksRemaining, consistency) {
   // Lower consistency = higher variance
   const varianceFactor = (100 - consistency) / 100
 

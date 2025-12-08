@@ -439,7 +439,7 @@ export default function SprintPlanningView({ issues: allIssues, onNavigate }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
           <div className="card">
             <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '8px' }}>Team Capacity</div>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: '#1F2937' }}>
+            <div style={{ fontSize: '28px', fontWeight: '600', color: '#1F2937' }}>
               {sprintCapacityData.totalAvailable}h
             </div>
             <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
@@ -449,7 +449,7 @@ export default function SprintPlanningView({ issues: allIssues, onNavigate }) {
 
           <div className="card">
             <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '8px' }}>Allocated</div>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: '#DC2626' }}>
+            <div style={{ fontSize: '28px', fontWeight: '600', color: '#DC2626' }}>
               {sprintCapacityData.totalAllocated}h
             </div>
             <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
@@ -459,7 +459,7 @@ export default function SprintPlanningView({ issues: allIssues, onNavigate }) {
 
           <div className="card">
             <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '8px' }}>Remaining</div>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: sprintCapacityData.totalRemaining < 0 ? '#DC2626' : '#059669' }}>
+            <div style={{ fontSize: '28px', fontWeight: '600', color: sprintCapacityData.totalRemaining < 0 ? '#DC2626' : '#059669' }}>
               {sprintCapacityData.totalRemaining}h
             </div>
             <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
@@ -469,7 +469,7 @@ export default function SprintPlanningView({ issues: allIssues, onNavigate }) {
 
           <div className="card">
             <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '8px' }}>Utilization</div>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: sprintCapacityData.teamUtilization >= 100 ? '#DC2626' : sprintCapacityData.teamUtilization >= 80 ? '#D97706' : '#059669' }}>
+            <div style={{ fontSize: '28px', fontWeight: '600', color: sprintCapacityData.teamUtilization >= 100 ? '#DC2626' : sprintCapacityData.teamUtilization >= 80 ? '#D97706' : '#059669' }}>
               {sprintCapacityData.teamUtilization}%
             </div>
             <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>

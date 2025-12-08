@@ -5,7 +5,7 @@ export default function Header({ stats, healthScore, onRefresh, onConfigure, onC
     <div className="header">
       <div style={{
         width: '100%',
-        padding: '16px 20px',
+        padding: '16px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center'
@@ -54,7 +54,7 @@ export default function Header({ stats, healthScore, onRefresh, onConfigure, onC
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '14px',
-                fontWeight: '700',
+                fontWeight: '600',
                 color: 'white',
                 background: healthScore.status === 'green' ? 'var(--success)' :
                            healthScore.status === 'amber' ? 'var(--warning)' :
@@ -87,7 +87,7 @@ export default function Header({ stats, healthScore, onRefresh, onConfigure, onC
             onClick={onDebug}
             title="Open debug panel (Ctrl+Alt+D or Cmd+Alt+D)"
           >
-            🔍 Debug
+            Debug
           </button>
 
           <button

@@ -11,7 +11,6 @@ export default function DebugPanel({ externalVisible, onToggle }) {
 
   // Use external visibility if provided
   const isVisible = externalVisible !== undefined ? externalVisible : visible
-  const toggleVisible = onToggle || setVisible
 
   // Toggle panel with Ctrl+Alt+D (or Cmd+Alt+D on Mac)
   useEffect(() => {
@@ -69,7 +68,7 @@ export default function DebugPanel({ externalVisible, onToggle }) {
         // Calculate total size
         let totalSize = 0
         for (let key in localStorage) {
-          if (localStorage.hasOwnProperty(key)) {
+          if (Object.hasOwn(localStorage, key)) {
             totalSize += localStorage[key].length + key.length
           }
         }
@@ -115,7 +114,7 @@ export default function DebugPanel({ externalVisible, onToggle }) {
     // Check React
     info.react = {
       version: React.version,
-      mode: process.env.NODE_ENV
+      mode: import.meta.env.MODE
     }
 
     console.log('🔍 Complete debug info:', info)

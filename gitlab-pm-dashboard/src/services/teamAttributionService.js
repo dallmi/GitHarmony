@@ -81,7 +81,7 @@ export function extractAllTeams(issues) {
 /**
  * Attribute initiatives to teams based on epic and issue assignments
  */
-export function attributeInitiativesToTeams(initiatives, issues) {
+export function attributeInitiativesToTeams(initiatives) {
   const attributions = []
 
   initiatives.forEach(initiative => {
@@ -156,7 +156,7 @@ export function attributeInitiativesToTeams(initiatives, issues) {
 /**
  * Detect resource contention - same people assigned to multiple high-priority initiatives
  */
-export function detectResourceContention(initiatives, issues) {
+export function detectResourceContention(initiatives) {
   const assigneeMap = new Map()
 
   initiatives.forEach(initiative => {

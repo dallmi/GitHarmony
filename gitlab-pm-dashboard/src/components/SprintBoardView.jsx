@@ -58,7 +58,6 @@ export default function SprintBoardView({ issues }) {
     return (
       <div className="container">
         <div className="card text-center" style={{ padding: '60px 20px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>📋</div>
           <h3 className="mb-2">No Sprints/Iterations Found</h3>
           <p className="text-muted">
             Add iterations to your issues in GitLab, or add "Sprint X" / "Iteration X" labels to see the sprint board.
@@ -118,7 +117,7 @@ export default function SprintBoardView({ issues }) {
                   )}
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--primary)' }}>
+                  <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--primary)' }}>
                     {progressPercent}%
                   </div>
                   <div className="text-small text-muted">{completed} / {total}</div>
@@ -145,12 +144,12 @@ export default function SprintBoardView({ issues }) {
                   onClick={() => setExpandedSprint(expandedSprint === sprint ? null : sprint)}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '20px' }}>
-                      {expandedSprint === sprint ? '▼' : '▶'}
+                    <span style={{ fontSize: '14px', fontWeight: '600' }}>
+                      {expandedSprint === sprint ? '▾' : '▸'}
                     </span>
                     <div>
                       <div style={{ fontSize: '14px', fontWeight: '600', color: hasIssues ? '#92400E' : '#1E40AF' }}>
-                        {hasIssues ? '⚠️ Team Capacity Issues' : '✓ Team Capacity'}
+                        {hasIssues ? 'Team Capacity Issues' : 'Team Capacity'}
                       </div>
                       <div style={{ fontSize: '12px', color: hasIssues ? '#78350F' : '#1E40AF' }}>
                         {teamWorkload.length} team members, {workingDays} working days
@@ -189,7 +188,7 @@ export default function SprintBoardView({ issues }) {
                                 </div>
                               </div>
                               <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontSize: '16px', fontWeight: '700', color: getStatusColor(member.status) }}>
+                                <div style={{ fontSize: '16px', fontWeight: '600', color: getStatusColor(member.status) }}>
                                   {member.utilizationPercent}%
                                 </div>
                                 <div style={{ fontSize: '10px', color: '#6B7280' }}>
@@ -278,7 +277,7 @@ export default function SprintBoardView({ issues }) {
                 <div style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '8px' }}>
                   <div style={{ marginBottom: '12px' }}>
                     <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
-                      📋 To Do ({grouped.todo.length})
+                      To Do ({grouped.todo.length})
                     </h4>
                     <div style={{ fontSize: '12px', color: '#6B7280' }}>
                       {storyPoints.todo} story points

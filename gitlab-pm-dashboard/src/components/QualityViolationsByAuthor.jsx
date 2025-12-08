@@ -284,7 +284,7 @@ export default function QualityViolationsByAuthor({ nonCompliantIssues }) {
                     </div>
                     <div style={{
                       fontSize: '20px',
-                      fontWeight: '700',
+                      fontWeight: '600',
                       color: '#DC2626'
                     }}>
                       {person.issues.length}

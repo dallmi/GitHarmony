@@ -1199,7 +1199,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                   </button>
                 </div>
                 <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '8px' }}>
-                  📧 {stakeholder.email}
+                  {stakeholder.email}
                 </div>
                 <div style={{ fontSize: '12px', color: '#6B7280' }}>
                   Frequency: {stakeholder.frequency}
@@ -1210,7 +1210,6 @@ export default function StakeholderHubView({ stats, healthScore }) {
 
           {stakeholders.length === 0 && !showAddStakeholder && (
             <div className="card text-center" style={{ padding: '40px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>👥</div>
               <h3>No Stakeholders Yet</h3>
               <p className="text-muted">Add stakeholders to track communications</p>
             </div>
@@ -1382,7 +1381,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
 
               {/* STEP 2: Type-Specific Fields */}
               <div style={{ marginBottom: '24px' }}>
-                <label style={{ fontSize: '14px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '12px' }}>
+                <label style={{ fontSize: '14px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '12px' }}>
                   Step 2: Communication Details
                 </label>
 
@@ -2129,7 +2128,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                     border: '1px solid #E5E7EB',
                     borderRadius: '6px',
                     fontSize: '13px',
-                    fontWeight: '700',
+                    fontWeight: '600',
                     color: '#374151',
                     cursor: 'pointer',
                     display: 'flex',
@@ -2339,7 +2338,6 @@ export default function StakeholderHubView({ stats, healthScore }) {
           {/* Communication History Display */}
           {history.length === 0 ? (
             <div className="card text-center" style={{ padding: '40px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>📝</div>
               <h3>No Communications Yet</h3>
               <p className="text-muted">Start using templates or import emails to track communications</p>
             </div>
@@ -2972,7 +2970,6 @@ export default function StakeholderHubView({ stats, healthScore }) {
 
           {getTimelineItems().length === 0 ? (
             <div className="card text-center" style={{ padding: '40px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>⏱️</div>
               <h3>No Activity Yet</h3>
               <p className="text-muted">Timeline will show all communications and decisions</p>
             </div>
@@ -3705,7 +3702,7 @@ export default function StakeholderHubView({ stats, healthScore }) {
                   border: 'none'
                 }}
               >
-                📧 Open in Email
+                Open in Email
               </button>
               <button className="btn btn-primary" onClick={handleSend}>
                 Log Communication

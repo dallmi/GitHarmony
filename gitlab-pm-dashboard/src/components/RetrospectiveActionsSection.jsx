@@ -124,7 +124,7 @@ export default function RetrospectiveActionsSection({ sprintId = 'current', spri
             <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
               Total Actions
             </div>
-            <div style={{ fontSize: '36px', fontWeight: '700', color: '#1F2937' }}>
+            <div style={{ fontSize: '36px', fontWeight: '600', color: '#1F2937' }}>
               {stats.totalActions}
             </div>
           </div>
@@ -133,7 +133,7 @@ export default function RetrospectiveActionsSection({ sprintId = 'current', spri
             <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
               Open Actions
             </div>
-            <div style={{ fontSize: '36px', fontWeight: '700', color: '#3B82F6' }}>
+            <div style={{ fontSize: '36px', fontWeight: '600', color: '#3B82F6' }}>
               {stats.openActions + stats.inProgressActions}
             </div>
           </div>
@@ -144,7 +144,7 @@ export default function RetrospectiveActionsSection({ sprintId = 'current', spri
             </div>
             <div style={{
               fontSize: '36px',
-              fontWeight: '700',
+              fontWeight: '600',
               color: stats.completionRate >= 70 ? '#10B981' : stats.completionRate >= 50 ? '#F59E0B' : '#EF4444'
             }}>
               {stats.completionRate}%
@@ -155,7 +155,7 @@ export default function RetrospectiveActionsSection({ sprintId = 'current', spri
             <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
               Overdue
             </div>
-            <div style={{ fontSize: '36px', fontWeight: '700', color: stats.overdueActions > 0 ? '#EF4444' : '#10B981' }}>
+            <div style={{ fontSize: '36px', fontWeight: '600', color: stats.overdueActions > 0 ? '#EF4444' : '#10B981' }}>
               {stats.overdueActions}
             </div>
           </div>

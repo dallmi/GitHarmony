@@ -23,7 +23,6 @@ export function buildEpicHierarchy(epics) {
 
   const epicMap = new Map()
   const rootEpics = []
-  const childrenMap = new Map()
 
   // First pass: Create map of all epics
   epics.forEach(epic => {
@@ -144,7 +143,7 @@ function calculateCrossProjectStats(epicIssueMap, crossProjectLinks) {
     avgProjectsPerEpic: 0
   }
 
-  epicIssueMap.forEach((data, epicId) => {
+  epicIssueMap.forEach((data) => {
     if (data.issues.length > 0) {
       stats.epicsWithIssues++
     }
@@ -207,7 +206,7 @@ export function findEpicDependencies(epicIssueMap, issues) {
  * @returns {Object} Formatted report for display
  */
 export function generateCrossProjectReport(linkingData) {
-  const { epicIssueMap, crossProjectLinks, statistics } = linkingData
+  const { epicIssueMap, statistics } = linkingData
 
   const report = {
     summary: {
@@ -271,7 +270,7 @@ export function generateCrossProjectReport(linkingData) {
  * @returns {Array} Enhanced epics with cross-project metadata
  */
 export function enhanceEpicsWithCrossProjectData(epics, linkingData) {
-  const { epicIssueMap, projectEpicMap, crossProjectLinks } = linkingData
+  const { epicIssueMap } = linkingData
 
   return epics.map(epic => {
     const epicData = epicIssueMap.get(epic.id) || {

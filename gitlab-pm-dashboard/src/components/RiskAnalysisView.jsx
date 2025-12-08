@@ -103,7 +103,7 @@ export default function RiskAnalysisView({ epics, issues }) {
           }}
         >
           <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>🔴 Critical Epics</div>
-          <div style={{ fontSize: '32px', fontWeight: '700', color: '#EF4444' }}>{summary.red}</div>
+          <div style={{ fontSize: '32px', fontWeight: '600', color: '#EF4444' }}>{summary.red}</div>
           <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>
             {summary.total > 0 ? Math.round((summary.red / summary.total) * 100) : 0}% of portfolio
           </div>
@@ -119,7 +119,7 @@ export default function RiskAnalysisView({ epics, issues }) {
           }}
         >
           <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>🟡 At Risk Epics</div>
-          <div style={{ fontSize: '32px', fontWeight: '700', color: '#F59E0B' }}>{summary.amber}</div>
+          <div style={{ fontSize: '32px', fontWeight: '600', color: '#F59E0B' }}>{summary.amber}</div>
           <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>
             {summary.total > 0 ? Math.round((summary.amber / summary.total) * 100) : 0}% of portfolio
           </div>
@@ -135,7 +135,7 @@ export default function RiskAnalysisView({ epics, issues }) {
           }}
         >
           <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>🟢 On Track Epics</div>
-          <div style={{ fontSize: '32px', fontWeight: '700', color: '#10B981' }}>{summary.green}</div>
+          <div style={{ fontSize: '32px', fontWeight: '600', color: '#10B981' }}>{summary.green}</div>
           <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>
             {summary.total > 0 ? Math.round((summary.green / summary.total) * 100) : 0}% of portfolio
           </div>
@@ -143,7 +143,7 @@ export default function RiskAnalysisView({ epics, issues }) {
 
         <div className="card">
           <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>Total Epics</div>
-          <div style={{ fontSize: '32px', fontWeight: '700', color: '#1F2937' }}>{summary.total}</div>
+          <div style={{ fontSize: '32px', fontWeight: '600', color: '#1F2937' }}>{summary.total}</div>
           <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>
             {filterStatus !== 'all' ? `Showing ${filteredAnalysis.length}` : 'All epics'}
           </div>
@@ -237,7 +237,7 @@ export default function RiskAnalysisView({ epics, issues }) {
                   {analysis.metrics && (
                     <div style={{ minWidth: '120px', textAlign: 'right' }}>
                       <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>Progress</div>
-                      <div style={{ fontSize: '24px', fontWeight: '700', color: getStatusColor(analysis.status) }}>
+                      <div style={{ fontSize: '24px', fontWeight: '600', color: getStatusColor(analysis.status) }}>
                         {analysis.metrics.progressPercent.toFixed(0)}%
                       </div>
                     </div>

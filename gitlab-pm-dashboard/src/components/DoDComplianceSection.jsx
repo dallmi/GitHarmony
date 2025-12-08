@@ -44,7 +44,7 @@ export default function DoDComplianceSection({ issues }) {
           </div>
           <div style={{
             fontSize: '36px',
-            fontWeight: '700',
+            fontWeight: '600',
             color: getComplianceColor(stats.complianceRate)
           }}>
             {stats.complianceRate}%
@@ -55,7 +55,7 @@ export default function DoDComplianceSection({ issues }) {
           <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
             Compliant Issues
           </div>
-          <div style={{ fontSize: '36px', fontWeight: '700', color: '#10B981' }}>
+          <div style={{ fontSize: '36px', fontWeight: '600', color: '#10B981' }}>
             {stats.compliantIssues}
           </div>
         </div>
@@ -64,7 +64,7 @@ export default function DoDComplianceSection({ issues }) {
           <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
             Violations
           </div>
-          <div style={{ fontSize: '36px', fontWeight: '700', color: '#EF4444' }}>
+          <div style={{ fontSize: '36px', fontWeight: '600', color: '#EF4444' }}>
             {stats.violatingIssues}
           </div>
         </div>
@@ -75,7 +75,7 @@ export default function DoDComplianceSection({ issues }) {
           </div>
           <div style={{
             fontSize: '36px',
-            fontWeight: '700',
+            fontWeight: '600',
             color: getComplianceColor(stats.avgCompliancePercentage)
           }}>
             {stats.avgCompliancePercentage}%

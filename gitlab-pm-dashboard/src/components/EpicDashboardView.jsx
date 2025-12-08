@@ -5,7 +5,7 @@ import React, { useMemo } from 'react'
  * Shows epic hierarchy, progress, and health aggregation
  * Requires GitLab Premium/Ultimate for epic support
  */
-export default function EpicDashboardView({ epics, issues }) {
+export default function EpicDashboardView({ epics }) {
   // Calculate epic statistics and health scores
   const epicStats = useMemo(() => {
     if (!epics || epics.length === 0) {
@@ -202,7 +202,7 @@ export default function EpicDashboardView({ epics, issues }) {
                 }}
               >
                 <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>Health</div>
-                <div style={{ fontSize: '28px', fontWeight: '700', color: getHealthColor(epic.health.score) }}>
+                <div style={{ fontSize: '28px', fontWeight: '600', color: getHealthColor(epic.health.score) }}>
                   {epic.health.score}
                 </div>
                 <div style={{ fontSize: '10px', color: '#6B7280', marginTop: '4px' }}>
@@ -279,7 +279,7 @@ export default function EpicDashboardView({ epics, issues }) {
                 }}
               >
                 <div style={{ fontWeight: '600', color: '#92400E', marginBottom: '6px' }}>
-                  ⚠️ Health Issues:
+                  Health Issues:
                 </div>
                 <ul style={{ margin: 0, paddingLeft: '20px', color: '#78350F' }}>
                   {epic.health.issues.map((issue, idx) => (

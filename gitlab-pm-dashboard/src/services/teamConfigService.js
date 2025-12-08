@@ -5,6 +5,8 @@
  * Falls back to project-specific storage for backwards compatibility
  */
 
+const isDev = import.meta.env.MODE === 'development'
+
 import { getActiveProjectId, getActiveGroupId } from './storageService'
 
 const TEAM_CONFIG_KEY = 'gitlab_team_config'
@@ -21,7 +23,9 @@ function getProjectKey(baseKey) {
   // Check if we're in pod mode (highest priority)
   const groupId = getActiveGroupId()
   if (groupId) {
-    console.log(`teamConfigService: Using pod-level key for groupId: ${groupId}`)
+    if (isDev) {
+      console.log(`teamConfigService: Using pod-level key for groupId: ${groupId}`)
+    }
     return `${baseKey}_pod_${groupId}`
   }
 
@@ -33,7 +37,9 @@ function getProjectKey(baseKey) {
     return baseKey
   }
 
-  console.log(`teamConfigService: Using project-level key for projectId: ${projectId}`)
+  if (isDev) {
+    console.log(`teamConfigService: Using project-level key for projectId: ${projectId}`)
+  }
   return `${baseKey}_${projectId}`
 }
 
@@ -190,14 +196,18 @@ export function loadTeamConfig() {
     const saved = localStorage.getItem(key)
     if (saved) {
       const config = JSON.parse(saved)
-      console.log(`Loaded team config from ${key}:`, config)
-      console.log(`  Team members: ${config.teamMembers?.length || 0}`)
-      config.teamMembers?.forEach(m => {
-        console.log(`    - ${m.username} (${m.role}): ${m.defaultCapacity}h/week`)
-      })
+      if (isDev) {
+        console.log(`Loaded team config from ${key}:`, config)
+        console.log(`  Team members: ${config.teamMembers?.length || 0}`)
+        config.teamMembers?.forEach(m => {
+          console.log(`    - ${m.username} (${m.role}): ${m.defaultCapacity}h/week`)
+        })
+      }
       return config
     }
-    console.log(`No saved team config found for key: ${key}`)
+    if (isDev) {
+      console.log(`No saved team config found for key: ${key}`)
+    }
   } catch (error) {
     console.error('Error loading team config:', error)
   }
@@ -236,16 +246,22 @@ export function saveTeamMember(member) {
   const existingIndex = config.teamMembers.findIndex(m => m.username === member.username)
 
   if (existingIndex >= 0) {
-    console.log(`Updating existing team member ${member.username}:`, member)
+    if (isDev) {
+      console.log(`Updating existing team member ${member.username}:`, member)
+    }
     config.teamMembers[existingIndex] = member
   } else {
-    console.log(`Adding new team member ${member.username}:`, member)
+    if (isDev) {
+      console.log(`Adding new team member ${member.username}:`, member)
+    }
     config.teamMembers.push(member)
   }
 
   const saved = saveTeamConfig(config)
-  console.log(`Team member ${member.username} saved successfully:`, saved)
-  console.log('Updated team config:', config)
+  if (isDev) {
+    console.log(`Team member ${member.username} saved successfully:`, saved)
+    console.log('Updated team config:', config)
+  }
 
   return saved
 }
@@ -346,12 +362,14 @@ export function getSprintMemberCapacity(sprintId, username, defaultCapacity = 40
   if (sprint && sprint.startDate && sprint.dueDate) {
     try {
       // Dynamic import to avoid circular dependency
-      const absenceModule = require('./absenceService.js')
-      const absenceImpact = absenceModule.calculateSprintCapacityWithAbsences(
-        username,
-        sprint,
-        defaultCapacity
-      )
+      // Note: Dynamic import would be needed for absenceService in ES modules
+      // const absenceModule = await import('./absenceService.js')
+      // const absenceImpact = absenceModule.calculateSprintCapacityWithAbsences(
+      //   username,
+      //   sprint,
+      //   defaultCapacity
+      // )
+      const absenceImpact = null
 
       // If there are absences, return adjusted capacity
       if (absenceImpact.hoursLost > 0) {

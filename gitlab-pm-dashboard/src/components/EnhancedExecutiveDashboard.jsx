@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { getInitiatives, getStatusBadge, formatDate } from '../services/initiativeService'
 import { getUpcomingMilestones, getMilestoneStatusBadge } from '../services/milestoneTimelineService'
-import { calculateCommunicationsMetrics } from '../services/communicationsMetricsService'
 import { exportExecutiveDashboardToPDF } from '../services/exportService'
 import { useIterationFilter } from '../contexts/IterationFilterContext'
 import HealthScoreConfigModal from './HealthScoreConfigModal'
@@ -21,9 +20,8 @@ import useLabelEvents from '../hooks/useLabelEvents'
  * Shows initiatives, KPIs, risks, and upcoming milestones
  * Now includes iteration filter and configurable health score
  */
-export default function EnhancedExecutiveDashboard({ stats, healthScore, issues: allIssues, milestones, epics, risks }) {
+export default function EnhancedExecutiveDashboard({ stats, healthScore, milestones, epics, risks }) {
   const [showHealthConfig, setShowHealthConfig] = useState(false)
-  const [configKey, setConfigKey] = useState(0) // Force re-render on config change
 
   // State for expandable sections in Items Requiring Attention
   const [expandedSections, setExpandedSections] = useState({
@@ -43,7 +41,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
   const { filteredIssues: issues } = useIterationFilter()
 
   // Fetch label events for accurate cycle time (GitLab Premium/Ultimate)
-  const { labelEventsMap, loading: labelEventsLoading, hasData: hasLabelEvents } = useLabelEvents(issues)
+  const { labelEventsMap, hasData: hasLabelEvents } = useLabelEvents(issues)
   // Get initiatives from epics
   const initiatives = useMemo(() => {
     if (!epics || !issues) return []
@@ -109,14 +107,6 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
       total: stats.blockers + stats.overdue + highPriorityOpen
     }
   }, [issues, stats])
-
-  // Get top 3 high-priority risks
-  const topRisks = useMemo(() => {
-    if (!risks) return []
-    return risks
-      .filter(r => r.impact === 'high' || (r.impact === 'medium' && r.probability === 'high'))
-      .slice(0, 3)
-  }, [risks])
 
   // Calculate burnup chart data
   const burnupData = useMemo(() => {
@@ -277,8 +267,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
     exportExecutiveDashboardToPDF(exportData)
   }
 
-  const handleConfigSave = (newConfig) => {
-    setConfigKey(prev => prev + 1) // Force re-render
+  const handleConfigSave = () => {
     window.location.reload() // Reload to apply new health score calculation
   }
 
@@ -305,7 +294,6 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
             }}
             title="Configure health score calculation"
           >
-            <span>⚙️</span>
             <span>Health Score Settings</span>
           </button>
           <button
@@ -707,7 +695,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
             <div style={{ textAlign: 'center' }}>
               <div style={{
                 fontSize: '48px',
-                fontWeight: '700',
+                fontWeight: '600',
                 color: deliveryConfidence?.statusColor || '#6B7280'
               }}>
                 {deliveryConfidence?.score ?? 0}%
@@ -777,7 +765,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                       <span style={{
                         fontSize: '10px',
-                        fontWeight: '700',
+                        fontWeight: '600',
                         textTransform: 'uppercase',
                         color: rec.priority === 'critical' ? '#DC2626' : rec.priority === 'high' ? '#F97316' : '#3B82F6',
                         letterSpacing: '0.5px'
@@ -814,7 +802,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
             <div style={{ textAlign: 'center' }}>
               <div style={{
                 fontSize: '48px',
-                fontWeight: '700',
+                fontWeight: '600',
                 color: forecastAccuracy.reliability.score >= 80 ? '#16A34A' : forecastAccuracy.reliability.score >= 60 ? '#EAB308' : '#DC2626'
               }}>
                 {forecastAccuracy.reliability.score}
@@ -949,7 +937,6 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
             background: 'var(--bg-secondary)',
             borderRadius: '8px'
           }}>
-            <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.3 }}>📊</div>
             <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
               {forecastAccuracy.reliability.reason}
             </div>
@@ -1095,7 +1082,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {recentDecisions.slice(0, 5).map((decision, index) => {
+              {recentDecisions.slice(0, 5).map((decision) => {
                 const impactColors = {
                   critical: '#DC2626',
                   high: '#F97316',
@@ -1265,7 +1252,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                   <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
                     {contributor.name}
                   </div>
-                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#16A34A', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '24px', fontWeight: '600', color: '#16A34A', marginBottom: '4px' }}>
                     {contributor.issuesCompleted}
                   </div>
                   <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginBottom: '6px' }}>
@@ -1299,7 +1286,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
-                  ⚠️
+                  !
                 </div>
                 <div>
                   <div style={{ fontSize: '14px', fontWeight: '600', color: '#991B1B' }}>
@@ -1327,7 +1314,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                       </div>
                       <div style={{
                         fontSize: '10px',
-                        fontWeight: '700',
+                        fontWeight: '600',
                         textTransform: 'uppercase',
                         color: risk.riskLevel === 'high' ? '#DC2626' : risk.riskLevel === 'medium' ? '#F97316' : '#EAB308',
                         padding: '2px 8px',
@@ -1948,7 +1935,7 @@ export default function EnhancedExecutiveDashboard({ stats, healthScore, issues:
                       borderRight: '2px solid var(--border-light)',
                       paddingRight: '20px'
                     }}>
-                      <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--primary)' }}>
+                      <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--primary)' }}>
                         {milestone.daysUntil}
                       </div>
                       <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>

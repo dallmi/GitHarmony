@@ -7,7 +7,6 @@
 
 import { getSprintFromLabels } from '../utils/labelUtils'
 import { getAnalyticsVelocity } from './unifiedVelocityService'
-import { loadVelocityConfig } from './velocityConfigService'
 
 /**
  * Calculate velocity metrics for all sprints
@@ -650,7 +649,7 @@ export function calculateVelocityTrendHistory(issues, months = 6) {
  * @param {Number} targetScope - Optional target scope (number of issues)
  * @returns {Object} Confidence score with breakdown and recommendations
  */
-export function calculateDeliveryConfidence(issues, targetDate = null, targetScope = null) {
+export function calculateDeliveryConfidence(issues) {
   if (!issues || issues.length === 0) {
     return {
       score: 0,
@@ -1281,7 +1280,7 @@ export function calculateSprintCapacityImpact(issues, sprintName, getTeamAbsence
 
   // Find affected members (those with absences)
   const affectedMembers = Object.entries(absenceStats.byMember)
-    .filter(([_, data]) => data.hoursLost > 0)
+    .filter(([, data]) => data.hoursLost > 0)
     .map(([username, data]) => ({
       username,
       hoursLost: data.hoursLost,

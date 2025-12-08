@@ -4,6 +4,8 @@
  * Supports both single-project and cross-project aggregation
  */
 
+const isDev = import.meta.env.MODE === 'development'
+
 import { useState, useEffect, useCallback } from 'react'
 import { fetchAllData } from '../services/gitlabApi'
 import { loadConfig, isConfigured, getActiveProjectId, getAllProjects, getActiveGroupId, getActiveGroup } from '../services/storageService'
@@ -23,10 +25,12 @@ export default function useGitLabData() {
   // Load configuration
   useEffect(() => {
     const savedConfig = loadConfig()
-    console.log('useGitLabData: Loading config from storage:', savedConfig)
-    console.log('  groupPath value:', savedConfig.groupPath)
-    console.log('  groupPath type:', typeof savedConfig.groupPath)
-    console.log('  groupPath length:', savedConfig.groupPath?.length)
+    if (isDev) {
+      console.log('useGitLabData: Loading config from storage:', savedConfig)
+      console.log('  groupPath value:', savedConfig.groupPath)
+      console.log('  groupPath type:', typeof savedConfig.groupPath)
+      console.log('  groupPath length:', savedConfig.groupPath?.length)
+    }
     setConfig(savedConfig)
   }, [])
 
@@ -37,11 +41,15 @@ export default function useGitLabData() {
 
     // Check if POD mode is active (GitLab Group/Pod)
     if (activeGroupId) {
-      console.log('useGitLabData: Pod mode detected, activeGroupId:', activeGroupId)
+      if (isDev) {
+        console.log('useGitLabData: Pod mode detected, activeGroupId:', activeGroupId)
+      }
       const activePod = getActiveGroup()
 
       if (!activePod) {
-        console.warn('useGitLabData: Pod not found:', activeGroupId)
+        if (isDev) {
+          console.warn('useGitLabData: Pod not found:', activeGroupId)
+        }
         return
       }
 
@@ -49,8 +57,10 @@ export default function useGitLabData() {
       setError(null)
 
       try {
-        console.log(`useGitLabData: Fetching data for pod "${activePod.name}"...`)
-        console.log('  Pod config:', activePod)
+        if (isDev) {
+          console.log(`useGitLabData: Fetching data for pod "${activePod.name}"...`)
+          console.log('  Pod config:', activePod)
+        }
 
         const mainConfig = loadConfig()
         const podConfig = {
@@ -63,11 +73,13 @@ export default function useGitLabData() {
 
         const result = await fetchAllData(podConfig)
 
-        console.log(`useGitLabData: Pod data fetch complete:`)
-        console.log(`  Pod: ${activePod.name}`)
-        console.log(`  Total issues: ${result.issues.length}`)
-        console.log(`  Total milestones: ${result.milestones.length}`)
-        console.log(`  Total epics: ${result.epics.length}`)
+        if (isDev) {
+          console.log(`useGitLabData: Pod data fetch complete:`)
+          console.log(`  Pod: ${activePod.name}`)
+          console.log(`  Total issues: ${result.issues.length}`)
+          console.log(`  Total milestones: ${result.milestones.length}`)
+          console.log(`  Total epics: ${result.epics.length}`)
+        }
 
         setData(result)
       } catch (err) {
@@ -81,12 +93,16 @@ export default function useGitLabData() {
 
     // Check if project group mode is active
     if (activeProjectId?.startsWith('group:')) {
-      console.log('useGitLabData: Project group mode detected')
+      if (isDev) {
+        console.log('useGitLabData: Project group mode detected')
+      }
       const groupId = activeProjectId.replace('group:', '')
       const group = getProjectGroup(groupId)
 
       if (!group) {
-        console.warn('useGitLabData: Project group not found:', groupId)
+        if (isDev) {
+          console.warn('useGitLabData: Project group not found:', groupId)
+        }
         return
       }
 
@@ -94,7 +110,9 @@ export default function useGitLabData() {
       const groupProjects = getProjectsForGroup(groupId, allProjects)
 
       if (groupProjects.length === 0) {
-        console.warn('useGitLabData: No projects in group:', group.name)
+        if (isDev) {
+          console.warn('useGitLabData: No projects in group:', group.name)
+        }
         return
       }
 
@@ -102,13 +120,17 @@ export default function useGitLabData() {
       setError(null)
 
       try {
-        console.log(`useGitLabData: Fetching data for project group "${group.name}" (${groupProjects.length} projects)...`)
+        if (isDev) {
+          console.log(`useGitLabData: Fetching data for project group "${group.name}" (${groupProjects.length} projects)...`)
+        }
 
         // Fetch data from all projects in the group
         const mainConfig = loadConfig()
         const projectDataPromises = groupProjects.map(async (project) => {
           try {
-            console.log(`  Fetching project: ${project.name}`)
+            if (isDev) {
+              console.log(`  Fetching project: ${project.name}`)
+            }
             const projectConfig = {
               gitlabUrl: project.gitlabUrl,
               token: mainConfig.token, // Use centralized token
@@ -145,13 +167,17 @@ export default function useGitLabData() {
         // If the group has shared group paths, fetch additional epics
         let sharedEpics = []
         if (group.sharedGroupPaths && group.sharedGroupPaths.length > 0) {
-          console.log(`  Fetching epics from ${group.sharedGroupPaths.length} shared group paths...`)
+          if (isDev) {
+            console.log(`  Fetching epics from ${group.sharedGroupPaths.length} shared group paths...`)
+          }
 
           // Use the first project's config as base for shared group fetches
           const baseProject = groupProjects[0]
           const sharedEpicPromises = group.sharedGroupPaths.map(async (groupPath) => {
             try {
-              console.log(`    Fetching shared group: ${groupPath}`)
+              if (isDev) {
+                console.log(`    Fetching shared group: ${groupPath}`)
+              }
               const sharedConfig = {
                 gitlabUrl: baseProject.gitlabUrl,
                 token: baseProject.token,
@@ -169,7 +195,9 @@ export default function useGitLabData() {
 
           const sharedEpicsResults = await Promise.all(sharedEpicPromises)
           sharedEpics = sharedEpicsResults.flat()
-          console.log(`  Found ${sharedEpics.length} epics from shared groups`)
+          if (isDev) {
+            console.log(`  Found ${sharedEpics.length} epics from shared groups`)
+          }
         }
 
         // Import cross-project linking functions
@@ -210,16 +238,18 @@ export default function useGitLabData() {
           }
         }
 
-        console.log(`useGitLabData: Project group aggregation complete:`)
-        console.log(`  Group: ${group.name}`)
-        console.log(`  Total issues: ${aggregatedData.issues.length}`)
-        console.log(`  Total milestones: ${aggregatedData.milestones.length}`)
-        console.log(`  Total epics: ${aggregatedData.epics.length}`)
+        if (isDev) {
+          console.log(`useGitLabData: Project group aggregation complete:`)
+          console.log(`  Group: ${group.name}`)
+          console.log(`  Total issues: ${aggregatedData.issues.length}`)
+          console.log(`  Total milestones: ${aggregatedData.milestones.length}`)
+          console.log(`  Total epics: ${aggregatedData.epics.length}`)
 
-        // Log any project failures
-        const failedProjects = projectsData.filter(p => p.error)
-        if (failedProjects.length > 0) {
-          console.warn(`  Failed projects: ${failedProjects.map(p => p.projectName).join(', ')}`)
+          // Log any project failures
+          const failedProjects = projectsData.filter(p => p.error)
+          if (failedProjects.length > 0) {
+            console.warn(`  Failed projects: ${failedProjects.map(p => p.projectName).join(', ')}`)
+          }
         }
 
         setData(aggregatedData)
@@ -232,11 +262,15 @@ export default function useGitLabData() {
     }
     // Check if cross-project mode is active
     else if (activeProjectId === 'cross-project') {
-      console.log('useGitLabData: Cross-project mode detected')
+      if (isDev) {
+        console.log('useGitLabData: Cross-project mode detected')
+      }
       const allProjects = getAllProjects()
 
       if (allProjects.length === 0) {
-        console.warn('useGitLabData: No projects configured for cross-project view')
+        if (isDev) {
+          console.warn('useGitLabData: No projects configured for cross-project view')
+        }
         return
       }
 
@@ -244,13 +278,17 @@ export default function useGitLabData() {
       setError(null)
 
       try {
-        console.log(`useGitLabData: Fetching data from ${allProjects.length} projects...`)
+        if (isDev) {
+          console.log(`useGitLabData: Fetching data from ${allProjects.length} projects...`)
+        }
 
         // Fetch data from all projects in parallel
         const mainConfig = loadConfig()
         const projectDataPromises = allProjects.map(async (project) => {
           try {
-            console.log(`  Fetching project: ${project.name}`)
+            if (isDev) {
+              console.log(`  Fetching project: ${project.name}`)
+            }
             const projectConfig = {
               gitlabUrl: project.gitlabUrl,
               token: mainConfig.token, // Use centralized token
@@ -311,15 +349,17 @@ export default function useGitLabData() {
           }
         }
 
-        console.log(`useGitLabData: Cross-project aggregation complete:`)
-        console.log(`  Total issues: ${aggregatedData.issues.length}`)
-        console.log(`  Total milestones: ${aggregatedData.milestones.length}`)
-        console.log(`  Total epics: ${aggregatedData.epics.length}`)
+        if (isDev) {
+          console.log(`useGitLabData: Cross-project aggregation complete:`)
+          console.log(`  Total issues: ${aggregatedData.issues.length}`)
+          console.log(`  Total milestones: ${aggregatedData.milestones.length}`)
+          console.log(`  Total epics: ${aggregatedData.epics.length}`)
 
-        // Log any project failures
-        const failedProjects = projectsData.filter(p => p.error)
-        if (failedProjects.length > 0) {
-          console.warn(`  Failed projects: ${failedProjects.map(p => p.projectName).join(', ')}`)
+          // Log any project failures
+          const failedProjects = projectsData.filter(p => p.error)
+          if (failedProjects.length > 0) {
+            console.warn(`  Failed projects: ${failedProjects.map(p => p.projectName).join(', ')}`)
+          }
         }
 
         setData(aggregatedData)
@@ -352,46 +392,60 @@ export default function useGitLabData() {
 
   // Auto-fetch on config change or when entering cross-project/group/pod mode
   useEffect(() => {
-    console.log('🔄 useGitLabData: useEffect triggered (config changed)')
-    console.log('  Current config:', config)
+    if (isDev) {
+      console.log('🔄 useGitLabData: useEffect triggered (config changed)')
+      console.log('  Current config:', config)
+    }
 
     const activeProjectId = getActiveProjectId()
     const activeGroupId = getActiveGroupId()
     const configured = isConfigured()
 
-    console.log('  activeProjectId:', activeProjectId)
-    console.log('  activeGroupId:', activeGroupId)
-    console.log('  isConfigured():', configured)
+    if (isDev) {
+      console.log('  activeProjectId:', activeProjectId)
+      console.log('  activeGroupId:', activeGroupId)
+      console.log('  isConfigured():', configured)
+    }
 
     // Fetch if in pod mode OR cross-project mode OR project group mode OR if single project is configured
     if (activeGroupId || activeProjectId === 'cross-project' || activeProjectId?.startsWith('group:') || (config && configured)) {
-      console.log('✅ Conditions met, calling fetchData()')
+      if (isDev) {
+        console.log('✅ Conditions met, calling fetchData()')
+      }
       fetchData()
     } else {
-      console.log('❌ Conditions NOT met, skipping fetchData()')
-      console.log('  Reasons:')
-      console.log('    - activeGroupId:', !!activeGroupId)
-      console.log('    - cross-project mode:', activeProjectId === 'cross-project')
-      console.log('    - group mode:', activeProjectId?.startsWith('group:'))
-      console.log('    - config exists:', !!config)
-      console.log('    - isConfigured:', configured)
+      if (isDev) {
+        console.log('❌ Conditions NOT met, skipping fetchData()')
+        console.log('  Reasons:')
+        console.log('    - activeGroupId:', !!activeGroupId)
+        console.log('    - cross-project mode:', activeProjectId === 'cross-project')
+        console.log('    - group mode:', activeProjectId?.startsWith('group:'))
+        console.log('    - config exists:', !!config)
+        console.log('    - isConfigured:', configured)
+      }
     }
   }, [config, fetchData])
 
   // Refresh function for manual reloading
   const refresh = useCallback(() => {
-    console.log('🔄 REFRESH CALLED')
-    console.log('  Current config state:', config)
+    if (isDev) {
+      console.log('🔄 REFRESH CALLED')
+      console.log('  Current config state:', config)
+    }
 
     // Reload config from storage before fetching (important for portfolio switching)
     const freshConfig = loadConfig()
-    console.log('  Fresh config from localStorage:', freshConfig)
-    console.log('  Fresh groupPath:', freshConfig.groupPath)
-    console.log('  Fresh projectId:', freshConfig.projectId)
-    console.log('  Fresh token exists:', !!freshConfig.token)
+    if (isDev) {
+      console.log('  Fresh config from localStorage:', freshConfig)
+      console.log('  Fresh groupPath:', freshConfig.groupPath)
+      console.log('  Fresh projectId:', freshConfig.projectId)
+      console.log('  Fresh token exists:', !!freshConfig.token)
+    }
 
     setConfig(freshConfig)
-    console.log('  Config state updated, useEffect should trigger...')
+    if (isDev) {
+      console.log('  Config state updated, useEffect should trigger...')
+    }
     // fetchData will be called automatically via the useEffect when config changes
   }, [])
 

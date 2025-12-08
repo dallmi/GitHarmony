@@ -228,7 +228,7 @@ export default function GroupedTabs({ activeView, onViewChange, onProjectChange 
           <span style={{
             background: 'var(--bg-tertiary)',
             padding: '4px 12px',
-            borderRadius: '12px',
+            borderRadius: '4px',
             fontWeight: '600'
           }}>
             {userRole === 'executive' && 'Executive'}

@@ -3,7 +3,7 @@
  * Automatically imports team members from GitLab issues and calculates velocity
  */
 
-import { loadTeamConfig, saveTeamConfig } from './teamConfigService'
+import { loadTeamConfig } from './teamConfigService'
 
 /**
  * Extract unique team members from issues
@@ -164,8 +164,7 @@ export function mergeTeamMembers(existingMembers, importedMembers, issues) {
 export function importTeamFromIssues(issues, options = {}) {
   const {
     autoDetectRoles = true,
-    preserveCustomSettings = true,
-    velocityPeriodDays = 90
+    preserveCustomSettings = true
   } = options
 
   // Get existing configuration

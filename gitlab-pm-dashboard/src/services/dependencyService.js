@@ -40,7 +40,7 @@ function parseDependencyPatterns(text) {
 /**
  * Detect dependencies from GitLab related issues (if available)
  */
-function getRelatedIssueDependencies(issue) {
+function getRelatedIssueDependencies() {
   // GitLab API can provide related issues
   // For now, we'll parse from description/comments
   // Future enhancement: Use GitLab Related Issues API

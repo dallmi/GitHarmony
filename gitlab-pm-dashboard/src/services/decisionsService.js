@@ -187,17 +187,17 @@ export function getDecisionsStats() {
 
   data.decisions.forEach(decision => {
     // Count by category
-    if (decision.category && stats.byCategory.hasOwnProperty(decision.category)) {
+    if (decision.category && Object.hasOwn(stats.byCategory, decision.category)) {
       stats.byCategory[decision.category]++
     }
 
     // Count by impact
-    if (decision.impact && stats.byImpact.hasOwnProperty(decision.impact)) {
+    if (decision.impact && Object.hasOwn(stats.byImpact, decision.impact)) {
       stats.byImpact[decision.impact]++
     }
 
     // Count by status
-    if (decision.status && stats.byStatus.hasOwnProperty(decision.status)) {
+    if (decision.status && Object.hasOwn(stats.byStatus, decision.status)) {
       stats.byStatus[decision.status]++
     }
 

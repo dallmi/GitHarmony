@@ -323,7 +323,7 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
                   </label>
                 </div>
                 <div className="text-small text-muted" style={{ marginTop: '8px', padding: '8px', background: '#F0F9FF', borderRadius: '4px', border: '1px solid #BFDBFE' }}>
-                  <strong>💡 Tip:</strong> Use <strong>Group Mode</strong> for multi-project pods/teams. This will automatically fetch issues from all projects and subgroups.
+                  <strong>Tip:</strong> Use <strong>Group Mode</strong> for multi-project pods/teams. This will automatically fetch issues from all projects and subgroups.
                 </div>
               </div>
 
@@ -407,7 +407,7 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
               {/* Centralized Token Field */}
               <div className="form-group" style={{ background: '#F0F9FF', padding: '16px', borderRadius: '8px', border: '1px solid #93C5FD' }}>
                 <label className="form-label" style={{ color: '#1E40AF', marginBottom: '8px', fontWeight: '600', fontSize: '15px' }}>
-                  🔐 GitLab Access Token (Required)
+                  GitLab Access Token (Required)
                 </label>
                 <input
                   type="password"
@@ -419,7 +419,7 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
                 />
                 <div style={{ background: 'white', padding: '12px', borderRadius: '6px', border: '1px solid #DBEAFE' }}>
                   <div style={{ marginBottom: '8px', color: '#1E40AF', fontWeight: '500' }}>
-                    ✨ This single token is automatically used everywhere:
+                    This single token is automatically used everywhere:
                   </div>
                   <ul style={{ margin: '0', paddingLeft: '20px', color: '#3B82F6', fontSize: '13px' }}>
                     <li>All projects in the Projects tab</li>
@@ -774,7 +774,6 @@ export default function ConfigModal({ show, onClose, onSave, onProjectSwitch }) 
                   border: '1px solid #E5E7EB',
                   color: '#6B7280'
                 }}>
-                  <div style={{ fontSize: '48px', marginBottom: '12px' }}>🏢</div>
                   <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px', color: '#374151' }}>
                     No Pods Configured
                   </div>

@@ -56,7 +56,7 @@ export default function CycleTimeView({ issues: allIssues }) {
   }, [issuesFromIteration, searchTerm])
 
   // Fetch label events for enhanced cycle time tracking (GitLab Premium/Ultimate)
-  const { labelEventsMap, loading: labelEventsLoading, hasData: hasLabelEvents } = useLabelEvents(issues)
+  const { labelEventsMap, hasData: hasLabelEvents } = useLabelEvents(issues)
 
   // Check for GitLab Premium features on mount
   useEffect(() => {
@@ -151,10 +151,9 @@ export default function CycleTimeView({ issues: allIssues }) {
     )
   }
 
-  const openIssues = issues.filter(i => i.state === 'opened')
   const totalInProgress = Object.entries(analytics.phaseDistribution)
     .filter(([phase]) => phase !== 'done' && phase !== 'cancelled')
-    .reduce((sum, [_, issuesList]) => sum + issuesList.length, 0)
+    .reduce((sum, [, issuesList]) => sum + issuesList.length, 0)
   const totalCancelled = analytics.phaseDistribution.cancelled?.length || 0
 
   return (
@@ -174,10 +173,10 @@ export default function CycleTimeView({ issues: allIssues }) {
             className="btn btn-secondary"
             onClick={() => setShowLabelConfig(!showLabelConfig)}
           >
-            🏷️ Detected Labels
+            Detected Labels
           </button>
           <button className="btn btn-primary" onClick={handleExportCSV}>
-            📊 Export CSV
+            Export CSV
           </button>
         </div>
       </div>
@@ -198,7 +197,7 @@ export default function CycleTimeView({ issues: allIssues }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ fontSize: '24px' }}>
-              {premiumFeatures.allPremium ? '✅' : premiumFeatures.anyPremium ? '⚠️' : 'ℹ️'}
+              {premiumFeatures.allPremium ? '✓' : premiumFeatures.anyPremium ? '!' : 'i'}
             </div>
             <div style={{ flex: 1 }}>
               <h3 style={{
@@ -219,10 +218,10 @@ export default function CycleTimeView({ issues: allIssues }) {
                 margin: 0
               }}>
                 {premiumFeatures.allPremium
-                  ? '✓ Label history API available - Precise cycle time tracking enabled for all projects'
+                  ? 'Label history API available - Precise cycle time tracking enabled for all projects'
                   : premiumFeatures.anyPremium
-                    ? `✓ Using precise cycle times for ${premiumFeatures.premiumCount} project(s) with Premium, estimated for others`
-                    : '⚠ Using estimated cycle times. Upgrade to Premium/Ultimate for exact label-change history and more accurate metrics.'}
+                    ? `Using precise cycle times for ${premiumFeatures.premiumCount} project(s) with Premium, estimated for others`
+                    : 'Using estimated cycle times. Upgrade to Premium/Ultimate for exact label-change history and more accurate metrics.'}
               </p>
               {premiumFeatures.anyPremium && !premiumFeatures.allPremium && premiumFeatures.featuresMap && (
                 <details style={{ marginTop: '8px', fontSize: '11px' }}>
@@ -508,7 +507,7 @@ export default function CycleTimeView({ issues: allIssues }) {
                 <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '4px', textTransform: 'uppercase', fontWeight: '600' }}>
                   {getPhaseLabel(phase)}
                 </div>
-                <div style={{ fontSize: '28px', fontWeight: '700', color: getPhaseColor(phase) }}>
+                <div style={{ fontSize: '28px', fontWeight: '600', color: getPhaseColor(phase) }}>
                   {issuesList.length}
                 </div>
                 <div style={{ fontSize: '10px', color: '#6B7280', marginTop: '4px' }}>

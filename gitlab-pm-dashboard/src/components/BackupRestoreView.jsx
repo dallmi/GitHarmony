@@ -181,7 +181,7 @@ export default function BackupRestoreView() {
               checked={includeTokens}
               onChange={(e) => setIncludeTokens(e.target.checked)}
             />
-            Include access tokens (⚠️ sensitive data)
+            Include access tokens (sensitive data)
           </label>
           <p className="help-text">
             By default, access tokens are masked for security. Enable this only if you need to share

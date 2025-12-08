@@ -6,7 +6,7 @@ import { getAllProjects } from '../services/storageService'
  * Project Group Manager
  * Allows creating custom groupings of projects for flexible portfolio views
  */
-export default function ProjectGroupManager({ onSelect, onClose }) {
+export default function ProjectGroupManager({ onSelect }) {
   const [projectGroups, setProjectGroups] = useState(loadProjectGroups())
   const [allProjects, setAllProjects] = useState(getAllProjects())
   const [showForm, setShowForm] = useState(false)
@@ -322,7 +322,6 @@ export default function ProjectGroupManager({ onSelect, onClose }) {
             border: '1px solid #E5E7EB',
             color: '#6B7280'
           }}>
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}>📁</div>
             <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px', color: '#374151' }}>
               No Project Groups Yet
             </div>

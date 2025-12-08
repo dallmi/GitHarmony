@@ -7,7 +7,6 @@ import React, { useState, useRef, useEffect } from 'react'
  */
 export default function BurnupChart({ burnupData, width, height = 300 }) {
   const [hoveredPoint, setHoveredPoint] = useState(null)
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
   const [containerWidth, setContainerWidth] = useState(width || 600)
   const containerRef = useRef(null)
 
@@ -288,10 +287,8 @@ export default function BurnupChart({ burnupData, width, height = 300 }) {
               height={chartHeight}
               fill="transparent"
               style={{ cursor: 'pointer' }}
-              onMouseEnter={(e) => {
+              onMouseEnter={() => {
                 setHoveredPoint(i)
-                const rect = e.currentTarget.getBoundingClientRect()
-                setTooltipPos({ x: rect.left + 10, y: rect.top })
               }}
               onMouseLeave={() => setHoveredPoint(null)}
             />

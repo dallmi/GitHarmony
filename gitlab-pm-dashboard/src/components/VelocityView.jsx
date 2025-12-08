@@ -311,21 +311,10 @@ export default function VelocityView({ issues: allIssues }) {
     }
   }, [issues, selectedIterations, isFiltered, velocityConfig])
 
-  if (!analytics || analytics.velocityData.length === 0) {
-    return (
-      <div className="container">
-        <div className="card text-center" style={{ padding: '60px 20px' }}>
-          <h3 className="mb-2">No Velocity Data</h3>
-          <p className="text-muted">Add "Sprint X" labels to your issues to track velocity and burndown.</p>
-        </div>
-      </div>
-    )
-  }
-
-  const { velocityData: fullVelocityData, avgVelocity, currentSprint, burndownIssues, burndownPoints, prediction } = analytics
-
   // Limit chart display to trailing 12 months or last 12 sprints to prevent overflow
+  // This must be called before any early returns to comply with Rules of Hooks
   const velocityDataForChart = React.useMemo(() => {
+    const fullVelocityData = analytics?.velocityData
     if (!fullVelocityData || fullVelocityData.length === 0) return []
 
     // Try to filter by 12 months first
@@ -345,7 +334,20 @@ export default function VelocityView({ issues: allIssues }) {
 
     // Fall back to last 12 sprints
     return fullVelocityData.slice(-12)
-  }, [fullVelocityData])
+  }, [analytics?.velocityData])
+
+  if (!analytics || analytics.velocityData.length === 0) {
+    return (
+      <div className="container">
+        <div className="card text-center" style={{ padding: '60px 20px' }}>
+          <h3 className="mb-2">No Velocity Data</h3>
+          <p className="text-muted">Add "Sprint X" labels to your issues to track velocity and burndown.</p>
+        </div>
+      </div>
+    )
+  }
+
+  const { velocityData: fullVelocityData, avgVelocity, currentSprint, burndownIssues, burndownPoints, prediction } = analytics
 
   // Use full data for trend calculations (need historical context)
   const velocityData = fullVelocityData
@@ -1058,7 +1060,7 @@ export default function VelocityView({ issues: allIssues }) {
                         const daysSinceStart = (today - start) / (24 * 60 * 60 * 1000)
                         const todayXPos = (daysSinceStart / sprintDuration) * 100
                         labels.push(
-                          <div key="today" style={{ position: 'absolute', left: `${todayXPos}%`, fontSize: '11px', color: '#EF4444', fontWeight: '700', textAlign: 'center', transform: 'translateX(-50%)', zIndex: 10 }}>
+                          <div key="today" style={{ position: 'absolute', left: `${todayXPos}%`, fontSize: '11px', color: '#EF4444', fontWeight: '600', textAlign: 'center', transform: 'translateX(-50%)', zIndex: 10 }}>
                             <div>Today</div>
                             <div style={{ fontSize: '9px', fontWeight: '600' }}>{today.toLocaleDateString('de-DE', { weekday: 'short' })}</div>
                           </div>
@@ -1117,7 +1119,7 @@ export default function VelocityView({ issues: allIssues }) {
                       Current Sprint Status
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: '8px', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '32px', fontWeight: '700', color: '#1F2937' }}>{remaining}</span>
+                      <span style={{ fontSize: '32px', fontWeight: '600', color: '#1F2937' }}>{remaining}</span>
                       <span style={{ fontSize: '16px', color: '#6B7280' }}>/ {burndown.total} {units} remaining</span>
                     </div>
                     <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>

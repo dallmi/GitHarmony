@@ -7,7 +7,6 @@ export default function RoadmapView({ issues, milestones }) {
     return (
       <div className="container">
         <div className="card text-center" style={{ padding: '60px 20px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>🗺️</div>
           <h3 className="mb-2">No Milestones</h3>
           <p className="text-muted">Create milestones in GitLab to see the roadmap view.</p>
         </div>
@@ -63,19 +62,19 @@ export default function RoadmapView({ issues, milestones }) {
                     </span>
                     {milestone.due_date && (
                       <span className="text-muted">
-                        📅 {formatDateReadable(milestone.due_date)}
+                        Due: {formatDateReadable(milestone.due_date)}
                       </span>
                     )}
                     {blockerCount > 0 && (
                       <span style={{ color: 'var(--danger)', fontWeight: '600' }}>
-                        🚫 {blockerCount} Blockers
+                        {blockerCount} Blockers
                       </span>
                     )}
                   </div>
                 </div>
 
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '32px', fontWeight: '700', color: 'var(--primary)' }}>
+                  <div style={{ fontSize: '32px', fontWeight: '600', color: 'var(--primary)' }}>
                     {progressPercent}%
                   </div>
                   <div className="text-small text-muted">{completed} / {total}</div>
@@ -89,15 +88,15 @@ export default function RoadmapView({ issues, milestones }) {
               <div className="grid grid-3" style={{ gap: '12px' }}>
                 <div className="card" style={{ background: 'var(--bg-secondary)', padding: '12px', textAlign: 'center' }}>
                   <div className="text-small text-muted mb-1">HIGH PRIORITY</div>
-                  <div style={{ fontSize: '24px', fontWeight: '700' }}>{highPriority}</div>
+                  <div style={{ fontSize: '24px', fontWeight: '600' }}>{highPriority}</div>
                 </div>
                 <div className="card" style={{ background: 'var(--bg-secondary)', padding: '12px', textAlign: 'center' }}>
                   <div className="text-small text-muted mb-1">AT RISK</div>
-                  <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--warning)' }}>{atRisk}</div>
+                  <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--warning)' }}>{atRisk}</div>
                 </div>
                 <div className="card" style={{ background: 'var(--bg-secondary)', padding: '12px', textAlign: 'center' }}>
                   <div className="text-small text-muted mb-1">OVERDUE</div>
-                  <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--danger)' }}>{overdue}</div>
+                  <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--danger)' }}>{overdue}</div>
                 </div>
               </div>
 
@@ -110,7 +109,7 @@ export default function RoadmapView({ issues, milestones }) {
                   borderRadius: '4px'
                 }}>
                   <h4 style={{ color: 'var(--danger)', marginBottom: '12px', fontWeight: '600' }}>
-                    🚫 Blockers
+                    Blockers
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {milestoneIssues.filter(i => isBlocked(i.labels)).map(issue => (

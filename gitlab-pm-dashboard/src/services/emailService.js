@@ -135,7 +135,7 @@ function decodeBody(body, headers = '') {
   if (headers.includes('Content-Transfer-Encoding: base64')) {
     try {
       return atob(body.replace(/\s/g, ''))
-    } catch (e) {
+    } catch {
       return body
     }
   }
@@ -381,7 +381,7 @@ function parseBinaryMsg(content) {
     }
 
     // Date patterns
-    const dateMatch = str.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/)
+    const dateMatch = str.match(/\d{1,2}[/-]\d{1,2}[/-]\d{2,4}/)
     if (dateMatch && !result.date) {
       result.date = dateMatch[0]
     }

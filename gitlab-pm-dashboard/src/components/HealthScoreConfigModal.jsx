@@ -244,12 +244,10 @@ export default function HealthScoreConfigModal({ isOpen, onClose, onSave }) {
               // Calculate key thresholds
               const scoreZeroPercent = (100 / amplifier * 100).toFixed(1)
               const score50Percent = (50 / amplifier * 100).toFixed(1)
-              const score25Percent = (75 / amplifier * 100).toFixed(1)
 
               // Calculate example percentages for common scenarios
               const at5Percent = (100 - (0.05 * amplifier)).toFixed(0)
               const at10Percent = Math.max(0, 100 - (0.10 * amplifier)).toFixed(0)
-              const at20Percent = Math.max(0, 100 - (0.20 * amplifier)).toFixed(0)
 
               return (
                 <div key={key} style={{

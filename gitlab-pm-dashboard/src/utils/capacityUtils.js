@@ -298,10 +298,10 @@ export function getStatusLabel(status) {
  */
 export function formatRecommendation(rec) {
   const icons = {
-    rebalance: '🔄',
-    assign: '👤',
-    warning: '⚠️',
-    info: 'ℹ️'
+    rebalance: '',
+    assign: '',
+    warning: '',
+    info: ''
   }
 
   return {

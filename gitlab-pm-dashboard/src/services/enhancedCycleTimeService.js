@@ -3,6 +3,8 @@
  * Uses GitLab Premium/Ultimate label events API for accurate cycle time tracking
  */
 
+const isDev = import.meta.env.MODE === 'development'
+
 import { fetchIssueLabelHistory } from './gitlabApi.js'
 import { DEFAULT_PHASE_PATTERNS, estimateCycleTime } from './cycleTimeService.js'
 
@@ -43,7 +45,9 @@ export function calculateAccurateCycleTime(issue, labelEvents) {
   sortedEvents.forEach(event => {
     // Skip events with null/undefined labels (data quality issue from GitLab API)
     if (!event.label || !event.label.name) {
-      console.warn('Skipping label event with null label:', event)
+      if (isDev) {
+        console.warn('Skipping label event with null label:', event)
+      }
       return
     }
 
@@ -82,7 +86,7 @@ export function calculateAccurateCycleTime(issue, labelEvents) {
   ].map(l => l.toLowerCase())
 
   // Debug: Log what labels we're looking for vs what we have
-  if (timeline.length > 0) {
+  if (isDev && timeline.length > 0) {
     const allLabelsInHistory = [...new Set(timeline.map(t => t.labelLower))]
     const matchingLabels = allLabelsInHistory.filter(l =>
       workStartLabels.some(wsl => l.includes(wsl))
@@ -105,7 +109,9 @@ export function calculateAccurateCycleTime(issue, labelEvents) {
 
       if (isWorkLabel) {
         workStartedAt = event.timestamp
-        console.log(`Issue #${issue.iid}: Work started at ${workStartedAt.toISOString()} with label "${event.label}"`)
+        if (isDev) {
+          console.log(`Issue #${issue.iid}: Work started at ${workStartedAt.toISOString()} with label "${event.label}"`)
+        }
         break
       }
     }
@@ -114,7 +120,7 @@ export function calculateAccurateCycleTime(issue, labelEvents) {
   // If no work start found in label events, we cannot accurately determine cycle time
   // Return null to indicate this is not an accurate measurement
   if (!workStartedAt) {
-    if (timeline.length > 0) {
+    if (isDev && timeline.length > 0) {
       console.log(`Issue #${issue.iid}: Could not determine work start from ${timeline.length} label events`)
     }
     return {
@@ -133,7 +139,9 @@ export function calculateAccurateCycleTime(issue, labelEvents) {
   // Validate: Cycle time must be positive and work start must be >= created
   const createdAt = new Date(issue.created_at)
   if (cycleTimeDays < 0) {
-    console.warn(`Issue #${issue.iid}: Invalid cycle time (${cycleTimeDays} days). Work started after closed. Falling back to estimation.`)
+    if (isDev) {
+      console.warn(`Issue #${issue.iid}: Invalid cycle time (${cycleTimeDays} days). Work started after closed. Falling back to estimation.`)
+    }
     return {
       cycleTime: null,
       workStartedAt: null,
@@ -144,7 +152,9 @@ export function calculateAccurateCycleTime(issue, labelEvents) {
   }
 
   if (workStartedAt < createdAt) {
-    console.warn(`Issue #${issue.iid}: Work started before issue created. This shouldn't happen. Falling back to estimation.`)
+    if (isDev) {
+      console.warn(`Issue #${issue.iid}: Work started before issue created. This shouldn't happen. Falling back to estimation.`)
+    }
     return {
       cycleTime: null,
       workStartedAt: null,
@@ -180,9 +190,11 @@ export async function fetchBatchLabelEvents(issues, config, onProgress = null) {
 
   // Identify unique projects
   const projectIds = [...new Set(closedIssues.map(i => i.project_id).filter(Boolean))]
-  console.log(`Fetching label events for ${closedIssues.length} closed issues from ${projectIds.length} project(s)...`)
-  if (projectIds.length > 1) {
-    console.log('Multiple projects detected (pod/multi-project mode):', projectIds)
+  if (isDev) {
+    console.log(`Fetching label events for ${closedIssues.length} closed issues from ${projectIds.length} project(s)...`)
+    if (projectIds.length > 1) {
+      console.log('Multiple projects detected (pod/multi-project mode):', projectIds)
+    }
   }
 
   // Batch requests to avoid overwhelming the API
@@ -218,7 +230,9 @@ export async function fetchBatchLabelEvents(issues, config, onProgress = null) {
     }
   }
 
-  console.log(`✓ Fetched label events for ${labelEventsMap.size} issues`)
+  if (isDev) {
+    console.log(`✓ Fetched label events for ${labelEventsMap.size} issues`)
+  }
   return labelEventsMap
 }
 
@@ -346,44 +360,46 @@ export function getEnhancedCycleTimeStats(issues, labelEventsMap) {
   }
 
   // Debug logging - detailed analysis
-  console.log('=== Enhanced Cycle Time Stats ===')
-  console.log('Sample Size:', cycleTimeData.length)
-  console.log('Accurate (label events):', accurateCount)
-  console.log('Estimated (fallback):', estimatedCount)
-  console.log('')
-  console.log('Avg Cycle Time:', avgCycleTime, 'days')
-  console.log('Avg Lead Time:', avgLeadTime, 'days')
-  console.log('Avg Wait Time:', avgLeadTime - avgCycleTime, 'days')
-  console.log('')
-  console.log('Median Cycle Time:', medianCycleTime, 'days')
-  console.log('Median Lead Time:', medianLeadTime, 'days')
-  console.log('')
-  console.log('First 10 Cycle Times:', cycleTimes.slice(0, 10))
-  console.log('First 10 Lead Times:', leadTimes.slice(0, 10))
-  console.log('')
+  if (isDev) {
+    console.log('=== Enhanced Cycle Time Stats ===')
+    console.log('Sample Size:', cycleTimeData.length)
+    console.log('Accurate (label events):', accurateCount)
+    console.log('Estimated (fallback):', estimatedCount)
+    console.log('')
+    console.log('Avg Cycle Time:', avgCycleTime, 'days')
+    console.log('Avg Lead Time:', avgLeadTime, 'days')
+    console.log('Avg Wait Time:', avgLeadTime - avgCycleTime, 'days')
+    console.log('')
+    console.log('Median Cycle Time:', medianCycleTime, 'days')
+    console.log('Median Lead Time:', medianLeadTime, 'days')
+    console.log('')
+    console.log('First 10 Cycle Times:', cycleTimes.slice(0, 10))
+    console.log('First 10 Lead Times:', leadTimes.slice(0, 10))
+    console.log('')
 
-  // Show sample issue details to understand the data
-  console.log('Sample Issue Analysis (first 5):')
-  cycleTimeData.slice(0, 5).forEach((data, idx) => {
-    const leadTime = Math.ceil((new Date(data.issue.closed_at) - new Date(data.issue.created_at)) / (1000 * 60 * 60 * 24))
-    console.log(`  #${data.issue.iid}:`, {
-      cycleTime: data.cycleTime,
-      leadTime: leadTime,
-      method: data.method,
-      created: new Date(data.issue.created_at).toLocaleDateString('de-DE'),
-      workStarted: data.workStartedAt ? new Date(data.workStartedAt).toLocaleDateString('de-DE') : 'N/A',
-      closed: new Date(data.issue.closed_at).toLocaleDateString('de-DE')
+    // Show sample issue details to understand the data
+    console.log('Sample Issue Analysis (first 5):')
+    cycleTimeData.slice(0, 5).forEach((data) => {
+      const leadTime = Math.ceil((new Date(data.issue.closed_at) - new Date(data.issue.created_at)) / (1000 * 60 * 60 * 24))
+      console.log(`  #${data.issue.iid}:`, {
+        cycleTime: data.cycleTime,
+        leadTime: leadTime,
+        method: data.method,
+        created: new Date(data.issue.created_at).toLocaleDateString('de-DE'),
+        workStarted: data.workStartedAt ? new Date(data.workStartedAt).toLocaleDateString('de-DE') : 'N/A',
+        closed: new Date(data.issue.closed_at).toLocaleDateString('de-DE')
+      })
     })
-  })
-  console.log('================================')
+    console.log('================================')
 
-  // Validation check
-  if (avgCycleTime > avgLeadTime) {
-    console.error('⚠️ DATA INCONSISTENCY: Avg Cycle Time > Avg Lead Time!', {
-      avgCycleTime,
-      avgLeadTime,
-      diff: avgCycleTime - avgLeadTime
-    })
+    // Validation check
+    if (avgCycleTime > avgLeadTime) {
+      console.error('⚠️ DATA INCONSISTENCY: Avg Cycle Time > Avg Lead Time!', {
+        avgCycleTime,
+        avgLeadTime,
+        diff: avgCycleTime - avgLeadTime
+      })
+    }
   }
 
   return {
@@ -419,7 +435,9 @@ export async function getOrFetchLabelEvents(issues, config, onProgress = null) {
 
   // Return cached data if still valid
   if (labelEventsCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_TTL) {
-    console.log('Using cached label events')
+    if (isDev) {
+      console.log('Using cached label events')
+    }
     return labelEventsCache
   }
 

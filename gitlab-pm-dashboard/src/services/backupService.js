@@ -165,7 +165,7 @@ function maskToken(token) {
  * @returns {Object} Backup object
  */
 export function createBackup(options = {}) {
-  const { includeTokens = false, encrypt = false, password = null } = options
+  const { includeTokens = false } = options
 
   const keys = getAllStorageKeys()
   const includedData = []
@@ -206,7 +206,7 @@ export function createBackup(options = {}) {
     // Remove token field from projects since we use centralized token
     if (Array.isArray(portfolioProjects)) {
       data.portfolioProjects = portfolioProjects.map(p => {
-        const { token, ...projectWithoutToken } = p
+        const { token: _token, ...projectWithoutToken } = p
         return projectWithoutToken
       })
     } else {
@@ -226,7 +226,7 @@ export function createBackup(options = {}) {
     // Remove token field from groups since we use centralized token
     if (Array.isArray(portfolioGroups)) {
       data.portfolioGroups = portfolioGroups.map(g => {
-        const { token, ...groupWithoutToken } = g
+        const { token: _token, ...groupWithoutToken } = g
         return groupWithoutToken
       })
     } else {
@@ -512,7 +512,7 @@ export function createBackup(options = {}) {
       version: BACKUP_VERSION,
       timestamp: new Date().toISOString(),
       appVersion: '1.0.0',
-      backupType: encrypt ? 'encrypted' : 'plain',
+      backupType: 'plain',
       includedData,
       tokensIncluded: includeTokens,
       itemCount: Object.keys(data).length
@@ -754,7 +754,7 @@ export function restoreFromBackup(backup, options = {}) {
           }
           break
 
-        case 'teamConfiguration':
+        case 'teamConfiguration': {
           // Restore project and pod-level team configurations
           let teamConfigCount = 0
 
@@ -884,8 +884,9 @@ export function restoreFromBackup(backup, options = {}) {
             result.restored.push(`teamConfiguration (${teamConfigCount} items)`)
           }
           break
+        }
 
-        case 'absences':
+        case 'absences': {
           // Restore project and pod-level absences
           let absenceCount = 0
 
@@ -935,6 +936,7 @@ export function restoreFromBackup(backup, options = {}) {
             result.restored.push(`absences (${absenceCount} items)`)
           }
           break
+        }
 
         case 'stakeholderHub':
           if (data.stakeholders) {
@@ -969,7 +971,7 @@ export function restoreFromBackup(backup, options = {}) {
           }
           break
 
-        case 'projectDecisions':
+        case 'projectDecisions': {
           // Restore project and pod-level decisions
           let decisionCount = 0
 
@@ -1006,6 +1008,7 @@ export function restoreFromBackup(backup, options = {}) {
             result.restored.push(`projectDecisions (${decisionCount} items)`)
           }
           break
+        }
 
         case 'healthScoreConfig':
           if (overwrite || !loadFromStorage(keys.healthScoreConfig)) {
@@ -1056,7 +1059,7 @@ export function restoreFromBackup(backup, options = {}) {
           }
           break
 
-        case 'forecasts':
+        case 'forecasts': {
           // Restore project and pod-level forecasts
           let forecastCount = 0
 
@@ -1093,6 +1096,7 @@ export function restoreFromBackup(backup, options = {}) {
             result.restored.push(`forecasts (${forecastCount} items)`)
           }
           break
+        }
 
         case 'backlogHealthHistory':
           if (overwrite || !loadFromStorage(keys.backlogHealthHistory)) {

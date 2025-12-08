@@ -3,6 +3,8 @@
  * Handles all communication with GitLab REST API
  */
 
+const isDev = import.meta.env.MODE === 'development'
+
 /**
  * Validate and fetch project information
  * Helps diagnose 404 errors by checking if project exists and is accessible
@@ -11,8 +13,10 @@ export async function validateProject(gitlabUrl, projectId, token) {
   const encodedProjectId = encodeURIComponent(projectId)
   const url = `${gitlabUrl}/api/v4/projects/${encodedProjectId}`
 
-  console.log('Validating project access...')
-  console.log('  URL:', url)
+  if (isDev) {
+    console.log('Validating project access...')
+    console.log('  URL:', url)
+  }
 
   const response = await fetch(url, {
     headers: { 'PRIVATE-TOKEN': token }
@@ -32,9 +36,11 @@ export async function validateProject(gitlabUrl, projectId, token) {
   }
 
   const project = await response.json()
-  console.log('✓ Project validated:', project.name)
-  console.log('  Full path:', project.path_with_namespace)
-  console.log('  Numeric ID:', project.id)
+  if (isDev) {
+    console.log('✓ Project validated:', project.name)
+    console.log('  Full path:', project.path_with_namespace)
+    console.log('  Numeric ID:', project.id)
+  }
 
   return project
 }
@@ -48,14 +54,18 @@ export async function fetchIssues(gitlabUrl, projectId, token) {
   let page = 1
   const perPage = 100
 
-  console.log('Fetching issues with pagination...')
-  console.log('  GitLab URL:', gitlabUrl)
-  console.log('  Project ID:', projectId)
-  console.log('  Encoded Project ID:', encodedProjectId)
+  if (isDev) {
+    console.log('Fetching issues with pagination...')
+    console.log('  GitLab URL:', gitlabUrl)
+    console.log('  Project ID:', projectId)
+    console.log('  Encoded Project ID:', encodedProjectId)
+  }
 
   while (true) {
     const url = `${gitlabUrl}/api/v4/projects/${encodedProjectId}/issues?per_page=${perPage}&page=${page}&scope=all&with_iterations=true`
-    console.log('  API Request URL:', url)
+    if (isDev) {
+      console.log('  API Request URL:', url)
+    }
 
     const response = await fetch(url, {
       headers: { 'PRIVATE-TOKEN': token }
@@ -74,7 +84,9 @@ export async function fetchIssues(gitlabUrl, projectId, token) {
     }
 
     allIssues = allIssues.concat(issues)
-    console.log(`  Fetched page ${page}: ${issues.length} issues (total: ${allIssues.length})`)
+    if (isDev) {
+      console.log(`  Fetched page ${page}: ${issues.length} issues (total: ${allIssues.length})`)
+    }
 
     if (issues.length < perPage) {
       break // Last page (partial results)
@@ -83,26 +95,28 @@ export async function fetchIssues(gitlabUrl, projectId, token) {
     page++
   }
 
-  console.log(`✓ Loaded ${allIssues.length} total issues from ${page} page(s)`)
+  if (isDev) {
+    console.log(`✓ Loaded ${allIssues.length} total issues from ${page} page(s)`)
 
-  // Debug: Check iteration data on first few issues
-  if (allIssues.length > 0) {
-    console.log('=== ITERATION DEBUG ===')
-    const sampleSize = Math.min(3, allIssues.length)
-    for (let i = 0; i < sampleSize; i++) {
-      const issue = allIssues[i]
-      console.log(`Issue #${issue.iid} (${issue.title}):`)
-      console.log('  - iteration field:', issue.iteration)
-      console.log('  - labels:', issue.labels)
+    // Debug: Check iteration data on first few issues
+    if (allIssues.length > 0) {
+      console.log('=== ITERATION DEBUG ===')
+      const sampleSize = Math.min(3, allIssues.length)
+      for (let i = 0; i < sampleSize; i++) {
+        const issue = allIssues[i]
+        console.log(`Issue #${issue.iid} (${issue.title}):`)
+        console.log('  - iteration field:', issue.iteration)
+        console.log('  - labels:', issue.labels)
+      }
+
+      // Count how many issues have iteration data
+      const withIteration = allIssues.filter(i => i.iteration).length
+      const withIterationLabels = allIssues.filter(i =>
+        i.labels && i.labels.some(l => l.toLowerCase().startsWith('sprint') || l.toLowerCase().startsWith('iteration'))
+      ).length
+      console.log(`Summary: ${withIteration} issues with iteration field, ${withIterationLabels} with iteration/sprint labels`)
+      console.log('======================')
     }
-
-    // Count how many issues have iteration data
-    const withIteration = allIssues.filter(i => i.iteration).length
-    const withIterationLabels = allIssues.filter(i =>
-      i.labels && i.labels.some(l => l.toLowerCase().startsWith('sprint') || l.toLowerCase().startsWith('iteration'))
-    ).length
-    console.log(`Summary: ${withIteration} issues with iteration field, ${withIterationLabels} with iteration/sprint labels`)
-    console.log('======================')
   }
 
   return allIssues
@@ -117,7 +131,9 @@ export async function fetchMilestones(gitlabUrl, projectId, token) {
   let page = 1
   const perPage = 100
 
-  console.log('Fetching milestones with pagination...')
+  if (isDev) {
+    console.log('Fetching milestones with pagination...')
+  }
 
   while (true) {
     const response = await fetch(
@@ -136,7 +152,9 @@ export async function fetchMilestones(gitlabUrl, projectId, token) {
     }
 
     allMilestones = allMilestones.concat(milestones)
-    console.log(`  Fetched page ${page}: ${milestones.length} milestones (total: ${allMilestones.length})`)
+    if (isDev) {
+      console.log(`  Fetched page ${page}: ${milestones.length} milestones (total: ${allMilestones.length})`)
+    }
 
     if (milestones.length < perPage) {
       break // Last page (partial results)
@@ -145,7 +163,9 @@ export async function fetchMilestones(gitlabUrl, projectId, token) {
     page++
   }
 
-  console.log(`✓ Loaded ${allMilestones.length} total milestones from ${page} page(s)`)
+  if (isDev) {
+    console.log(`✓ Loaded ${allMilestones.length} total milestones from ${page} page(s)`)
+  }
   return allMilestones
 }
 
@@ -162,7 +182,9 @@ export async function updateIssueAssignee(gitlabUrl, projectId, issueIid, assign
   const encodedProjectId = encodeURIComponent(projectId)
   const url = `${gitlabUrl}/api/v4/projects/${encodedProjectId}/issues/${issueIid}`
 
-  console.log(`Updating issue #${issueIid} assignee to user ${assigneeId}`)
+  if (isDev) {
+    console.log(`Updating issue #${issueIid} assignee to user ${assigneeId}`)
+  }
 
   const response = await fetch(url, {
     method: 'PUT',
@@ -191,7 +213,9 @@ export async function updateIssueAssignee(gitlabUrl, projectId, issueIid, assign
   }
 
   const updatedIssue = await response.json()
-  console.log(`✓ Successfully updated issue #${issueIid} assignee`)
+  if (isDev) {
+    console.log(`✓ Successfully updated issue #${issueIid} assignee`)
+  }
   return updatedIssue
 }
 
@@ -211,7 +235,9 @@ export async function batchUpdateIssueAssignees(gitlabUrl, projectId, issues, as
     failed: []
   }
 
-  console.log(`Starting batch update for ${issues.length} issues`)
+  if (isDev) {
+    console.log(`Starting batch update for ${issues.length} issues`)
+  }
 
   for (let i = 0; i < issues.length; i++) {
     const issue = issues[i]
@@ -244,7 +270,9 @@ export async function batchUpdateIssueAssignees(gitlabUrl, projectId, issues, as
     }
   }
 
-  console.log(`Batch update completed: ${results.successful.length} successful, ${results.failed.length} failed`)
+  if (isDev) {
+    console.log(`Batch update completed: ${results.successful.length} successful, ${results.failed.length} failed`)
+  }
   return results
 }
 
@@ -261,19 +289,25 @@ export async function fetchEpics(gitlabUrl, groupPath, token) {
   let page = 1
   const perPage = 100
 
-  console.log('Fetching epics with pagination...')
-  console.log('  GitLab URL:', gitlabUrl)
-  console.log('  Group Path:', groupPath)
-  console.log('  Encoded Group Path:', encodedGroupPath)
+  if (isDev) {
+    console.log('Fetching epics with pagination...')
+    console.log('  GitLab URL:', gitlabUrl)
+    console.log('  Group Path:', groupPath)
+    console.log('  Encoded Group Path:', encodedGroupPath)
+  }
 
   try {
     while (true) {
       const url = `${gitlabUrl}/api/v4/groups/${encodedGroupPath}/epics?per_page=${perPage}&page=${page}`
-      console.log('  Epic API Request URL:', url)
+      if (isDev) {
+        console.log('  Epic API Request URL:', url)
+      }
 
       const response = await fetch(url, { headers: { 'PRIVATE-TOKEN': token } })
 
-      console.log(`  Epic API Response Status: ${response.status}`)
+      if (isDev) {
+        console.log(`  Epic API Response Status: ${response.status}`)
+      }
 
       if (response.status === 404) {
         console.warn('Epics not available (requires Premium/Ultimate)')
@@ -287,14 +321,18 @@ export async function fetchEpics(gitlabUrl, groupPath, token) {
       }
 
       const epics = await response.json()
-      console.log(`  Epics returned on page ${page}:`, epics.length)
+      if (isDev) {
+        console.log(`  Epics returned on page ${page}:`, epics.length)
+      }
 
       if (epics.length === 0) {
         break // No more epics
       }
 
       allEpics = allEpics.concat(epics)
-      console.log(`  Fetched page ${page}: ${epics.length} epics (total: ${allEpics.length})`)
+      if (isDev) {
+        console.log(`  Fetched page ${page}: ${epics.length} epics (total: ${allEpics.length})`)
+      }
 
       if (epics.length < perPage) {
         break // Last page (partial results)
@@ -303,7 +341,9 @@ export async function fetchEpics(gitlabUrl, groupPath, token) {
       page++
     }
 
-    console.log(`✓ Loaded ${allEpics.length} total epics from ${page} page(s)`)
+    if (isDev) {
+      console.log(`✓ Loaded ${allEpics.length} total epics from ${page} page(s)`)
+    }
     return allEpics
   } catch (error) {
     console.error('Epic fetch failed:', error)
@@ -367,10 +407,12 @@ export async function checkPremiumFeatures(gitlabUrl, projectId, token) {
     const hasLabelHistory = labelEventsResponse.ok
     const hasResourceEvents = eventsResponse.ok
 
-    console.log(`GitLab Premium Features for project ${projectId}:`, {
-      hasLabelHistory,
-      hasResourceEvents
-    })
+    if (isDev) {
+      console.log(`GitLab Premium Features for project ${projectId}:`, {
+        hasLabelHistory,
+        hasResourceEvents
+      })
+    }
 
     return { hasLabelHistory, hasResourceEvents, projectId }
   } catch (error) {
@@ -402,12 +444,14 @@ export async function checkPremiumFeaturesForProjects(gitlabUrl, projectIds, tok
   const allPremium = results.every(r => r.hasLabelHistory && r.hasResourceEvents)
   const premiumCount = results.filter(r => r.hasLabelHistory || r.hasResourceEvents).length
 
-  console.log('Multi-project Premium check:', {
-    totalProjects: projectIds.length,
-    premiumCount,
-    allPremium,
-    anyPremium
-  })
+  if (isDev) {
+    console.log('Multi-project Premium check:', {
+      totalProjects: projectIds.length,
+      premiumCount,
+      allPremium,
+      anyPremium
+    })
+  }
 
   return {
     featuresMap,
@@ -473,8 +517,10 @@ export async function validateGroup(gitlabUrl, groupPath, token) {
   const encodedGroupPath = encodeURIComponent(groupPath)
   const url = `${gitlabUrl}/api/v4/groups/${encodedGroupPath}`
 
-  console.log('Validating group access...')
-  console.log('  URL:', url)
+  if (isDev) {
+    console.log('Validating group access...')
+    console.log('  URL:', url)
+  }
 
   const response = await fetch(url, {
     headers: { 'PRIVATE-TOKEN': token }
@@ -494,9 +540,11 @@ export async function validateGroup(gitlabUrl, groupPath, token) {
   }
 
   const group = await response.json()
-  console.log('✓ Group validated:', group.name)
-  console.log('  Full path:', group.full_path)
-  console.log('  Numeric ID:', group.id)
+  if (isDev) {
+    console.log('✓ Group validated:', group.name)
+    console.log('  Full path:', group.full_path)
+    console.log('  Numeric ID:', group.id)
+  }
 
   return group
 }
@@ -510,8 +558,10 @@ export async function fetchGroupProjects(gitlabUrl, groupPath, token) {
   let page = 1
   const perPage = 100
 
-  console.log('Fetching all projects in group (including subgroups)...')
-  console.log('  Group Path:', groupPath)
+  if (isDev) {
+    console.log('Fetching all projects in group (including subgroups)...')
+    console.log('  Group Path:', groupPath)
+  }
 
   while (true) {
     // include_subgroups=true fetches all projects from subgroups recursively
@@ -534,7 +584,9 @@ export async function fetchGroupProjects(gitlabUrl, groupPath, token) {
     }
 
     allProjects = allProjects.concat(projects)
-    console.log(`  Fetched page ${page}: ${projects.length} projects (total: ${allProjects.length})`)
+    if (isDev) {
+      console.log(`  Fetched page ${page}: ${projects.length} projects (total: ${allProjects.length})`)
+    }
 
     if (projects.length < perPage) {
       break
@@ -543,14 +595,16 @@ export async function fetchGroupProjects(gitlabUrl, groupPath, token) {
     page++
   }
 
-  console.log(`✓ Found ${allProjects.length} projects in group "${groupPath}"`)
+  if (isDev) {
+    console.log(`✓ Found ${allProjects.length} projects in group "${groupPath}"`)
 
-  // Log project summary
-  if (allProjects.length > 0) {
-    console.log('  Projects:')
-    allProjects.forEach(p => {
-      console.log(`    - ${p.path_with_namespace} (ID: ${p.id})`)
-    })
+    // Log project summary
+    if (allProjects.length > 0) {
+      console.log('  Projects:')
+      allProjects.forEach(p => {
+        console.log(`    - ${p.path_with_namespace} (ID: ${p.id})`)
+      })
+    }
   }
 
   return allProjects
@@ -560,7 +614,9 @@ export async function fetchGroupProjects(gitlabUrl, groupPath, token) {
  * Fetch issues from multiple projects in parallel
  */
 export async function fetchIssuesFromProjects(gitlabUrl, projects, token, onProgress = null) {
-  console.log(`Fetching issues from ${projects.length} projects...`)
+  if (isDev) {
+    console.log(`Fetching issues from ${projects.length} projects...`)
+  }
 
   const batchSize = 5 // Process 5 projects at a time to avoid overwhelming the API
   let allIssues = []
@@ -582,7 +638,7 @@ export async function fetchIssuesFromProjects(gitlabUrl, projects, token, onProg
     )
 
     batchResults.forEach(({ projectPath, issues }) => {
-      if (issues.length > 0) {
+      if (isDev && issues.length > 0) {
         console.log(`  ✓ ${projectPath}: ${issues.length} issues`)
       }
       allIssues = allIssues.concat(issues)
@@ -594,7 +650,9 @@ export async function fetchIssuesFromProjects(gitlabUrl, projects, token, onProg
     }
   }
 
-  console.log(`✓ Loaded ${allIssues.length} total issues from ${projects.length} projects`)
+  if (isDev) {
+    console.log(`✓ Loaded ${allIssues.length} total issues from ${projects.length} projects`)
+  }
   return allIssues
 }
 
@@ -602,7 +660,9 @@ export async function fetchIssuesFromProjects(gitlabUrl, projects, token, onProg
  * Fetch milestones from multiple projects in parallel
  */
 export async function fetchMilestonesFromProjects(gitlabUrl, projects, token) {
-  console.log(`Fetching milestones from ${projects.length} projects...`)
+  if (isDev) {
+    console.log(`Fetching milestones from ${projects.length} projects...`)
+  }
 
   const batchSize = 5
   let allMilestones = []
@@ -632,7 +692,9 @@ export async function fetchMilestonesFromProjects(gitlabUrl, projects, token) {
     new Map(allMilestones.map(m => [m.id, m])).values()
   )
 
-  console.log(`✓ Loaded ${uniqueMilestones.length} unique milestones from ${projects.length} projects`)
+  if (isDev) {
+    console.log(`✓ Loaded ${uniqueMilestones.length} unique milestones from ${projects.length} projects`)
+  }
   return uniqueMilestones
 }
 
@@ -660,9 +722,11 @@ function filterByYear2025(data, dateFields) {
 export async function fetchAllData(config) {
   const { gitlabUrl, projectId, groupPath, groupPaths, token, filter2025, mode } = config
 
-  console.log('=== Starting GitLab Data Fetch ===')
-  console.log('Full config object:', config)
-  console.log('Mode:', mode || 'project (default)')
+  if (isDev) {
+    console.log('=== Starting GitLab Data Fetch ===')
+    console.log('Full config object:', config)
+    console.log('Mode:', mode || 'project (default)')
+  }
 
   let allIssues, allMilestones, projects = []
   const isSingleProjectMode = mode !== 'group'
@@ -682,7 +746,9 @@ export async function fetchAllData(config) {
     // Fetch all projects in the group
     projects = await fetchGroupProjects(gitlabUrl, primaryGroupPath, token)
 
-    console.log(`\n📊 GROUP MODE: Fetching data from ${projects.length} projects in "${primaryGroupPath}"\n`)
+    if (isDev) {
+      console.log(`\n📊 GROUP MODE: Fetching data from ${projects.length} projects in "${primaryGroupPath}"\n`)
+    }
 
     // Fetch issues and milestones from all projects
     const [issuesResult, milestonesResult] = await Promise.all([
@@ -695,18 +761,22 @@ export async function fetchAllData(config) {
   }
   // PROJECT MODE: Fetch from single project (existing behavior)
   else {
-    console.log('Config values:', {
-      gitlabUrl,
-      projectId,
-      groupPath: groupPath || '(none)',
-      groupPathType: typeof groupPath,
-      groupPathLength: groupPath?.length
-    })
+    if (isDev) {
+      console.log('Config values:', {
+        gitlabUrl,
+        projectId,
+        groupPath: groupPath || '(none)',
+        groupPathType: typeof groupPath,
+        groupPathLength: groupPath?.length
+      })
+    }
 
     // Validate project access
     await validateProject(gitlabUrl, projectId, token)
 
-    console.log(`\n📊 PROJECT MODE: Fetching data from single project "${projectId}"\n`)
+    if (isDev) {
+      console.log(`\n📊 PROJECT MODE: Fetching data from single project "${projectId}"\n`)
+    }
 
     // Fetch issues and milestones from single project
     const [issuesResult, milestonesResult] = await Promise.all([
@@ -751,10 +821,12 @@ export async function fetchAllData(config) {
     ? filterByYear2025(uniqueEpics, ['start_date', 'end_date', 'created_at'])
     : uniqueEpics
 
-  console.log(`Filtered data: ${allIssues.length} → ${issues.length} issues, ${allMilestones.length} → ${milestones.length} milestones, ${uniqueEpics.length} → ${epics.length} epics ${shouldFilter ? '(>= 2025)' : '(no filter)'}`)
+  if (isDev) {
+    console.log(`Filtered data: ${allIssues.length} → ${issues.length} issues, ${allMilestones.length} → ${milestones.length} milestones, ${uniqueEpics.length} → ${epics.length} epics ${shouldFilter ? '(>= 2025)' : '(no filter)'}`)
 
-  if (mode === 'group') {
-    console.log(`  Aggregated from ${projects.length} projects in group`)
+    if (mode === 'group') {
+      console.log(`  Aggregated from ${projects.length} projects in group`)
+    }
   }
 
   // Import cross-project linking functions
@@ -794,10 +866,12 @@ export async function fetchAllData(config) {
     return { ...epic, issues: epicIssues }
   })
 
-  console.log(`✓ Loaded ${epics.length} epics with ${epicsWithIssues.reduce((sum, e) => sum + e.issues.length, 0)} total issues`)
-  console.log(`✓ Cross-project statistics:`, linkingData.statistics)
-  if (orphanedIssues.length > 0) {
-    console.log(`  Found ${orphanedIssues.length} orphaned issues that might need epic assignment`)
+  if (isDev) {
+    console.log(`✓ Loaded ${epics.length} epics with ${epicsWithIssues.reduce((sum, e) => sum + e.issues.length, 0)} total issues`)
+    console.log(`✓ Cross-project statistics:`, linkingData.statistics)
+    if (orphanedIssues.length > 0) {
+      console.log(`  Found ${orphanedIssues.length} orphaned issues that might need epic assignment`)
+    }
   }
 
   return {

@@ -180,7 +180,6 @@ export default function QuarterlyEpicTracker({ epics, issues }) {
     return (
       <div className="container">
         <div className="card text-center" style={{ padding: '60px 20px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>📊</div>
           <h3 className="mb-2">No Epics Found</h3>
           <p className="text-muted">
             Epic support requires GitLab Premium/Ultimate.
@@ -206,7 +205,7 @@ export default function QuarterlyEpicTracker({ epics, issues }) {
         </div>
         {filteredEpics.length > 0 && (
           <button className="btn btn-primary" onClick={handleExport}>
-            📊 Export CSV ({filteredEpics.length} epics)
+            Export CSV ({filteredEpics.length} epics)
           </button>
         )}
       </div>
@@ -256,7 +255,7 @@ export default function QuarterlyEpicTracker({ epics, issues }) {
         </div>
 
         <div className="card" style={{ borderLeft: '4px solid #DC2626' }}>
-          <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>🔴 Red</div>
+          <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>Red</div>
           <div style={{ fontSize: '32px', fontWeight: '600', color: '#DC2626' }}>
             {ragSummary.red}
           </div>
@@ -276,7 +275,7 @@ export default function QuarterlyEpicTracker({ epics, issues }) {
         </div>
 
         <div className="card" style={{ borderLeft: '4px solid #059669' }}>
-          <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>🟢 Green</div>
+          <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>Green</div>
           <div style={{ fontSize: '32px', fontWeight: '600', color: '#059669' }}>
             {ragSummary.green}
           </div>
@@ -290,7 +289,6 @@ export default function QuarterlyEpicTracker({ epics, issues }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         {filteredEpics.length === 0 ? (
           <div className="card text-center" style={{ padding: '40px 20px' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>🔍</div>
             <h3 className="mb-2">No Epics Found</h3>
             <p className="text-muted">
               {searchTerm ? 'Try a different search term' : `No epics for ${selectedQuarter}`}
@@ -373,8 +371,8 @@ export default function QuarterlyEpicTracker({ epics, issues }) {
                   }}
                 >
                   <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>RAG Status</div>
-                  <div style={{ fontSize: '36px', fontWeight: '700', color: getRagColor(epic.rag) }}>
-                    {epic.rag === 'red' ? '🔴' : epic.rag === 'amber' ? '🟠' : '🟢'}
+                  <div style={{ fontSize: '36px', fontWeight: '600', color: getRagColor(epic.rag) }}>
+                    {epic.rag === 'red' ? 'R' : epic.rag === 'amber' ? 'A' : 'G'}
                   </div>
                   <div style={{ fontSize: '12px', fontWeight: '600', color: getRagColor(epic.rag), textTransform: 'uppercase' }}>
                     {epic.rag}

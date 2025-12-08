@@ -1,5 +1,7 @@
+const isDev = import.meta.env.MODE === 'development'
+
 import React, { useState, useEffect } from 'react'
-import { isConfigured, loadConfig, getActiveProjectId } from './services/storageService'
+import { isConfigured, getActiveProjectId } from './services/storageService'
 import useGitLabData from './hooks/useGitLabData'
 import useHealthScore from './hooks/useHealthScore'
 import useRisks from './hooks/useRisks'
@@ -10,7 +12,6 @@ import GroupedTabs from './components/GroupedTabs'
 import RoleSelectorModal from './components/RoleSelectorModal'
 import IterationFilterDropdown from './components/IterationFilterDropdown'
 import { getViewPreference } from './services/userPreferencesService'
-import PortfolioFilterDropdown from './components/PortfolioFilterDropdown'
 import ConfigModal from './components/ConfigModal'
 import EnhancedExecutiveDashboard from './components/EnhancedExecutiveDashboard'
 import RoadmapView from './components/RoadmapView'
@@ -30,70 +31,102 @@ import ReleasePlanningView from './components/ReleasePlanningView'
 import DebugPanel from './components/DebugPanel'
 
 function App() {
-  console.log('App: Component initializing...')
+  if (isDev) {
+    console.log('App: Component initializing...')
+  }
 
   const [activeView, setActiveView] = useState('executive')
-  console.log('App: activeView state initialized:', activeView)
+  if (isDev) {
+    console.log('App: activeView state initialized:', activeView)
+  }
 
   // Log whenever activeView changes
   useEffect(() => {
-    console.log('🔄 ACTIVE VIEW CHANGED TO:', activeView)
-    console.log('Timestamp:', new Date().toISOString())
+    if (isDev) {
+      console.log('🔄 ACTIVE VIEW CHANGED TO:', activeView)
+      console.log('Timestamp:', new Date().toISOString())
+    }
   }, [activeView])
 
   // Wrapper for setActiveView with detailed logging
   const handleViewChange = (newView) => {
-    console.log('=== VIEW CHANGE REQUESTED ===')
-    console.log('Current view:', activeView)
-    console.log('New view:', newView)
-    console.log('Type of newView:', typeof newView)
+    if (isDev) {
+      console.log('=== VIEW CHANGE REQUESTED ===')
+      console.log('Current view:', activeView)
+      console.log('New view:', newView)
+      console.log('Type of newView:', typeof newView)
+    }
     try {
       setActiveView(newView)
-      console.log('✅ setActiveView called successfully')
+      if (isDev) {
+        console.log('✅ setActiveView called successfully')
+      }
     } catch (err) {
       console.error('❌ Error calling setActiveView:', err)
     }
   }
 
   const configured = isConfigured()
-  console.log('App: Configuration check:', configured)
+  if (isDev) {
+    console.log('App: Configuration check:', configured)
+  }
 
   const [showConfigModal, setShowConfigModal] = useState(!configured)
   const [showRoleModal, setShowRoleModal] = useState(false)
   const [showDebugPanel, setShowDebugPanel] = useState(false)
-  const [useGroupedNav, setUseGroupedNav] = useState(getViewPreference() === 'grouped')
-  console.log('App: showConfigModal:', !configured)
-
-  console.log('App: Calling useGitLabData hook...')
-  const { issues, milestones, epics, crossProjectData, loading, error, refresh } = useGitLabData()
-  console.log('App: GitLab data:', { issuesCount: issues?.length, milestonesCount: milestones?.length, epicsCount: epics?.length, loading, error })
-  if (crossProjectData) {
-    console.log('App: Cross-project data available:', crossProjectData.statistics)
+  const [useGroupedNav] = useState(getViewPreference() === 'grouped')
+  if (isDev) {
+    console.log('App: showConfigModal:', !configured)
   }
 
-  console.log('App: Calling useHealthScore hook...')
-  const { stats, healthScore } = useHealthScore(issues, milestones)
-  console.log('App: Health data:', { stats, healthScore })
+  if (isDev) {
+    console.log('App: Calling useGitLabData hook...')
+  }
+  const { issues, milestones, epics, crossProjectData, loading, error, refresh } = useGitLabData()
+  if (isDev) {
+    console.log('App: GitLab data:', { issuesCount: issues?.length, milestonesCount: milestones?.length, epicsCount: epics?.length, loading, error })
+    if (crossProjectData) {
+      console.log('App: Cross-project data available:', crossProjectData.statistics)
+    }
+  }
 
-  console.log('App: Calling useRisks hook...')
+  if (isDev) {
+    console.log('App: Calling useHealthScore hook...')
+  }
+  const { stats, healthScore } = useHealthScore(issues, milestones)
+  if (isDev) {
+    console.log('App: Health data:', { stats, healthScore })
+  }
+
+  if (isDev) {
+    console.log('App: Calling useRisks hook...')
+  }
   const { risks } = useRisks()
-  console.log('App: Risks data:', { risksCount: risks?.length })
+  if (isDev) {
+    console.log('App: Risks data:', { risksCount: risks?.length })
+  }
 
   const handleConfigSave = () => {
-    console.log('App: handleConfigSave called')
+    if (isDev) {
+      console.log('App: handleConfigSave called')
+    }
     setShowConfigModal(false)
     refresh()
   }
 
   const handleProjectSwitch = (projectId) => {
-    console.log('App: handleProjectSwitch called with:', projectId)
+    if (isDev) {
+      console.log('App: handleProjectSwitch called with:', projectId)
+    }
     // Refresh data after switching project
     refresh()
     // Switch to executive view
     handleViewChange('executive')
   }
 
-  console.log('App: About to render, current state:', { activeView, showConfigModal, configured, issuesCount: issues?.length, loading })
+  if (isDev) {
+    console.log('App: About to render, current state:', { activeView, showConfigModal, configured, issuesCount: issues?.length, loading })
+  }
 
   return (
     <IterationFilterProvider issues={issues}>
@@ -115,7 +148,9 @@ function App() {
             onProjectChange={isConfigured() ? (projectId) => {
               if (projectId === 'cross-project') {
                 // Cross-project mode: trigger data refresh to aggregate all projects
-                console.log('Cross-project view activated - refreshing data')
+                if (isDev) {
+                  console.log('Cross-project view activated - refreshing data')
+                }
                 refresh()
               } else {
                 // Project switched, data will reload

@@ -3,14 +3,13 @@ import {
   findNonCompliantIssues,
   getComplianceStats,
   getCriteriaDetails,
-  exportToCSV,
-  downloadCSV,
-  findStaleIssues
+  findStaleIssues,
+  exportToCSV as exportComplianceToCSV,
+  downloadCSV as downloadComplianceCSV
 } from '../services/complianceService'
 import { useIterationFilter } from '../contexts/IterationFilterContext'
 import SearchBar from './SearchBar'
 import { searchIssues } from '../utils/searchUtils'
-import { exportIssuesToCSV, downloadCSV as downloadCSVUtil } from '../services/exportService'
 import { loadTeamConfig } from '../services/teamConfigService'
 import QualityCriteriaConfigModal from './QualityCriteriaConfigModal'
 import DoDComplianceSection from './DoDComplianceSection'
@@ -20,7 +19,7 @@ import QualityViolationsByAuthor from './QualityViolationsByAuthor'
  * Issue Compliance & Quality Check View
  * Shows issues that don't meet quality criteria
  */
-export default function IssueComplianceView({ issues: allIssues }) {
+export default function IssueComplianceView() {
   // Use filtered issues from iteration context
   const { filteredIssues: issues } = useIterationFilter()
   const [searchTerm, setSearchTerm] = useState('')
@@ -52,7 +51,7 @@ export default function IssueComplianceView({ issues: allIssues }) {
     })
   }
 
-  const { nonCompliantIssues, stats, staleIssues } = useMemo(() => {
+  const { nonCompliantIssues, stats } = useMemo(() => {
     if (!issues || issues.length === 0) {
       return { nonCompliantIssues: [], stats: null, staleIssues: [] }
     }
@@ -107,10 +106,10 @@ export default function IssueComplianceView({ issues: allIssues }) {
   }, [nonCompliantIssues, searchTerm, activeFilter])
 
   const handleExportCSV = () => {
-    // Export filtered issues using new CSV export utility
-    const csvContent = exportIssuesToCSV(filteredIssues)
+    // Export filtered issues using compliance-specific CSV export with all quality fields
+    const csvContent = exportComplianceToCSV(filteredIssues)
     const date = new Date().toISOString().split('T')[0]
-    downloadCSVUtil(csvContent, `issue-compliance-report-${date}.csv`)
+    downloadComplianceCSV(csvContent, `issue-compliance-report-${date}.csv`)
   }
 
   const handleEmailReport = () => {
@@ -141,10 +140,10 @@ The CSV report has been downloaded to your Downloads folder. Please attach it to
 
 Best regards`
 
-    // Download CSV
-    const csvContent = exportIssuesToCSV(filteredIssues)
+    // Download CSV with compliance-specific fields
+    const csvContent = exportComplianceToCSV(filteredIssues)
     const date = new Date().toISOString().split('T')[0]
-    downloadCSVUtil(csvContent, `issue-compliance-report-${date}.csv`)
+    downloadComplianceCSV(csvContent, `issue-compliance-report-${date}.csv`)
 
     // Open email client with pre-filled content
     const mailtoLink = `mailto:${toEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
@@ -457,7 +456,7 @@ Best regards`
           }}
         >
           <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1E40AF', margin: 0 }}>
-            ℹ️ Color Coding Guide
+            Color Coding Guide
           </h3>
           <span style={{
             fontSize: '14px',
@@ -735,7 +734,7 @@ Best regards`
                     borderRadius: '8px'
                   }}>
                     <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '2px' }}>Score</div>
-                    <div style={{ fontSize: '20px', fontWeight: '700', color: issue.complianceScore < 50 ? '#DC2626' : issue.complianceScore < 75 ? '#D97706' : '#2563EB' }}>
+                    <div style={{ fontSize: '20px', fontWeight: '600', color: issue.complianceScore < 50 ? '#DC2626' : issue.complianceScore < 75 ? '#D97706' : '#2563EB' }}>
                       {issue.complianceScore}%
                     </div>
                   </div>
@@ -887,7 +886,7 @@ Best regards`
               {Object.entries(stats.violationsByCriterion)
                 .sort((a, b) => b[1] - a[1])
                 .slice(0, 5)
-                .filter(([_, count]) => count > 0)
+                .filter(([, count]) => count > 0)
                 .map(([criterion, count]) => {
                   const criterionDetails = criteria.find(c => c.key === criterion)
                   return (

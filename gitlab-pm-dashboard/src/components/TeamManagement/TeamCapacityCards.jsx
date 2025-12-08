@@ -5,7 +5,7 @@ import { getSprintFromLabels } from '../../utils/labelUtils'
 import IssueReallocationDialog from './IssueReallocationDialog'
 import { batchUpdateIssueAssignees } from '../../services/gitlabApi'
 import { loadConfig } from '../../services/storageService'
-import { calculateTeamAverageVelocity, getHoursPerStoryPoint } from '../../services/memberVelocityService'
+import { calculateUnifiedVelocity, getVelocityWithFallback } from '../../services/unifiedVelocityService'
 import { loadVelocityConfig } from '../../services/velocityConfigService'
 
 /**
@@ -104,12 +104,24 @@ export default function TeamCapacityCards({ teamMembers, issues, allIssues, mile
     // Use allIssues if available (for velocity calculation), otherwise fall back to issues
     const issuesForVelocity = allIssues || issues
     if (!issuesForVelocity) return null
-    return calculateTeamAverageVelocity(
+
+    const result = calculateUnifiedVelocity({
+      issues: issuesForVelocity,
+      aggregationType: 'team',
+      metricType: velocityConfig.metricType,
+      lookbackIterations: velocityConfig.velocityLookbackIterations,
       teamMembers,
-      issuesForVelocity,
-      velocityConfig.velocityLookbackIterations,
-      velocityConfig.metricType
-    )
+      includeAbsences: true
+    })
+
+    // Transform to match expected format
+    return {
+      hoursPerStoryPoint: result.hoursPerStoryPoint,
+      hoursPerIssue: result.hoursPerIssue,
+      metricType: result.metricType,
+      membersAnalyzed: result.membersAnalyzed,
+      dataQuality: result.dataQuality
+    }
   }, [teamMembers, allIssues, issues, velocityConfig, velocityConfigKey])
 
   // Calculate member capacity and workload
@@ -212,16 +224,42 @@ export default function TeamCapacityCards({ teamMembers, issues, allIssues, mile
       if (velocityConfig.mode === 'dynamic') {
         // Use allIssues for velocity calculation (to analyze historical data across all iterations)
         const issuesForVelocity = allIssues || issues
-        velocityData = getHoursPerStoryPoint(
+        velocityData = getVelocityWithFallback(
           member.username,
           issuesForVelocity,
           memberDefaultCapacity,
-          teamAverageVelocity,
-          velocityConfig.staticHoursPerStoryPoint,
-          velocityConfig.staticHoursPerIssue,
-          velocityConfig.metricType,
-          velocityConfig.velocityLookbackIterations
+          teamMembers
         )
+
+        // If we have pre-calculated team average and result uses team average, use it
+        if (velocityData.source === 'team-average' && teamAverageVelocity) {
+          const teamHours = velocityConfig.metricType === 'issues'
+            ? teamAverageVelocity.hoursPerIssue
+            : teamAverageVelocity.hoursPerStoryPoint
+          if (teamHours) {
+            velocityData = {
+              hours: teamHours,
+              source: 'team-average',
+              quality: teamAverageVelocity.dataQuality,
+              details: `Team average (${teamAverageVelocity.membersAnalyzed} members)`,
+              metricType: velocityConfig.metricType
+            }
+          }
+        }
+
+        // Override static values if configured differently
+        if (velocityData.source === 'static') {
+          const configuredStatic = velocityConfig.metricType === 'issues'
+            ? velocityConfig.staticHoursPerIssue
+            : velocityConfig.staticHoursPerStoryPoint
+          if (velocityData.hours !== configuredStatic) {
+            velocityData = {
+              ...velocityData,
+              hours: configuredStatic
+            }
+          }
+        }
+
         hoursPerSP = velocityData.hours
       }
 
@@ -528,7 +566,7 @@ export default function TeamCapacityCards({ teamMembers, issues, allIssues, mile
         }}>
           <div style={{
             fontSize: '24px',
-            fontWeight: '700',
+            fontWeight: '600',
             color: member.statusColor
           }}>
             {member.utilization}%

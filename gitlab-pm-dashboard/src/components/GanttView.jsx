@@ -468,7 +468,6 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
 
         {/* No Epics Message */}
         <div className="card text-center" style={{ padding: '60px 20px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>📅</div>
           <h3 className="mb-2">No Epics Found</h3>
           <p className="text-muted">
             {selectedQuarters.length === 4
@@ -528,8 +527,6 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
             <div style={{ display: 'flex', gap: '6px' }}>
               {[1, 2, 3, 4].map(quarter => {
                 const isSelected = selectedQuarters.includes(quarter)
-                const isEdge = quarter === Math.min(...selectedQuarters) || quarter === Math.max(...selectedQuarters)
-                const isFullYear = selectedQuarters.length === 4
 
                 return (
                   <button
@@ -654,19 +651,19 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
             <div>
               <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>Total Epics</div>
-              <div style={{ fontSize: '28px', fontWeight: '700', color: '#1F2937' }}>
+              <div style={{ fontSize: '28px', fontWeight: '600', color: '#1F2937' }}>
                 {executiveSummary.total}
               </div>
               <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px', display: 'flex', gap: '8px' }}>
-                <span style={{ color: '#EF4444' }}>🔴 {executiveSummary.red}</span>
-                <span style={{ color: '#F59E0B' }}>🟡 {executiveSummary.amber}</span>
-                <span style={{ color: '#10B981' }}>🟢 {executiveSummary.green}</span>
+                <span style={{ color: '#EF4444' }}>Red: {executiveSummary.red}</span>
+                <span style={{ color: '#F59E0B' }}>Amber: {executiveSummary.amber}</span>
+                <span style={{ color: '#10B981' }}>Green: {executiveSummary.green}</span>
               </div>
             </div>
 
             <div>
               <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>Total Issues</div>
-              <div style={{ fontSize: '28px', fontWeight: '700', color: '#1F2937' }}>
+              <div style={{ fontSize: '28px', fontWeight: '600', color: '#1F2937' }}>
                 {executiveSummary.totalIssues}
               </div>
               <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>
@@ -676,7 +673,7 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
 
             <div>
               <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>Overall Progress</div>
-              <div style={{ fontSize: '28px', fontWeight: '700', color: '#1F2937' }}>
+              <div style={{ fontSize: '28px', fontWeight: '600', color: '#1F2937' }}>
                 {executiveSummary.overallProgress.toFixed(0)}%
               </div>
               <div style={{ width: '100%', height: '6px', background: '#E5E7EB', borderRadius: '3px', marginTop: '8px', overflow: 'hidden' }}>
@@ -1016,7 +1013,7 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
                         fontSize: '12px',
                         color: '#1E40AF'
                       }}>
-                        <strong>📊 Showing {localCount} local + {crossProjectCount} cross-project issues</strong>
+                        <strong>Showing {localCount} local + {crossProjectCount} cross-project issues</strong>
                         <div style={{ fontSize: '11px', color: '#3B82F6', marginTop: '2px' }}>
                           Cross-project issues are highlighted with a blue left border
                         </div>

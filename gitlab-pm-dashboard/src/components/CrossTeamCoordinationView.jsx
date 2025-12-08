@@ -14,13 +14,10 @@ import {
   detectInitiativeDependencies,
   getInitiativeDependencyMatrix,
   findBlockingInitiatives,
-  calculateCascadeImpact,
-  exportInitiativeDependenciesCSV,
-  exportCascadeImpactCSV
+  exportInitiativeDependenciesCSV
 } from '../services/crossInitiativeDependencyService'
 import {
   forecastAllInitiatives,
-  compareForecastToDueDate,
   getForecastStatusBadge,
   formatForecastDate,
   exportForecastCSV
@@ -33,9 +30,8 @@ import { downloadCSV } from '../services/exportService'
  * Comprehensive view for managing cross-team overarching initiatives
  * Combines team attribution, dependencies, and forecasting
  */
-export default function CrossTeamCoordinationView({ issues, epics, milestones }) {
+export default function CrossTeamCoordinationView({ issues, epics }) {
   const [activeTab, setActiveTab] = useState('overview')
-  const [selectedInitiative, setSelectedInitiative] = useState(null)
 
   // Extract initiatives
   const initiatives = useMemo(() => {
@@ -391,7 +387,7 @@ function OverviewTab({ initiatives, teams, teamCapacity, resourceContention, blo
 /**
  * Teams Tab - Team capacity and attribution
  */
-function TeamsTab({ teamCapacity, initiativeAttributions, onExportAttribution, onExportCapacity }) {
+function TeamsTab({ teamCapacity, onExportAttribution, onExportCapacity }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -443,7 +439,7 @@ function TeamsTab({ teamCapacity, initiativeAttributions, onExportAttribution, o
                   <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
                     Active Initiatives
                   </div>
-                  <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--primary)' }}>
+                  <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--primary)' }}>
                     {team.activeInitiativeCount}
                   </div>
                 </div>
@@ -451,7 +447,7 @@ function TeamsTab({ teamCapacity, initiativeAttributions, onExportAttribution, o
                   <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
                     Open Issues
                   </div>
-                  <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--warning)' }}>
+                  <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--warning)' }}>
                     {team.openIssueCount}
                   </div>
                 </div>
@@ -459,7 +455,7 @@ function TeamsTab({ teamCapacity, initiativeAttributions, onExportAttribution, o
                   <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
                     Capacity Score
                   </div>
-                  <div style={{ fontSize: '20px', fontWeight: '700', color: statusColor }}>
+                  <div style={{ fontSize: '20px', fontWeight: '600', color: statusColor }}>
                     {team.capacityScore}
                   </div>
                 </div>
@@ -499,7 +495,7 @@ function TeamsTab({ teamCapacity, initiativeAttributions, onExportAttribution, o
 /**
  * Dependencies Tab - Cross-initiative dependencies
  */
-function DependenciesTab({ initiativeDependencies, blockingInitiatives, onExport }) {
+function DependenciesTab({ initiativeDependencies, onExport }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -680,7 +676,7 @@ function ForecastsTab({ forecasts, onExport }) {
 /**
  * Resources Tab - Resource contention
  */
-function ResourcesTab({ resourceContention, sharedResources, onExport }) {
+function ResourcesTab({ resourceContention, onExport }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -730,7 +726,7 @@ function ResourcesTab({ resourceContention, sharedResources, onExport }) {
                   <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
                     Initiatives
                   </div>
-                  <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--primary)' }}>
+                  <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--primary)' }}>
                     {person.initiativeCount}
                   </div>
                 </div>
@@ -738,7 +734,7 @@ function ResourcesTab({ resourceContention, sharedResources, onExport }) {
                   <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
                     High Priority
                   </div>
-                  <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--danger)' }}>
+                  <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--danger)' }}>
                     {person.highPriorityCount}
                   </div>
                 </div>
@@ -746,7 +742,7 @@ function ResourcesTab({ resourceContention, sharedResources, onExport }) {
                   <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
                     Open Issues
                   </div>
-                  <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--warning)' }}>
+                  <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--warning)' }}>
                     {person.totalIssues}
                   </div>
                 </div>

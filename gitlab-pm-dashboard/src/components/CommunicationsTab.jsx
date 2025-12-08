@@ -2,8 +2,7 @@ import React, { useState, useMemo } from 'react'
 import {
   COMMUNICATION_TYPES,
   logCommunication,
-  saveDecision,
-  getCommunicationType
+  saveDecision
 } from '../services/stakeholderService'
 
 /**
@@ -13,16 +12,13 @@ import {
  */
 export default function CommunicationsTab({
   history,
-  stakeholders,
-  onHistoryUpdate,
-  onStakeholderSelect
+  onHistoryUpdate
 }) {
   const [viewMode, setViewMode] = useState('timeline') // 'timeline' or 'create'
   const [timelineView, setTimelineView] = useState('list') // 'list' or 'gantt'
   const [filterType, setFilterType] = useState('all')
   const [filterDateRange, setFilterDateRange] = useState('all') // all, today, week, month
   const [searchQuery, setSearchQuery] = useState('')
-  const [showQuickCreate, setShowQuickCreate] = useState(false)
   const [selectedItem, setSelectedItem] = useState(null)
   const [ganttRange, setGanttRange] = useState({ start: null, end: null })
 
@@ -99,7 +95,6 @@ export default function CommunicationsTab({
 
     // Date range filter
     if (filterDateRange !== 'all') {
-      const now = new Date()
       const cutoff = new Date()
 
       switch (filterDateRange) {
@@ -1230,8 +1225,6 @@ export default function CommunicationsTab({
                         </div>
                         <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#6B7280' }}>
                           {(() => {
-                            // Calculate the duration in days
-                            const durationDays = Math.ceil((ganttRange.end - ganttRange.start) / (1000 * 60 * 60 * 24))
 
                             // Smart display logic based on timeframe
                             if (ganttQuarters.length === 1) {

@@ -239,16 +239,9 @@ export function exportExecutiveDashboardToPDF(data) {
   const {
     initiatives,
     healthScore,
-    burnupData,
-    velocityTrend,
-    cycleTimeMetrics,
-    deliveryConfidence,
-    monthOverMonthMetrics,
     recentDecisions,
     upcomingMilestones,
-    stats,
-    teamPerformance,
-    forecastAccuracy
+    stats
   } = data
 
   const date = new Date().toLocaleDateString('en-US', {
@@ -877,7 +870,7 @@ export function isFormatSupported(format) {
  */
 export function getAvailableFormats() {
   return [
-    { value: 'csv', label: 'CSV', icon: '📊', description: 'Comma-separated values for spreadsheets' },
-    { value: 'pdf', label: 'PDF', icon: '📄', description: 'Portable document format for printing' }
+    { value: 'csv', label: 'CSV', description: 'Comma-separated values for spreadsheets' },
+    { value: 'pdf', label: 'PDF', description: 'Portable document format for printing' }
   ]
 }

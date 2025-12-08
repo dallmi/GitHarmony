@@ -284,7 +284,7 @@ function RiskCell({ score, count }) {
       alignItems: 'center',
       justifyContent: 'center',
       fontSize: '32px',
-      fontWeight: '700',
+      fontWeight: '600',
       minHeight: '80px'
     }}>
       {count}

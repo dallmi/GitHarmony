@@ -263,7 +263,7 @@ export default function AbsenceCalendarTab({ issues, isCrossProject, refreshKey,
             >
               ◀
             </button>
-            <span style={{ fontSize: '16px', fontWeight: '700', minWidth: '60px', textAlign: 'center', color: '#1F2937' }}>
+            <span style={{ fontSize: '16px', fontWeight: '600', minWidth: '60px', textAlign: 'center', color: '#1F2937' }}>
               {selectedYear}
             </span>
             <button
@@ -403,19 +403,19 @@ export default function AbsenceCalendarTab({ issues, isCrossProject, refreshKey,
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '20px' }}>
           <div>
             <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>TOTAL ABSENCES</div>
-            <div style={{ fontSize: '24px', fontWeight: '700', color: '#1F2937' }}>
+            <div style={{ fontSize: '24px', fontWeight: '600', color: '#1F2937' }}>
               {teamStats.totalAbsences}
             </div>
           </div>
           <div>
             <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>DAYS OFF</div>
-            <div style={{ fontSize: '24px', fontWeight: '700', color: '#2563EB' }}>
+            <div style={{ fontSize: '24px', fontWeight: '600', color: '#2563EB' }}>
               {teamStats.totalDaysOff}
             </div>
           </div>
           <div>
             <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>CAPACITY IMPACT</div>
-            <div style={{ fontSize: '24px', fontWeight: '700', color: '#DC2626' }}>
+            <div style={{ fontSize: '24px', fontWeight: '600', color: '#DC2626' }}>
               {teamStats.totalHoursImpact}h
             </div>
           </div>
