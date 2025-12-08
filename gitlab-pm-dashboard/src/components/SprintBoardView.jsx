@@ -8,9 +8,17 @@ import {
   getStatusLabel,
   formatRecommendation
 } from '../utils/capacityUtils'
+import { useIterationFilter } from '../contexts/IterationFilterContext'
 
-export default function SprintBoardView({ issues }) {
+export default function SprintBoardView({ issues: allIssues }) {
   const [expandedSprint, setExpandedSprint] = useState(null)
+
+  // Use iteration filter context
+  const { filteredIssues, selectedIterations } = useIterationFilter()
+
+  // Use filtered issues if iterations are selected, otherwise use all issues
+  const issues = selectedIterations.length > 0 ? filteredIssues : allIssues
+
   const sprints = useMemo(() => {
     // Build map of iteration name to start date for sorting
     const iterationDates = new Map()
