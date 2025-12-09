@@ -195,14 +195,18 @@ export function createBackup(options = {}) {
   }
 
   // 1. Core GitLab Configuration
+  // All these values are stored as raw strings in localStorage
   const gitlabToken = loadFromStorage(keys.gitlabToken)
   const gitlabUrl = loadFromStorage(keys.gitlabUrl)
   const projectId = loadFromStorage(keys.projectId)
   const groupPath = loadFromStorage(keys.groupPath)
-  const filter2025 = loadFromStorage(keys.filter2025)
+  const filter2025Raw = loadFromStorage(keys.filter2025)
   const mode = loadFromStorage(keys.mode)
 
-  if (gitlabToken || gitlabUrl || projectId || groupPath || filter2025 || mode) {
+  // Convert filter2025 from string "true"/"false" to boolean for cleaner JSON
+  const filter2025 = filter2025Raw === 'true' ? true : (filter2025Raw === 'false' ? false : null)
+
+  if (gitlabToken || gitlabUrl || projectId || groupPath || filter2025 !== null || mode) {
     data.gitlabConfig = {
       gitlabUrl,
       gitlabToken: includeTokens ? gitlabToken : (gitlabToken ? maskToken(gitlabToken) : null),
@@ -693,13 +697,17 @@ export function restoreFromBackup(backup, options = {}) {
       switch (category) {
         case 'gitlabConfig':
           if (overwrite || !loadFromStorage(keys.gitlabUrl)) {
-            // Token and URL are stored as raw strings, not JSON
+            // All core config values are stored as raw strings, not JSON
             if (data.gitlabUrl) saveToStorage(keys.gitlabUrl, data.gitlabUrl, true)
             if (data.gitlabToken) saveToStorage(keys.gitlabToken, data.gitlabToken, true)
-            if (data.projectId) saveToStorage(keys.projectId, data.projectId)
-            if (data.groupPath) saveToStorage(keys.groupPath, data.groupPath)
-            if (data.filter2025 !== null && data.filter2025 !== undefined) saveToStorage(keys.filter2025, data.filter2025)
-            if (data.mode) saveToStorage(keys.mode, data.mode)
+            if (data.projectId) saveToStorage(keys.projectId, data.projectId, true)
+            if (data.groupPath) saveToStorage(keys.groupPath, data.groupPath, true)
+            if (data.filter2025 !== null && data.filter2025 !== undefined) {
+              // filter2025 is stored as string "true" or "false"
+              const filterValue = typeof data.filter2025 === 'boolean' ? data.filter2025.toString() : data.filter2025
+              saveToStorage(keys.filter2025, filterValue, true)
+            }
+            if (data.mode) saveToStorage(keys.mode, data.mode, true)
             result.restored.push('gitlabConfig')
           } else {
             result.skipped.push('gitlabConfig (already exists)')
