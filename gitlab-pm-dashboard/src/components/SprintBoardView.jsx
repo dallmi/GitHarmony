@@ -96,14 +96,15 @@ export default function SprintBoardView({ issues: allIssues }) {
       return labelText.toLowerCase().trim()
     })
 
-    // Cancelled goes to Done column
-    if (labelNames.includes('cancelled')) return 'done'
+    // Cancelled and Awaiting Release go to Done column
+    if (labelNames.includes('status::cancelled') || labelNames.includes('cancelled')) return 'done'
+    if (labelNames.includes('status::awaiting release') || labelNames.includes('awaiting release')) return 'done'
 
     // In Testing
-    if (labelNames.includes('in testing')) return 'testing'
+    if (labelNames.includes('status::in testing') || labelNames.includes('in testing')) return 'testing'
 
     // In Progress
-    if (labelNames.includes('in progress')) return 'inprogress'
+    if (labelNames.includes('status::in progress') || labelNames.includes('in progress')) return 'inprogress'
 
     // Everything else (including no status label) goes to Backlog
     // This includes: In Discovery, In Analysis, Awaiting Refinement,
