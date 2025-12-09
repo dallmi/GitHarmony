@@ -10,6 +10,37 @@ import {
 } from '../utils/capacityUtils'
 import { useIterationFilter } from '../contexts/IterationFilterContext'
 
+// Issue card component for the board columns
+function IssueCard({ issue, isDone = false }) {
+  return (
+    <div
+      className="card"
+      style={{
+        padding: '12px',
+        cursor: 'pointer',
+        transition: 'all 0.2s'
+      }}
+      onClick={() => window.open(issue.web_url, '_blank')}
+      onMouseOver={e => e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)'}
+      onMouseOut={e => e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)'}
+    >
+      <div style={{
+        fontSize: '13px',
+        fontWeight: '500',
+        marginBottom: '4px',
+        textDecoration: isDone ? 'line-through' : 'none',
+        color: isDone ? 'var(--text-secondary)' : 'inherit'
+      }}>
+        #{issue.iid} {issue.title}
+      </div>
+      <div className="text-small text-muted" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>{issue.assignees?.[0]?.name || 'Unassigned'}</span>
+        {issue.weight && <span style={{ fontWeight: '600' }}>{issue.weight} pts</span>}
+      </div>
+    </div>
+  )
+}
+
 export default function SprintBoardView({ issues: allIssues }) {
   const [expandedSprint, setExpandedSprint] = useState(null)
 
@@ -53,13 +84,27 @@ export default function SprintBoardView({ issues: allIssues }) {
     })
   }, [issues])
 
-  const getProgress = (issue) => {
-    if (issue.state === 'closed') return 100
-    const labelNames = issue.labels.map(l => l.toLowerCase())
-    if (labelNames.some(l => l.includes('review') || l.includes('testing'))) return 75
-    if (labelNames.some(l => l.includes('progress') || l.includes('wip'))) return 50
-    if (labelNames.some(l => l.includes('started'))) return 25
-    return 0
+  // Get the workflow status of an issue based on labels
+  const getWorkflowStatus = (issue) => {
+    // Closed issues are always "done"
+    if (issue.state === 'closed') return 'done'
+
+    // Check for specific status labels (case-insensitive exact match)
+    const labelNames = issue.labels.map(l => l.toLowerCase().trim())
+
+    // Cancelled goes to Done column
+    if (labelNames.includes('cancelled')) return 'done'
+
+    // In Testing
+    if (labelNames.includes('in testing')) return 'testing'
+
+    // In Progress
+    if (labelNames.includes('in progress')) return 'inprogress'
+
+    // Everything else (including no status label) goes to Backlog
+    // This includes: In Discovery, In Analysis, Awaiting Refinement,
+    // Ready for Work, Done (but open), Awaiting Release, Released, or no label
+    return 'backlog'
   }
 
   if (sprints.length === 0) {
@@ -93,15 +138,17 @@ export default function SprintBoardView({ issues: allIssues }) {
           const dueDate = iterationData?.due_date
 
           const grouped = {
-            todo: sprintIssues.filter(i => i.state === 'opened' && getProgress(i) === 0),
-            progress: sprintIssues.filter(i => i.state === 'opened' && getProgress(i) > 0 && getProgress(i) < 100),
-            done: sprintIssues.filter(i => i.state === 'closed')
+            backlog: sprintIssues.filter(i => getWorkflowStatus(i) === 'backlog'),
+            inprogress: sprintIssues.filter(i => getWorkflowStatus(i) === 'inprogress'),
+            testing: sprintIssues.filter(i => getWorkflowStatus(i) === 'testing'),
+            done: sprintIssues.filter(i => getWorkflowStatus(i) === 'done')
           }
 
           // Calculate story points for each column
           const storyPoints = {
-            todo: grouped.todo.reduce((sum, issue) => sum + (issue.weight || 0), 0),
-            progress: grouped.progress.reduce((sum, issue) => sum + (issue.weight || 0), 0),
+            backlog: grouped.backlog.reduce((sum, issue) => sum + (issue.weight || 0), 0),
+            inprogress: grouped.inprogress.reduce((sum, issue) => sum + (issue.weight || 0), 0),
+            testing: grouped.testing.reduce((sum, issue) => sum + (issue.weight || 0), 0),
             done: grouped.done.reduce((sum, issue) => sum + (issue.weight || 0), 0)
           }
 
@@ -280,41 +327,22 @@ export default function SprintBoardView({ issues: allIssues }) {
                 )}
               </div>
 
-              <div className="grid grid-3" style={{ gap: '16px' }}>
-                {/* To Do Column */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                {/* Backlog Column */}
                 <div style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '8px' }}>
                   <div style={{ marginBottom: '12px' }}>
                     <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
-                      To Do ({grouped.todo.length})
+                      📋 Backlog ({grouped.backlog.length})
                     </h4>
                     <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                      {storyPoints.todo} story points
+                      {storyPoints.backlog} story points
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {grouped.todo.map(issue => (
-                      <div
-                        key={issue.id}
-                        className="card"
-                        style={{
-                          padding: '12px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s'
-                        }}
-                        onClick={() => window.open(issue.web_url, '_blank')}
-                        onMouseOver={e => e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)'}
-                        onMouseOut={e => e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)'}
-                      >
-                        <div style={{ fontSize: '13px', fontWeight: '500', marginBottom: '4px' }}>
-                          #{issue.iid} {issue.title}
-                        </div>
-                        <div className="text-small text-muted" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span>{issue.assignees?.[0]?.name || 'Unassigned'}</span>
-                          {issue.weight && <span style={{ fontWeight: '600' }}>{issue.weight} pts</span>}
-                        </div>
-                      </div>
+                    {grouped.backlog.map(issue => (
+                      <IssueCard key={issue.id} issue={issue} />
                     ))}
-                    {grouped.todo.length === 0 && (
+                    {grouped.backlog.length === 0 && (
                       <div className="text-center text-muted" style={{ padding: '20px' }}>
                         No items
                       </div>
@@ -326,36 +354,39 @@ export default function SprintBoardView({ issues: allIssues }) {
                 <div style={{ background: '#DBEAFE', padding: '16px', borderRadius: '8px' }}>
                   <div style={{ marginBottom: '12px' }}>
                     <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
-                      🔄 In Progress ({grouped.progress.length})
+                      🔄 In Progress ({grouped.inprogress.length})
                     </h4>
                     <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                      {storyPoints.progress} story points
+                      {storyPoints.inprogress} story points
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {grouped.progress.map(issue => (
-                      <div
-                        key={issue.id}
-                        className="card"
-                        style={{
-                          padding: '12px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s'
-                        }}
-                        onClick={() => window.open(issue.web_url, '_blank')}
-                        onMouseOver={e => e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)'}
-                        onMouseOut={e => e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)'}
-                      >
-                        <div style={{ fontSize: '13px', fontWeight: '500', marginBottom: '4px' }}>
-                          #{issue.iid} {issue.title}
-                        </div>
-                        <div className="text-small text-muted" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span>{issue.assignees?.[0]?.name || 'Unassigned'}</span>
-                          {issue.weight && <span style={{ fontWeight: '600' }}>{issue.weight} pts</span>}
-                        </div>
-                      </div>
+                    {grouped.inprogress.map(issue => (
+                      <IssueCard key={issue.id} issue={issue} />
                     ))}
-                    {grouped.progress.length === 0 && (
+                    {grouped.inprogress.length === 0 && (
+                      <div className="text-center text-muted" style={{ padding: '20px' }}>
+                        No items
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Testing Column */}
+                <div style={{ background: '#FEF3C7', padding: '16px', borderRadius: '8px' }}>
+                  <div style={{ marginBottom: '12px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
+                      🧪 Testing ({grouped.testing.length})
+                    </h4>
+                    <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                      {storyPoints.testing} story points
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {grouped.testing.map(issue => (
+                      <IssueCard key={issue.id} issue={issue} />
+                    ))}
+                    {grouped.testing.length === 0 && (
                       <div className="text-center text-muted" style={{ padding: '20px' }}>
                         No items
                       </div>
@@ -375,32 +406,7 @@ export default function SprintBoardView({ issues: allIssues }) {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {grouped.done.map(issue => (
-                      <div
-                        key={issue.id}
-                        className="card"
-                        style={{
-                          padding: '12px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s'
-                        }}
-                        onClick={() => window.open(issue.web_url, '_blank')}
-                        onMouseOver={e => e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)'}
-                        onMouseOut={e => e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)'}
-                      >
-                        <div style={{
-                          fontSize: '13px',
-                          fontWeight: '500',
-                          textDecoration: 'line-through',
-                          color: 'var(--text-secondary)',
-                          marginBottom: '4px'
-                        }}>
-                          #{issue.iid} {issue.title}
-                        </div>
-                        <div className="text-small text-muted" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span>{issue.assignees?.[0]?.name || 'Unassigned'}</span>
-                          {issue.weight && <span style={{ fontWeight: '600' }}>{issue.weight} pts</span>}
-                        </div>
-                      </div>
+                      <IssueCard key={issue.id} issue={issue} isDone />
                     ))}
                     {grouped.done.length === 0 && (
                       <div className="text-center text-muted" style={{ padding: '20px' }}>
