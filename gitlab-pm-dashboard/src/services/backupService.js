@@ -195,13 +195,14 @@ export function createBackup(options = {}) {
   }
 
   // 1. Core GitLab Configuration
-  // All these values are stored as raw strings in localStorage
-  const gitlabToken = loadFromStorage(keys.gitlabToken)
-  const gitlabUrl = loadFromStorage(keys.gitlabUrl)
-  const projectId = loadFromStorage(keys.projectId)
-  const groupPath = loadFromStorage(keys.groupPath)
-  const filter2025Raw = loadFromStorage(keys.filter2025)
-  const mode = loadFromStorage(keys.mode)
+  // All these values are stored as raw strings in localStorage (not JSON)
+  // We must read them directly without JSON.parse
+  const gitlabToken = localStorage.getItem(keys.gitlabToken) || null
+  const gitlabUrl = localStorage.getItem(keys.gitlabUrl) || null
+  const projectId = localStorage.getItem(keys.projectId) || null
+  const groupPath = localStorage.getItem(keys.groupPath) || null
+  const filter2025Raw = localStorage.getItem(keys.filter2025) || null
+  const mode = localStorage.getItem(keys.mode) || null
 
   // Convert filter2025 from string "true"/"false" to boolean for cleaner JSON
   const filter2025 = filter2025Raw === 'true' ? true : (filter2025Raw === 'false' ? false : null)
