@@ -90,7 +90,11 @@ export default function SprintBoardView({ issues: allIssues }) {
     if (issue.state === 'closed') return 'done'
 
     // Check for specific status labels (case-insensitive exact match)
-    const labelNames = issue.labels.map(l => l.toLowerCase().trim())
+    // Labels can be strings OR objects with a 'name' property
+    const labelNames = (issue.labels || []).map(l => {
+      const labelText = typeof l === 'string' ? l : (l.name || l.title || '')
+      return labelText.toLowerCase().trim()
+    })
 
     // Cancelled goes to Done column
     if (labelNames.includes('cancelled')) return 'done'
