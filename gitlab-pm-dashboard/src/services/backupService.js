@@ -124,12 +124,19 @@ function getPerProjectKeys(baseKey) {
 
 /**
  * Load data from localStorage
+ * @param {string} key - Storage key
+ * @param {boolean} isRawString - If true, return raw string without JSON parsing (for tokens, URLs)
  */
-function loadFromStorage(key) {
+function loadFromStorage(key, isRawString = false) {
   try {
     const data = localStorage.getItem(key)
-    return data ? JSON.parse(data) : null
+    if (!data) return null
+    if (isRawString) return data
+    return JSON.parse(data)
   } catch (e) {
+    // If JSON parse fails, return raw string (backwards compatibility)
+    const rawData = localStorage.getItem(key)
+    if (rawData) return rawData
     console.warn(`Failed to load ${key}:`, e)
     return null
   }
@@ -137,10 +144,17 @@ function loadFromStorage(key) {
 
 /**
  * Save data to localStorage
+ * @param {string} key - Storage key
+ * @param {*} data - Data to save
+ * @param {boolean} isRawString - If true, save as raw string without JSON stringifying
  */
-function saveToStorage(key, data) {
+function saveToStorage(key, data, isRawString = false) {
   try {
-    localStorage.setItem(key, JSON.stringify(data))
+    if (isRawString && typeof data === 'string') {
+      localStorage.setItem(key, data)
+    } else {
+      localStorage.setItem(key, JSON.stringify(data))
+    }
     return true
   } catch (e) {
     console.error(`Failed to save ${key}:`, e)
@@ -679,8 +693,9 @@ export function restoreFromBackup(backup, options = {}) {
       switch (category) {
         case 'gitlabConfig':
           if (overwrite || !loadFromStorage(keys.gitlabUrl)) {
-            if (data.gitlabUrl) saveToStorage(keys.gitlabUrl, data.gitlabUrl)
-            if (data.gitlabToken) saveToStorage(keys.gitlabToken, data.gitlabToken)
+            // Token and URL are stored as raw strings, not JSON
+            if (data.gitlabUrl) saveToStorage(keys.gitlabUrl, data.gitlabUrl, true)
+            if (data.gitlabToken) saveToStorage(keys.gitlabToken, data.gitlabToken, true)
             if (data.projectId) saveToStorage(keys.projectId, data.projectId)
             if (data.groupPath) saveToStorage(keys.groupPath, data.groupPath)
             if (data.filter2025 !== null && data.filter2025 !== undefined) saveToStorage(keys.filter2025, data.filter2025)
