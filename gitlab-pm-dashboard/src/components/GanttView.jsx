@@ -158,6 +158,21 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
 
     const issuesMap = new Map()
 
+    // DEBUG: Log all issues with epic assignments to find epic 81's issues
+    const issuesWithEpic81 = issues.filter(i => normalizeId(i.epic?.id) === 81)
+    console.log('=== EPIC 81 ISSUE INVESTIGATION ===')
+    console.log('Issues with epic.id = 81:', issuesWithEpic81.map(i => ({
+      id: i.id,
+      iid: i.iid,
+      title: i.title?.substring(0, 40),
+      epicId: normalizeId(i.epic?.id),
+      epicTitle: i.epic?.title,
+      created_at: i.created_at,
+      due_date: i.due_date,
+      milestone: i.milestone?.title
+    })))
+    console.log('Date range:', { rangeStart: rangeStart.toISOString(), rangeEnd: rangeEnd.toISOString() })
+
     // Group issues by epic
     issues.forEach(issue => {
       const epicId = normalizeId(issue.epic?.id)
@@ -182,6 +197,21 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
                       (epicEnd && epicEnd >= rangeStart && epicEnd <= rangeEnd) ||
                       // Also include if epic spans across the time range
                       (epicStart && epicEnd && epicStart <= rangeEnd && epicEnd >= rangeStart)
+
+      // DEBUG: Log epic 81 issues specifically
+      if (epicId === 81) {
+        console.log('Epic 81 issue check:', {
+          issueId: issue.iid,
+          title: issue.title?.substring(0, 30),
+          created: created.toISOString(),
+          dueDate: dueDate?.toISOString(),
+          milestoneDate: milestoneDate?.toISOString(),
+          epicStart: epicStart?.toISOString(),
+          epicEnd: epicEnd?.toISOString(),
+          inRange,
+          parentEpicFound: !!parentEpic
+        })
+      }
 
       if (!inRange) return
 
