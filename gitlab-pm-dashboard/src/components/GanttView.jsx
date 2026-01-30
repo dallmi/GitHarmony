@@ -226,8 +226,19 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
         return true // Include if no dates
       })
 
+    // DEBUG: Log filtering steps
+    console.log('=== EPIC HIERARCHY DEBUG ===')
+    console.log('1. All epics from API:', allEpics.map(e => ({ id: e.id, parent_id: e.parent_id, title: e.title })))
+    console.log('2. Issues grouped by epic ID:', Array.from(issuesMap.entries()).map(([id, issues]) => ({ epicId: id, issueCount: issues.length })))
+    console.log('3. Epics with issues (Set):', Array.from(epicsWithIssues))
+    console.log('4. Filtered epics (after date filter):', filteredEpics.map(e => ({ id: e.id, parent_id: e.parent_id, title: e.title })))
+
     // Build hierarchy from filtered epics
     const { rootEpics, epicMap } = buildEpicHierarchy(filteredEpics)
+
+    console.log('5. Root epics:', rootEpics.map(e => ({ id: e.id, title: e.title, childrenCount: e.children?.length })))
+    console.log('6. Epic map entries:', Array.from(epicMap.entries()).map(([id, e]) => ({ id, title: e.title, parent_id: e.parent_id, level: e.level })))
+    console.log('=== END DEBUG ===')
 
     // Return epics with normalized IDs from epicMap for consistency
     const normalizedEpics = Array.from(epicMap.values())
