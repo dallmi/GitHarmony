@@ -145,10 +145,13 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
   }, [selectedQuarters])
 
   // Get epics with issues, filtered by date range
-  const { epics, epicIssuesMap, rootEpics, epicMap } = useMemo(() => {
+  const { epics, epicIssuesMap, rootEpics, epicMap, normalizeId } = useMemo(() => {
     if (!allEpics || !issues) {
       return { epics: [], epicIssuesMap: new Map() }
     }
+
+    // Helper to normalize ID (handle string/number mismatch from GitLab API)
+    const normalizeId = (id) => id != null ? Number(id) : null
 
     const rangeStart = timelineRange.start
     const rangeEnd = timelineRange.end
@@ -157,12 +160,12 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
 
     // Group issues by epic
     issues.forEach(issue => {
-      const epicId = issue.epic?.id
+      const epicId = normalizeId(issue.epic?.id)
 
       if (!epicId) return
 
       // Find the parent epic to check its dates too
-      const parentEpic = allEpics.find(e => e.id === epicId)
+      const parentEpic = allEpics.find(e => normalizeId(e.id) === epicId)
       const epicStart = parentEpic?.start_date ? new Date(parentEpic.start_date) : null
       const epicEnd = parentEpic?.end_date ? new Date(parentEpic.end_date) : null
 
@@ -193,19 +196,21 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
 
     // Also include parent epics of epics that have issues (so hierarchy is complete)
     allEpics.forEach(epic => {
-      if (epicsWithIssues.has(epic.id) && epic.parent_id) {
+      const normalizedEpicId = normalizeId(epic.id)
+      const normalizedParentId = normalizeId(epic.parent_id)
+      if (epicsWithIssues.has(normalizedEpicId) && normalizedParentId) {
         // Find all ancestors
-        let currentParentId = epic.parent_id
+        let currentParentId = normalizedParentId
         while (currentParentId) {
           epicsWithIssues.add(currentParentId)
-          const parentEpic = allEpics.find(e => e.id === currentParentId)
-          currentParentId = parentEpic?.parent_id
+          const parentEpic = allEpics.find(e => normalizeId(e.id) === currentParentId)
+          currentParentId = normalizeId(parentEpic?.parent_id)
         }
       }
     })
 
     const filteredEpics = allEpics
-      .filter(epic => epicsWithIssues.has(epic.id))
+      .filter(epic => epicsWithIssues.has(normalizeId(epic.id)))
       .filter(epic => {
         // Additional epic-level date range filtering
         if (epic.start_date || epic.end_date) {
@@ -224,7 +229,10 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
     // Build hierarchy from filtered epics
     const { rootEpics, epicMap } = buildEpicHierarchy(filteredEpics)
 
-    return { epics: filteredEpics, epicIssuesMap: issuesMap, rootEpics, epicMap }
+    // Return epics with normalized IDs from epicMap for consistency
+    const normalizedEpics = Array.from(epicMap.values())
+
+    return { epics: normalizedEpics, epicIssuesMap: issuesMap, rootEpics, epicMap, normalizeId }
   }, [allEpics, issues, timelineRange])
 
   // Calculate RAG status for each epic

@@ -24,27 +24,35 @@ export function buildEpicHierarchy(epics) {
   const epicMap = new Map()
   const rootEpics = []
 
-  // First pass: Create map of all epics
+  // Helper to normalize ID (handle string/number mismatch from GitLab API)
+  const normalizeId = (id) => id != null ? Number(id) : null
+
+  // First pass: Create map of all epics (using normalized IDs)
   epics.forEach(epic => {
-    epicMap.set(epic.id, {
+    const normalizedId = normalizeId(epic.id)
+    epicMap.set(normalizedId, {
       ...epic,
+      id: normalizedId,
+      parent_id: normalizeId(epic.parent_id),
       children: [],
       level: 0,
-      path: [epic.id]
+      path: [normalizedId]
     })
   })
 
   // Second pass: Build parent-child relationships
   epics.forEach(epic => {
-    const enhancedEpic = epicMap.get(epic.id)
+    const normalizedId = normalizeId(epic.id)
+    const normalizedParentId = normalizeId(epic.parent_id)
+    const enhancedEpic = epicMap.get(normalizedId)
 
-    if (epic.parent_id && epicMap.has(epic.parent_id)) {
+    if (normalizedParentId && epicMap.has(normalizedParentId)) {
       // This epic has a parent
-      const parent = epicMap.get(epic.parent_id)
+      const parent = epicMap.get(normalizedParentId)
       parent.children.push(enhancedEpic)
       enhancedEpic.parent = parent
       enhancedEpic.level = parent.level + 1
-      enhancedEpic.path = [...parent.path, epic.id]
+      enhancedEpic.path = [...parent.path, normalizedId]
     } else {
       // Root epic (no parent or parent not in our dataset)
       rootEpics.push(enhancedEpic)
