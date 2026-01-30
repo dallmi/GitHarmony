@@ -317,9 +317,9 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
   // Executive summary stats
   const executiveSummary = useMemo(() => {
     const total = epics.length
-    const red = Array.from(epicAnalysis.values()).filter(r => r.status === 'red').length
-    const amber = Array.from(epicAnalysis.values()).filter(r => r.status === 'amber').length
-    const green = Array.from(epicAnalysis.values()).filter(r => r.status === 'green').length
+    const red = Array.from(epicAnalysis.values()).filter(r => r?.status === 'red').length
+    const amber = Array.from(epicAnalysis.values()).filter(r => r?.status === 'amber').length
+    const green = Array.from(epicAnalysis.values()).filter(r => r?.status === 'green').length
 
     const totalIssues = Array.from(epicIssuesMap.values()).flat().length
     const openIssues = Array.from(epicIssuesMap.values()).flat().filter(i => i.state === 'opened').length
@@ -510,7 +510,8 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
       return phase === 'inProgress' || phase === 'review' || phase === 'testing'
     })
 
-    const progressPercent = analysis.metrics.progressPercent
+    const progressPercent = analysis.metrics?.progressPercent ?? 0
+    const ragStatus = analysis.status || 'green'
     const indentPx = level * 24 // 24px per level
 
     return (
@@ -598,14 +599,14 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
 
                   <div style={{
                     padding: '2px 8px',
-                    background: getRAGBgColor(analysis.status),
-                    color: getRAGColor(analysis.status),
+                    background: getRAGBgColor(ragStatus),
+                    color: getRAGColor(ragStatus),
                     borderRadius: '4px',
                     fontSize: '11px',
                     fontWeight: '600',
                     whiteSpace: 'nowrap'
                   }}>
-                    {getRAGLabel(analysis.status)}
+                    {getRAGLabel(ragStatus)}
                   </div>
                 </div>
 
@@ -638,7 +639,7 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
                   overflow: 'hidden',
                   cursor: 'pointer',
                   boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                  border: `1px solid ${getRAGColor(analysis.status)}40`
+                  border: `1px solid ${getRAGColor(ragStatus)}40`
                 }}
                 onClick={() => window.open(epic.web_url, '_blank')}
                 title={generateRAGTooltip(analysis)}
@@ -647,7 +648,7 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
                 <div style={{
                   width: `${progressPercent}%`,
                   height: '100%',
-                  background: `linear-gradient(90deg, ${getRAGColor(analysis.status)}, ${getRAGColor(analysis.status)}DD)`,
+                  background: `linear-gradient(90deg, ${getRAGColor(ragStatus)}, ${getRAGColor(ragStatus)}DD)`,
                   transition: 'width 0.3s ease'
                 }} />
                 {/* Percentage Label */}
@@ -893,7 +894,7 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
         })()}
 
         {/* Expanded: Diagnostics Panel (Collapsible) */}
-        {isExpanded && analysis.factors.length > 0 && (
+        {isExpanded && analysis.factors?.length > 0 && (
           <div style={{ marginTop: '12px', marginLeft: `${indentPx + 32}px` }}>
             {/* Diagnostics Toggle Button */}
             <button
@@ -918,7 +919,7 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
                 <span style={{ fontSize: '14px' }}>⚠️</span>
                 <span>Analysis & Recommendations</span>
                 <span style={{ fontSize: '11px', fontWeight: '400', color: '#6B7280' }}>
-                  ({analysis.factors.length} factors, {analysis.actions.length} actions)
+                  ({analysis.factors?.length || 0} factors, {analysis.actions?.length || 0} actions)
                 </span>
               </div>
               <span style={{ fontSize: '12px', color: '#6B7280' }}>
@@ -939,21 +940,21 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                   <span style={{ fontSize: '16px' }}>⚠️</span>
                   <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937', margin: 0 }}>
-                    Why {getRAGLabel(analysis.status)}?
+                    Why {getRAGLabel(ragStatus)}?
                   </h4>
                 </div>
 
                 <div style={{ marginBottom: '16px' }}>
                   <div style={{ fontSize: '13px', fontWeight: '600', color: '#6B7280', marginBottom: '8px' }}>
-                    🎯 Primary Issue: {analysis.reason}
+                    🎯 Primary Issue: {analysis.reason || 'No issues identified'}
                   </div>
 
-                  {analysis.factors.length > 0 && (
+                  {analysis.factors?.length > 0 && (
                     <div>
                       <div style={{ fontSize: '13px', fontWeight: '600', color: '#6B7280', marginTop: '12px', marginBottom: '8px' }}>
                         🔍 Contributing Factors:
                       </div>
-                      {analysis.factors.slice(0, 3).map((factor, idx) => (
+                      {(analysis.factors || []).slice(0, 3).map((factor, idx) => (
                         <div key={idx} style={{
                           padding: '10px',
                           background: 'white',
@@ -976,12 +977,12 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
                   )}
                 </div>
 
-                {analysis.actions.length > 0 && (
+                {analysis.actions?.length > 0 && (
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: '600', color: '#6B7280', marginBottom: '8px' }}>
                       💡 Recommended Actions:
                     </div>
-                    {analysis.actions.slice(0, 3).map((action, idx) => (
+                    {(analysis.actions || []).slice(0, 3).map((action, idx) => (
                       <div key={idx} style={{
                         padding: '10px',
                         background: 'white',
