@@ -179,12 +179,27 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
 
       if (!epicId) return
 
-      // Find the parent epic to check its dates too
-      const parentEpic = allEpics.find(e => normalizeId(e.id) === epicId)
-      const epicStart = parentEpic?.start_date ? new Date(parentEpic.start_date) : null
-      const epicEnd = parentEpic?.end_date ? new Date(parentEpic.end_date) : null
+      // Find the epic and traverse up to find any ancestor with dates
+      let currentEpic = allEpics.find(e => normalizeId(e.id) === epicId)
+      let epicStart = null
+      let epicEnd = null
 
-      // Check if issue falls within selected date range (by creation, due date, milestone, OR parent epic dates)
+      // Traverse up the hierarchy to find dates from any ancestor
+      while (currentEpic) {
+        if (!epicStart && currentEpic.start_date) {
+          epicStart = new Date(currentEpic.start_date)
+        }
+        if (!epicEnd && currentEpic.end_date) {
+          epicEnd = new Date(currentEpic.end_date)
+        }
+        // If we found both dates, stop traversing
+        if (epicStart && epicEnd) break
+        // Move to parent epic
+        const parentId = normalizeId(currentEpic.parent_id)
+        currentEpic = parentId ? allEpics.find(e => normalizeId(e.id) === parentId) : null
+      }
+
+      // Check if issue falls within selected date range (by creation, due date, milestone, OR ancestor epic dates)
       const created = new Date(issue.created_at)
       const dueDate = issue.due_date ? new Date(issue.due_date) : null
       const milestoneDate = issue.milestone?.due_date ? new Date(issue.milestone.due_date) : null
@@ -192,7 +207,7 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
       const inRange = (created >= rangeStart && created <= rangeEnd) ||
                       (dueDate && dueDate >= rangeStart && dueDate <= rangeEnd) ||
                       (milestoneDate && milestoneDate >= rangeStart && milestoneDate <= rangeEnd) ||
-                      // Also include if parent epic falls within the time range
+                      // Also include if any ancestor epic falls within the time range
                       (epicStart && epicStart >= rangeStart && epicStart <= rangeEnd) ||
                       (epicEnd && epicEnd >= rangeStart && epicEnd <= rangeEnd) ||
                       // Also include if epic spans across the time range
@@ -206,10 +221,9 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
           created: created.toISOString(),
           dueDate: dueDate?.toISOString(),
           milestoneDate: milestoneDate?.toISOString(),
-          epicStart: epicStart?.toISOString(),
-          epicEnd: epicEnd?.toISOString(),
-          inRange,
-          parentEpicFound: !!parentEpic
+          ancestorEpicStart: epicStart?.toISOString(),
+          ancestorEpicEnd: epicEnd?.toISOString(),
+          inRange
         })
       }
 
