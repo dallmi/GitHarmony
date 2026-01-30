@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { calculateEpicRAG, getHistoricalData } from '../services/ragAnalysisService'
 import { isBlocked } from '../utils/labelUtils'
 import { getPhaseLabel, getPhaseColor, detectIssuePhase } from '../services/cycleTimeService'
+import { buildEpicHierarchy } from '../services/crossProjectLinkingService'
 
 /**
  * Calculate issue progress percentage based on state and phase
@@ -48,7 +49,8 @@ function generateRAGTooltip(analysis) {
 export default function GanttView({ issues, epics: allEpics, crossProjectData }) {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [selectedQuarters, setSelectedQuarters] = useState([1, 2, 3, 4]) // Array of selected quarters (1-4)
-  const [expandedEpics, setExpandedEpics] = useState(new Set())
+  const [expandedEpics, setExpandedEpics] = useState(new Set()) // For showing issues
+  const [expandedChildEpics, setExpandedChildEpics] = useState(new Set()) // For showing child epics
   const [expandedDiagnostics, setExpandedDiagnostics] = useState(new Set())
   const [showExecutiveSummary, setShowExecutiveSummary] = useState(true)
   const [selectedPhases, setSelectedPhases] = useState([]) // Empty = show all phases
@@ -143,7 +145,7 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
   }, [selectedQuarters])
 
   // Get epics with issues, filtered by date range
-  const { epics, epicIssuesMap } = useMemo(() => {
+  const { epics, epicIssuesMap, rootEpics, epicMap } = useMemo(() => {
     if (!allEpics || !issues) {
       return { epics: [], epicIssuesMap: new Map() }
     }
@@ -186,9 +188,24 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
       issuesMap.get(epicId).push(issue)
     })
 
-    // Filter epics that have issues in this date range
+    // Filter epics that have issues in this date range OR are parents of such epics
+    const epicsWithIssues = new Set(issuesMap.keys())
+
+    // Also include parent epics of epics that have issues (so hierarchy is complete)
+    allEpics.forEach(epic => {
+      if (epicsWithIssues.has(epic.id) && epic.parent_id) {
+        // Find all ancestors
+        let currentParentId = epic.parent_id
+        while (currentParentId) {
+          epicsWithIssues.add(currentParentId)
+          const parentEpic = allEpics.find(e => e.id === currentParentId)
+          currentParentId = parentEpic?.parent_id
+        }
+      }
+    })
+
     const filteredEpics = allEpics
-      .filter(epic => issuesMap.has(epic.id))
+      .filter(epic => epicsWithIssues.has(epic.id))
       .filter(epic => {
         // Additional epic-level date range filtering
         if (epic.start_date || epic.end_date) {
@@ -204,7 +221,10 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
         return true // Include if no dates
       })
 
-    return { epics: filteredEpics, epicIssuesMap: issuesMap }
+    // Build hierarchy from filtered epics
+    const { rootEpics, epicMap } = buildEpicHierarchy(filteredEpics)
+
+    return { epics: filteredEpics, epicIssuesMap: issuesMap, rootEpics, epicMap }
   }, [allEpics, issues, timelineRange])
 
   // Calculate RAG status for each epic
@@ -287,6 +307,16 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
       newExpanded.add(epicId)
     }
     setExpandedEpics(newExpanded)
+  }
+
+  const toggleChildEpics = (epicId) => {
+    const newExpanded = new Set(expandedChildEpics)
+    if (newExpanded.has(epicId)) {
+      newExpanded.delete(epicId)
+    } else {
+      newExpanded.add(epicId)
+    }
+    setExpandedChildEpics(newExpanded)
   }
 
   /**
@@ -384,6 +414,544 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
   }
 
   const todayPosition = getTodayPosition()
+
+  // Recursive function to render epic with hierarchy
+  const renderEpicRow = (epicData, level = 0) => {
+    // epicData comes from epicMap, so it has children, level, etc.
+    const epic = epicData
+    const epicIssues = epicIssuesMap.get(epic.id) || []
+    const analysis = epicAnalysis.get(epic.id)
+
+    // Safety check - if no analysis, skip this epic
+    if (!analysis) return null
+
+    const isExpanded = expandedEpics.has(epic.id)
+    const isChildrenExpanded = expandedChildEpics.has(epic.id)
+    const timelinePos = getTimelinePosition(epic.start_date, epic.end_date)
+    const hasChildren = epic.children && epic.children.length > 0
+
+    const openIssues = epicIssues.filter(i => i.state === 'opened')
+    const closedIssues = epicIssues.filter(i => i.state === 'closed')
+    const inProgressIssues = openIssues.filter(i => {
+      const phase = detectIssuePhase(i)
+      return phase === 'inProgress' || phase === 'review' || phase === 'testing'
+    })
+
+    const progressPercent = analysis.metrics.progressPercent
+    const indentPx = level * 24 // 24px per level
+
+    return (
+      <div key={epic.id} style={{ marginBottom: level === 0 ? '24px' : '8px' }}>
+        {/* Epic Header Row */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '12px 0',
+          paddingLeft: `${indentPx}px`,
+          borderBottom: '1px solid #E5E7EB',
+          background: level > 0 ? '#FAFBFC' : 'transparent'
+        }}>
+          {/* Epic Info */}
+          <div style={{ width: `${350 - indentPx}px`, paddingRight: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              {/* Child epics toggle button */}
+              {hasChildren && (
+                <button
+                  onClick={() => toggleChildEpics(epic.id)}
+                  style={{
+                    background: '#E0E7FF',
+                    border: '1px solid #A5B4FC',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    padding: '2px 6px',
+                    color: '#4F46E5',
+                    fontWeight: '600',
+                    marginRight: '4px'
+                  }}
+                  title={isChildrenExpanded ? 'Collapse child epics' : `Show ${epic.children.length} child epic(s)`}
+                >
+                  {isChildrenExpanded ? '−' : '+'}{epic.children.length}
+                </button>
+              )}
+
+              {/* Issues toggle button */}
+              <button
+                onClick={() => toggleEpic(epic.id)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  padding: '0 4px',
+                  color: '#6B7280'
+                }}
+                title={isExpanded ? 'Collapse issues' : 'Show issues'}
+              >
+                {isExpanded ? '▼' : '▶'}
+              </button>
+
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                  {/* Level indicator for child epics */}
+                  {level > 0 && (
+                    <span style={{
+                      fontSize: '9px',
+                      padding: '1px 5px',
+                      background: '#E0E7FF',
+                      color: '#4F46E5',
+                      borderRadius: '3px',
+                      fontWeight: '600'
+                    }}>
+                      L{level}
+                    </span>
+                  )}
+
+                  <a
+                    href={epic.web_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      fontSize: level === 0 ? '14px' : '13px',
+                      fontWeight: '600',
+                      color: '#1F2937',
+                      textDecoration: 'none'
+                    }}
+                    onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                    onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                  >
+                    {epic.title}
+                  </a>
+
+                  <div style={{
+                    padding: '2px 8px',
+                    background: getRAGBgColor(analysis.status),
+                    color: getRAGColor(analysis.status),
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {getRAGLabel(analysis.status)}
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                  {closedIssues.length}/{epicIssues.length} closed
+                  {' | '}
+                  {openIssues.length} open
+                  {inProgressIssues.length > 0 && ` | ${inProgressIssues.length} in progress`}
+                  {hasChildren && (
+                    <span style={{ color: '#4F46E5', fontWeight: '500' }}>
+                      {' | '}{epic.children.length} sub-epic{epic.children.length > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Timeline Bar with Progress Fill */}
+          <div style={{ flex: 1, position: 'relative', height: '40px' }}>
+            {timelinePos && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: timelinePos.left,
+                  width: timelinePos.width,
+                  height: level === 0 ? '32px' : '26px',
+                  background: '#E5E7EB',
+                  borderRadius: '6px',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  border: `1px solid ${getRAGColor(analysis.status)}40`
+                }}
+                onClick={() => window.open(epic.web_url, '_blank')}
+                title={generateRAGTooltip(analysis)}
+              >
+                {/* Filled Progress Portion */}
+                <div style={{
+                  width: `${progressPercent}%`,
+                  height: '100%',
+                  background: `linear-gradient(90deg, ${getRAGColor(analysis.status)}, ${getRAGColor(analysis.status)}DD)`,
+                  transition: 'width 0.3s ease'
+                }} />
+                {/* Percentage Label */}
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <span style={{
+                    color: progressPercent > 30 ? 'white' : '#1F2937',
+                    fontSize: level === 0 ? '12px' : '11px',
+                    fontWeight: '600',
+                    textShadow: progressPercent > 30 ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    padding: '0 8px'
+                  }}>
+                    {progressPercent.toFixed(0)}%
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Child Epics (hierarchical) */}
+        {hasChildren && isChildrenExpanded && (
+          <div style={{
+            marginLeft: `${indentPx + 16}px`,
+            borderLeft: '3px solid #A5B4FC',
+            paddingLeft: '8px',
+            marginTop: '4px'
+          }}>
+            {epic.children.map(childEpic => renderEpicRow(childEpic, level + 1))}
+          </div>
+        )}
+
+        {/* Expanded: Issues List (including cross-project children) */}
+        {isExpanded && (() => {
+          const allIssues = getAllIssuesForEpic(epic.id)
+          const localCount = allIssues.filter(i => !i._isCrossProject).length
+          const crossProjectCount = allIssues.filter(i => i._isCrossProject).length
+
+          return (
+            <div style={{
+              marginTop: '12px',
+              marginLeft: `${indentPx + 32}px`,
+              paddingLeft: '16px',
+              borderLeft: '2px solid #E5E7EB'
+            }}>
+              {/* Info header if there are cross-project issues */}
+              {crossProjectCount > 0 && (
+                <div style={{
+                  padding: '8px 12px',
+                  background: '#EFF6FF',
+                  border: '1px solid #BFDBFE',
+                  borderRadius: '6px',
+                  marginBottom: '12px',
+                  fontSize: '12px',
+                  color: '#1E40AF'
+                }}>
+                  <strong>Showing {localCount} local + {crossProjectCount} cross-project issues</strong>
+                  <div style={{ fontSize: '11px', color: '#3B82F6', marginTop: '2px' }}>
+                    Cross-project issues are highlighted with a blue left border
+                  </div>
+                </div>
+              )}
+
+              {(() => {
+                // Apply phase filter
+                const filteredIssues = selectedPhases.length === 0
+                  ? allIssues
+                  : allIssues.filter(issue => selectedPhases.includes(detectIssuePhase(issue)))
+
+                // Get limit for this epic
+                const limit = issuesPerEpic.get(epic.id) || 20
+                const visibleIssues = filteredIssues.slice(0, limit)
+                const hasMore = filteredIssues.length > limit
+
+                return (
+                  <>
+                    {visibleIssues.map(issue => {
+                      const issueProgress = getIssueProgressPercent(issue)
+                      const issueTimelinePos = getTimelinePosition(
+                        issue.created_at,
+                        issue.due_date || issue.milestone?.due_date || epic.end_date
+                      )
+                      const phase = detectIssuePhase(issue)
+                      const phaseColor = getPhaseColor(phase)
+
+                      return (
+                        <div
+                          key={issue.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: '8px 0',
+                            paddingLeft: issue._isCrossProject ? '12px' : '0',
+                            borderBottom: '1px solid #F3F4F6',
+                            borderLeft: issue._isCrossProject ? '4px solid #3B82F6' : 'none',
+                            background: issue._isCrossProject ? '#F0F9FF' : 'transparent',
+                            marginLeft: issue._isCrossProject ? '-12px' : '0',
+                            borderRadius: issue._isCrossProject ? '4px' : '0'
+                          }}
+                        >
+                          {/* Issue Info */}
+                          <div style={{ width: `${318 - indentPx}px`, paddingRight: '16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                              <a
+                                href={issue.web_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  fontSize: '12px',
+                                  color: issue.state === 'closed' ? '#6B7280' : '#1F2937',
+                                  textDecoration: 'none',
+                                  textOverflow: 'ellipsis',
+                                  overflow: 'hidden',
+                                  whiteSpace: 'nowrap',
+                                  flex: 1
+                                }}
+                                onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                                onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                              >
+                                #{issue.iid} {issue.title}
+                              </a>
+                              {issue._isCrossProject && (
+                                <span style={{
+                                  fontSize: '9px',
+                                  padding: '2px 5px',
+                                  background: '#3B82F6',
+                                  color: 'white',
+                                  borderRadius: '3px',
+                                  fontWeight: '600',
+                                  whiteSpace: 'nowrap'
+                                }} title={`From: ${issue._sourceProject}`}>
+                                  {issue._sourceProject}
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '10px', color: '#6B7280' }}>
+                              {issue.assignees?.[0]?.name || 'Unassigned'}
+                              {' • '}
+                              <span style={{ color: phaseColor, fontWeight: '600' }}>
+                                {getPhaseLabel(phase)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Issue Timeline Bar */}
+                          <div style={{ flex: 1, position: 'relative', height: '24px' }}>
+                            {issueTimelinePos && (
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  left: issueTimelinePos.left,
+                                  width: issueTimelinePos.width,
+                                  height: '20px',
+                                  background: '#F3F4F6',
+                                  borderRadius: '4px',
+                                  overflow: 'hidden',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                  border: `1px solid ${phaseColor}40`
+                                }}
+                                onClick={() => window.open(issue.web_url, '_blank')}
+                                title={`${issue.title} - ${issueProgress}% complete`}
+                              >
+                                {/* Filled Progress Portion */}
+                                <div style={{
+                                  width: `${issueProgress}%`,
+                                  height: '100%',
+                                  background: phaseColor,
+                                  transition: 'width 0.3s ease'
+                                }} />
+                                {/* Percentage Label */}
+                                {issueProgress > 20 && (
+                                  <div style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}>
+                                    <span style={{
+                                      color: issueProgress > 30 ? 'white' : '#1F2937',
+                                      fontSize: '10px',
+                                      fontWeight: '600',
+                                      textShadow: issueProgress > 30 ? '0 1px 2px rgba(0,0,0,0.3)' : 'none'
+                                    }}>
+                                      {issueProgress}%
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                    {hasMore && (
+                      <button
+                        onClick={() => handleLoadMoreIssues(epic.id)}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          marginTop: '8px',
+                          background: '#F3F4F6',
+                          border: '1px solid #D1D5DB',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#3B82F6',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#E5E7EB'
+                          e.currentTarget.style.borderColor = '#3B82F6'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#F3F4F6'
+                          e.currentTarget.style.borderColor = '#D1D5DB'
+                        }}
+                      >
+                        Load +10 More Issues ({filteredIssues.length - limit} remaining)
+                      </button>
+                    )}
+                  </>
+                )
+              })()}
+            </div>
+          )
+        })()}
+
+        {/* Expanded: Diagnostics Panel (Collapsible) */}
+        {isExpanded && analysis.factors.length > 0 && (
+          <div style={{ marginTop: '12px', marginLeft: `${indentPx + 32}px` }}>
+            {/* Diagnostics Toggle Button */}
+            <button
+              onClick={() => toggleDiagnostics(epic.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 12px',
+                background: '#F9FAFB',
+                border: '1px solid #E5E7EB',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: '#1F2937',
+                width: '100%',
+                justifyContent: 'space-between'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '14px' }}>⚠️</span>
+                <span>Analysis & Recommendations</span>
+                <span style={{ fontSize: '11px', fontWeight: '400', color: '#6B7280' }}>
+                  ({analysis.factors.length} factors, {analysis.actions.length} actions)
+                </span>
+              </div>
+              <span style={{ fontSize: '12px', color: '#6B7280' }}>
+                {expandedDiagnostics.has(epic.id) ? '▼' : '▶'}
+              </span>
+            </button>
+
+            {/* Diagnostics Content */}
+            {expandedDiagnostics.has(epic.id) && (
+              <div style={{
+                background: '#F9FAFB',
+                border: '1px solid #E5E7EB',
+                borderRadius: '6px',
+                padding: '16px',
+                marginTop: '12px',
+                marginBottom: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '16px' }}>⚠️</span>
+                  <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937', margin: 0 }}>
+                    Why {getRAGLabel(analysis.status)}?
+                  </h4>
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#6B7280', marginBottom: '8px' }}>
+                    🎯 Primary Issue: {analysis.reason}
+                  </div>
+
+                  {analysis.factors.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#6B7280', marginTop: '12px', marginBottom: '8px' }}>
+                        🔍 Contributing Factors:
+                      </div>
+                      {analysis.factors.slice(0, 3).map((factor, idx) => (
+                        <div key={idx} style={{
+                          padding: '10px',
+                          background: 'white',
+                          borderLeft: `3px solid ${factor.severity === 'critical' ? '#EF4444' : '#F59E0B'}`,
+                          borderRadius: '4px',
+                          marginBottom: '8px'
+                        }}>
+                          <div style={{ fontSize: '12px', fontWeight: '600', color: '#1F2937', marginBottom: '4px' }}>
+                            {idx + 1}. [{factor.severity === 'critical' ? '🔴 Critical' : '🟡 Medium'}] {factor.title}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '2px' }}>
+                            {factor.description}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#6B7280', fontStyle: 'italic' }}>
+                            Impact: {factor.impact}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {analysis.actions.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#6B7280', marginBottom: '8px' }}>
+                      💡 Recommended Actions:
+                    </div>
+                    {analysis.actions.slice(0, 3).map((action, idx) => (
+                      <div key={idx} style={{
+                        padding: '10px',
+                        background: 'white',
+                        borderRadius: '4px',
+                        marginBottom: '8px',
+                        borderLeft: `3px solid ${action.priority === 'critical' ? '#EF4444' : action.priority === 'high' ? '#F59E0B' : '#3B82F6'}`
+                      }}>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#1F2937', marginBottom: '4px' }}>
+                          {action.priority === 'critical' ? '✅ [Critical]' : action.priority === 'high' ? '⚠️ [High]' : '📋 [Medium]'} {action.title}
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '2px' }}>
+                          {action.description}
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#6B7280' }}>
+                          Effort: {action.estimatedEffort} • Impact: {action.impact}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {analysis.projection && (
+                  <div style={{
+                    marginTop: '12px',
+                    padding: '10px',
+                    background: analysis.projection.onTime ? '#D1FAE5' : '#FEE2E2',
+                    borderRadius: '4px'
+                  }}>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: analysis.projection.onTime ? '#065F46' : '#991B1B' }}>
+                      📈 Projection: {analysis.projection.onTime ? 'On time' : `${Math.abs(Math.round(analysis.projection.daysVariance))} days late`}
+                    </div>
+                    <div style={{ fontSize: '11px', color: analysis.projection.onTime ? '#065F46' : '#991B1B', marginTop: '2px' }}>
+                      Expected completion: {analysis.projection.date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })} ({analysis.projection.iterationsNeeded} iterations at current velocity)
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   if (epics.length === 0) {
     return (
@@ -861,534 +1429,8 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
           </div>
         </div>
 
-        {/* Epic Rows */}
-        {epics.map(epic => {
-          const epicIssues = epicIssuesMap.get(epic.id) || []
-          const analysis = epicAnalysis.get(epic.id)
-          const isExpanded = expandedEpics.has(epic.id)
-          const timelinePos = getTimelinePosition(epic.start_date, epic.end_date)
-
-          const openIssues = epicIssues.filter(i => i.state === 'opened')
-          const closedIssues = epicIssues.filter(i => i.state === 'closed')
-          const inProgressIssues = openIssues.filter(i => {
-            const phase = detectIssuePhase(i)
-            return phase === 'inProgress' || phase === 'review' || phase === 'testing'
-          })
-
-          const progressPercent = analysis.metrics.progressPercent
-
-          return (
-            <div key={epic.id} style={{ marginBottom: '24px' }}>
-              {/* Epic Header Row */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: '12px 0',
-                borderBottom: '1px solid #E5E7EB'
-              }}>
-                {/* Epic Info */}
-                <div style={{ width: '350px', paddingRight: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                    <button
-                      onClick={() => toggleEpic(epic.id)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        padding: '0 4px',
-                        color: '#6B7280'
-                      }}
-                    >
-                      {isExpanded ? '▼' : '▶'}
-                    </button>
-
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <a
-                          href={epic.web_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            color: '#1F2937',
-                            textDecoration: 'none'
-                          }}
-                          onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
-                          onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
-                        >
-                          {epic.title}
-                        </a>
-
-                        <div style={{
-                          padding: '2px 8px',
-                          background: getRAGBgColor(analysis.status),
-                          color: getRAGColor(analysis.status),
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          fontWeight: '600',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {getRAGLabel(analysis.status)}
-                        </div>
-                      </div>
-
-                      <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                        {closedIssues.length}/{epicIssues.length} closed
-                        {' | '}
-                        {openIssues.length} open
-                        {inProgressIssues.length > 0 && ` | ${inProgressIssues.length} in progress`}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Timeline Bar with Progress Fill */}
-                <div style={{ flex: 1, position: 'relative', height: '40px' }}>
-                  {timelinePos && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: timelinePos.left,
-                        width: timelinePos.width,
-                        height: '32px',
-                        background: '#E5E7EB',
-                        borderRadius: '6px',
-                        overflow: 'hidden',
-                        cursor: 'pointer',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                        border: `1px solid ${getRAGColor(analysis.status)}40`
-                      }}
-                      onClick={() => window.open(epic.web_url, '_blank')}
-                      title={generateRAGTooltip(analysis)}
-                    >
-                      {/* Filled Progress Portion */}
-                      <div style={{
-                        width: `${progressPercent}%`,
-                        height: '100%',
-                        background: `linear-gradient(90deg, ${getRAGColor(analysis.status)}, ${getRAGColor(analysis.status)}DD)`,
-                        transition: 'width 0.3s ease'
-                      }} />
-                      {/* Percentage Label */}
-                      <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <span style={{
-                          color: progressPercent > 30 ? 'white' : '#1F2937',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          textShadow: progressPercent > 30 ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          padding: '0 8px'
-                        }}>
-                          {progressPercent.toFixed(0)}%
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Expanded: Issues List (including cross-project children) */}
-              {isExpanded && (() => {
-                const allIssues = getAllIssuesForEpic(epic.id)
-                const localCount = allIssues.filter(i => !i._isCrossProject).length
-                const crossProjectCount = allIssues.filter(i => i._isCrossProject).length
-
-                return (
-                  <div style={{
-                    marginTop: '12px',
-                    marginLeft: '32px',
-                    paddingLeft: '16px',
-                    borderLeft: '2px solid #E5E7EB'
-                  }}>
-                    {/* Info header if there are cross-project issues */}
-                    {crossProjectCount > 0 && (
-                      <div style={{
-                        padding: '8px 12px',
-                        background: '#EFF6FF',
-                        border: '1px solid #BFDBFE',
-                        borderRadius: '6px',
-                        marginBottom: '12px',
-                        fontSize: '12px',
-                        color: '#1E40AF'
-                      }}>
-                        <strong>Showing {localCount} local + {crossProjectCount} cross-project issues</strong>
-                        <div style={{ fontSize: '11px', color: '#3B82F6', marginTop: '2px' }}>
-                          Cross-project issues are highlighted with a blue left border
-                        </div>
-                      </div>
-                    )}
-
-                    {(() => {
-                      // Apply phase filter
-                      const filteredIssues = selectedPhases.length === 0
-                        ? allIssues
-                        : allIssues.filter(issue => selectedPhases.includes(detectIssuePhase(issue)))
-
-                      // Get limit for this epic
-                      const limit = issuesPerEpic.get(epic.id) || 20
-                      const visibleIssues = filteredIssues.slice(0, limit)
-                      const hasMore = filteredIssues.length > limit
-
-                      return (
-                        <>
-                          {visibleIssues.map(issue => {
-                    const issueProgress = getIssueProgressPercent(issue)
-                    const issueTimelinePos = getTimelinePosition(
-                      issue.created_at,
-                      issue.due_date || issue.milestone?.due_date || epic.end_date
-                    )
-                    const phase = detectIssuePhase(issue)
-                    const phaseColor = getPhaseColor(phase)
-
-                    return (
-                      <div
-                        key={issue.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          padding: '8px 0',
-                          paddingLeft: issue._isCrossProject ? '12px' : '0',
-                          borderBottom: '1px solid #F3F4F6',
-                          borderLeft: issue._isCrossProject ? '4px solid #3B82F6' : 'none',
-                          background: issue._isCrossProject ? '#F0F9FF' : 'transparent',
-                          marginLeft: issue._isCrossProject ? '-12px' : '0',
-                          borderRadius: issue._isCrossProject ? '4px' : '0'
-                        }}
-                      >
-                        {/* Issue Info */}
-                        <div style={{ width: '318px', paddingRight: '16px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                            <a
-                              href={issue.web_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{
-                                fontSize: '12px',
-                                color: issue.state === 'closed' ? '#6B7280' : '#1F2937',
-                                textDecoration: 'none',
-                                textOverflow: 'ellipsis',
-                                overflow: 'hidden',
-                                whiteSpace: 'nowrap',
-                                flex: 1
-                              }}
-                              onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
-                              onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
-                            >
-                              #{issue.iid} {issue.title}
-                            </a>
-                            {issue._isCrossProject && (
-                              <span style={{
-                                fontSize: '9px',
-                                padding: '2px 5px',
-                                background: '#3B82F6',
-                                color: 'white',
-                                borderRadius: '3px',
-                                fontWeight: '600',
-                                whiteSpace: 'nowrap'
-                              }} title={`From: ${issue._sourceProject}`}>
-                                {issue._sourceProject}
-                              </span>
-                            )}
-                          </div>
-                          <div style={{ fontSize: '10px', color: '#6B7280' }}>
-                            {issue.assignees?.[0]?.name || 'Unassigned'}
-                            {' • '}
-                            <span style={{ color: phaseColor, fontWeight: '600' }}>
-                              {getPhaseLabel(phase)}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Issue Timeline Bar */}
-                        <div style={{ flex: 1, position: 'relative', height: '24px' }}>
-                          {issueTimelinePos && (
-                            <div
-                              style={{
-                                position: 'absolute',
-                                left: issueTimelinePos.left,
-                                width: issueTimelinePos.width,
-                                height: '20px',
-                                background: '#F3F4F6',
-                                borderRadius: '4px',
-                                overflow: 'hidden',
-                                cursor: 'pointer',
-                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                                border: `1px solid ${phaseColor}40`
-                              }}
-                              onClick={() => window.open(issue.web_url, '_blank')}
-                              title={`${issue.title} - ${issueProgress}% complete`}
-                            >
-                              {/* Filled Progress Portion */}
-                              <div style={{
-                                width: `${issueProgress}%`,
-                                height: '100%',
-                                background: phaseColor,
-                                transition: 'width 0.3s ease'
-                              }} />
-                              {/* Percentage Label */}
-                              {issueProgress > 20 && (
-                                <div style={{
-                                  position: 'absolute',
-                                  top: 0,
-                                  left: 0,
-                                  right: 0,
-                                  bottom: 0,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center'
-                                }}>
-                                  <span style={{
-                                    color: issueProgress > 30 ? 'white' : '#1F2937',
-                                    fontSize: '10px',
-                                    fontWeight: '600',
-                                    textShadow: issueProgress > 30 ? '0 1px 2px rgba(0,0,0,0.3)' : 'none'
-                                  }}>
-                                    {issueProgress}%
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                          {hasMore && (
-                            <button
-                              onClick={() => handleLoadMoreIssues(epic.id)}
-                              style={{
-                                width: '100%',
-                                padding: '12px',
-                                marginTop: '8px',
-                                background: '#F3F4F6',
-                                border: '1px solid #D1D5DB',
-                                borderRadius: '6px',
-                                fontSize: '12px',
-                                fontWeight: '600',
-                                color: '#3B82F6',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = '#E5E7EB'
-                                e.currentTarget.style.borderColor = '#3B82F6'
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = '#F3F4F6'
-                                e.currentTarget.style.borderColor = '#D1D5DB'
-                              }}
-                            >
-                              Load +10 More Issues ({filteredIssues.length - limit} remaining)
-                            </button>
-                          )}
-                        </>
-                      )
-                    })()}
-                </div>
-                )
-              })()}
-
-              {/* Expanded: Diagnostics Panel (Collapsible) */}
-              {isExpanded && analysis.factors.length > 0 && (
-                <div style={{ marginTop: '12px', marginLeft: '32px' }}>
-                  {/* Diagnostics Toggle Button */}
-                  <button
-                    onClick={() => toggleDiagnostics(epic.id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '8px 12px',
-                      background: '#F9FAFB',
-                      border: '1px solid #E5E7EB',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      fontWeight: '600',
-                      color: '#1F2937',
-                      width: '100%',
-                      justifyContent: 'space-between'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '14px' }}>⚠️</span>
-                      <span>Analysis & Recommendations</span>
-                      <span style={{ fontSize: '11px', fontWeight: '400', color: '#6B7280' }}>
-                        ({analysis.factors.length} factors, {analysis.actions.length} actions)
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '12px', color: '#6B7280' }}>
-                      {expandedDiagnostics.has(epic.id) ? '▼' : '▶'}
-                    </span>
-                  </button>
-
-                  {/* Diagnostics Content */}
-                  {expandedDiagnostics.has(epic.id) && (
-                <div style={{
-                  background: '#F9FAFB',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '6px',
-                  padding: '16px',
-                  marginTop: '12px',
-                  marginBottom: '12px'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                    <span style={{ fontSize: '16px' }}>⚠️</span>
-                    <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937', margin: 0 }}>
-                      Why {getRAGLabel(analysis.status)}?
-                    </h4>
-                  </div>
-
-                  <div style={{ marginBottom: '16px' }}>
-                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#6B7280', marginBottom: '8px' }}>
-                      🎯 Primary Issue: {analysis.reason}
-                    </div>
-
-                    {analysis.factors.length > 0 && (
-                      <div>
-                        <div style={{ fontSize: '13px', fontWeight: '600', color: '#6B7280', marginTop: '12px', marginBottom: '8px' }}>
-                          🔍 Contributing Factors:
-                        </div>
-                        {analysis.factors.slice(0, 3).map((factor, idx) => (
-                          <div key={idx} style={{
-                            padding: '10px',
-                            background: 'white',
-                            borderLeft: `3px solid ${factor.severity === 'critical' ? '#EF4444' : '#F59E0B'}`,
-                            borderRadius: '4px',
-                            marginBottom: '8px'
-                          }}>
-                            <div style={{ fontSize: '12px', fontWeight: '600', color: '#1F2937', marginBottom: '4px' }}>
-                              {idx + 1}. [{factor.severity === 'critical' ? '🔴 Critical' : '🟡 Medium'}] {factor.title}
-                            </div>
-                            <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '2px' }}>
-                              {factor.description}
-                            </div>
-                            <div style={{ fontSize: '11px', color: '#6B7280', fontStyle: 'italic' }}>
-                              Impact: {factor.impact}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {analysis.actions.length > 0 && (
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#6B7280', marginBottom: '8px' }}>
-                        💡 Recommended Actions:
-                      </div>
-                      {analysis.actions.slice(0, 3).map((action, idx) => (
-                        <div key={idx} style={{
-                          padding: '10px',
-                          background: 'white',
-                          borderRadius: '4px',
-                          marginBottom: '8px',
-                          borderLeft: `3px solid ${action.priority === 'critical' ? '#EF4444' : action.priority === 'high' ? '#F59E0B' : '#3B82F6'}`
-                        }}>
-                          <div style={{ fontSize: '12px', fontWeight: '600', color: '#1F2937', marginBottom: '4px' }}>
-                            {action.priority === 'critical' ? '✅ [Critical]' : action.priority === 'high' ? '⚠️ [High]' : '📋 [Medium]'} {action.title}
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '2px' }}>
-                            {action.description}
-                          </div>
-                          <div style={{ fontSize: '10px', color: '#6B7280' }}>
-                            Effort: {action.estimatedEffort} • Impact: {action.impact}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {analysis.projection && (
-                    <div style={{
-                      marginTop: '12px',
-                      padding: '10px',
-                      background: analysis.projection.onTime ? '#D1FAE5' : '#FEE2E2',
-                      borderRadius: '4px'
-                    }}>
-                      <div style={{ fontSize: '12px', fontWeight: '600', color: analysis.projection.onTime ? '#065F46' : '#991B1B' }}>
-                        📈 Projection: {analysis.projection.onTime ? 'On time' : `${Math.abs(Math.round(analysis.projection.daysVariance))} days late`}
-                      </div>
-                      <div style={{ fontSize: '11px', color: analysis.projection.onTime ? '#065F46' : '#991B1B', marginTop: '2px' }}>
-                        Expected completion: {analysis.projection.date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })} ({analysis.projection.iterationsNeeded} iterations at current velocity)
-                      </div>
-                    </div>
-                  )}
-                </div>
-                  )}
-                </div>
-              )}
-
-              {/* Old Issue Breakdown - REMOVED, replaced with new hierarchical view above */}
-              {false && isExpanded && (
-                <div style={{ marginLeft: '40px', marginTop: '12px' }}>
-                  {/* Open Issues */}
-                  {openIssues.length > 0 && (
-                    <div style={{ marginBottom: '16px' }}>
-                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', marginBottom: '8px', textTransform: 'uppercase' }}>
-                        Open Issues ({openIssues.length})
-                      </div>
-                      {openIssues.slice(0, 5).map(issue => (
-                        <div key={issue.id} style={{
-                          padding: '8px',
-                          background: '#F9FAFB',
-                          borderRadius: '4px',
-                          marginBottom: '6px',
-                          fontSize: '12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
-                        }}>
-                          <a
-                            href={issue.web_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ color: '#3B82F6', textDecoration: 'none', fontWeight: '600' }}
-                          >
-                            #{issue.iid}
-                          </a>
-                          <span style={{ flex: 1, color: '#1F2937' }}>{issue.title}</span>
-                          {isBlocked(issue.labels) && (
-                            <span style={{ color: '#EF4444', fontSize: '11px', fontWeight: '600' }}>🚫 BLOCKED</span>
-                          )}
-                          {issue.assignees?.[0] && (
-                            <span style={{ color: '#6B7280', fontSize: '11px' }}>{issue.assignees[0].name}</span>
-                          )}
-                        </div>
-                      ))}
-                      {openIssues.length > 5 && (
-                        <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px', fontStyle: 'italic' }}>
-                          ... and {openIssues.length - 5} more open issues
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Closed Issues (collapsed by default) */}
-                  {closedIssues.length > 0 && (
-                    <div>
-                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#10B981', marginBottom: '8px' }}>
-                        ✅ Closed ({closedIssues.length})
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )
-        })}
+        {/* Epic Rows - Hierarchical rendering */}
+        {rootEpics.map(rootEpic => renderEpicRow(rootEpic, 0))}
       </div>
     </div>
   )
