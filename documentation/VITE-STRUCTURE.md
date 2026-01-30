@@ -201,7 +201,7 @@ export default App
 
 ### src/services/gitlabApi.js
 ```javascript
-const API_BASE = 'https://devcloud.ubs.net/api/v4'
+const API_BASE = 'https://devcloud.CompanyName.net/api/v4'
 
 export async function fetchEpics(groupPath, token) {
   const response = await fetch(

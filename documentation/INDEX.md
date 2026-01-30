@@ -34,7 +34,6 @@
 - [PM-SWOT-ANALYSIS.md](PM-SWOT-ANALYSIS.md) - PM-specific SWOT analysis
 - [SWOT-ANALYSIS.md](SWOT-ANALYSIS.md) - General SWOT analysis
 - [PROFESSIONAL-DESIGN-AUDIT.md](PROFESSIONAL-DESIGN-AUDIT.md) - UI/UX design audit
-- [TRANSFER-TO-UBS.md](TRANSFER-TO-UBS.md) - Transfer notes for UBS
 
 ## Quick Reference
 - **Total Documentation Files**: 24

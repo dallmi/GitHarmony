@@ -17,7 +17,7 @@ The Portfolio Filter is a **sticky dropdown** that appears across all tabs, enab
 - Provides portfolio-level insights
 
 ### 3. Visual Design
-- Red UBS brand color (#E60000)
+- Red brand color (#E60000)
 - Clean, modern dropdown with hover effects
 - Project count badge
 - Active project indicator with checkmark

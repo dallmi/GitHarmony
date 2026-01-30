@@ -238,7 +238,7 @@ npm run build
 - **Frontend**: React 18 with JSX
 - **Build**: Vite with single-file plugin
 - **Visualization**: D3.js v7
-- **Styling**: CSS with CSS variables (UBS design system)
+- **Styling**: CSS with CSS variables (professional design system)
 - **API**: GitLab REST API v4
 - **Storage**: Browser localStorage (config + risks)
 
@@ -283,7 +283,7 @@ npm run build
 ### CORS Errors
 - GitLab must allow CORS for your domain
 - For development: Use browser extension (temporary solution only)
-- For UBS DevCloud: Should work by default
+- For corporate GitLab instances: Should work by default
 
 ### Configuration Not Saving
 - Check browser localStorage is enabled
@@ -291,11 +291,11 @@ npm run build
 
 ## 🎨 Customization
 
-### Change UBS Colors
+### Change Brand Colors
 Edit `src/constants/colors.js`:
 ```javascript
 export const COLORS = {
-  primary: '#E60000',      // UBS Red
+  primary: '#E60000',      // Brand Red
   primaryDark: '#B80000',
   // ... other colors
 }

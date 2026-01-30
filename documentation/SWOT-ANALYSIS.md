@@ -23,7 +23,7 @@
    - Resource view for capacity planning
 
 4. **Corporate Design Ready**
-   - Professional UBS branding
+   - Professional corporate branding
    - Executive-friendly interface
    - Clean, modern UI/UX
 
