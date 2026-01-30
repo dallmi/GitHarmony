@@ -158,10 +158,10 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
 
     const issuesMap = new Map()
 
-    // DEBUG: Log all issues with epic assignments to find epic 81's issues
-    const issuesWithEpic81 = issues.filter(i => normalizeId(i.epic?.id) === 81)
-    console.log('=== EPIC 81 ISSUE INVESTIGATION ===')
-    console.log('Issues with epic.id = 81:', issuesWithEpic81.map(i => ({
+    // DEBUG: Log all issues with epic assignments to find epic 808134's issues
+    const issuesWithEpic808134 = issues.filter(i => normalizeId(i.epic?.id) === 808134)
+    console.log('=== EPIC 808134 ISSUE INVESTIGATION ===')
+    console.log('Issues with epic.id = 808134:', issuesWithEpic808134.map(i => ({
       id: i.id,
       iid: i.iid,
       title: i.title?.substring(0, 40),
@@ -198,9 +198,9 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
                       // Also include if epic spans across the time range
                       (epicStart && epicEnd && epicStart <= rangeEnd && epicEnd >= rangeStart)
 
-      // DEBUG: Log epic 81 issues specifically
-      if (epicId === 81) {
-        console.log('Epic 81 issue check:', {
+      // DEBUG: Log epic 808134 issues specifically
+      if (epicId === 808134) {
+        console.log('Epic 808134 issue check:', {
           issueId: issue.iid,
           title: issue.title?.substring(0, 30),
           created: created.toISOString(),
