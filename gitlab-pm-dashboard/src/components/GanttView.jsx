@@ -239,10 +239,34 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
       }
     })
 
+    // Also include all children of visible parent epics (so all siblings are shown)
+    // This ensures if one child epic has issues, all sibling child epics are visible too
+    let addedNew = true
+    while (addedNew) {
+      addedNew = false
+      allEpics.forEach(epic => {
+        const normalizedEpicId = normalizeId(epic.id)
+        const normalizedParentId = normalizeId(epic.parent_id)
+        // If this epic's parent is visible but this epic isn't, add it
+        if (normalizedParentId && epicsWithIssues.has(normalizedParentId) && !epicsWithIssues.has(normalizedEpicId)) {
+          epicsWithIssues.add(normalizedEpicId)
+          addedNew = true
+        }
+      })
+    }
+
     const filteredEpics = allEpics
       .filter(epic => epicsWithIssues.has(normalizeId(epic.id)))
       .filter(epic => {
-        // Additional epic-level date range filtering
+        const normalizedEpicId = normalizeId(epic.id)
+        const normalizedParentId = normalizeId(epic.parent_id)
+
+        // Always include child epics if their parent is visible (to preserve hierarchy)
+        if (normalizedParentId && epicsWithIssues.has(normalizedParentId)) {
+          return true
+        }
+
+        // Additional epic-level date range filtering for root/standalone epics
         if (epic.start_date || epic.end_date) {
           const epicStart = epic.start_date ? new Date(epic.start_date) : null
           const epicEnd = epic.end_date ? new Date(epic.end_date) : null
