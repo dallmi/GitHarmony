@@ -159,14 +159,24 @@ export default function GanttView({ issues, epics: allEpics, crossProjectData })
 
       if (!epicId) return
 
-      // Check if issue falls within selected date range (by creation, due date, or milestone)
+      // Find the parent epic to check its dates too
+      const parentEpic = allEpics.find(e => e.id === epicId)
+      const epicStart = parentEpic?.start_date ? new Date(parentEpic.start_date) : null
+      const epicEnd = parentEpic?.end_date ? new Date(parentEpic.end_date) : null
+
+      // Check if issue falls within selected date range (by creation, due date, milestone, OR parent epic dates)
       const created = new Date(issue.created_at)
       const dueDate = issue.due_date ? new Date(issue.due_date) : null
       const milestoneDate = issue.milestone?.due_date ? new Date(issue.milestone.due_date) : null
 
       const inRange = (created >= rangeStart && created <= rangeEnd) ||
                       (dueDate && dueDate >= rangeStart && dueDate <= rangeEnd) ||
-                      (milestoneDate && milestoneDate >= rangeStart && milestoneDate <= rangeEnd)
+                      (milestoneDate && milestoneDate >= rangeStart && milestoneDate <= rangeEnd) ||
+                      // Also include if parent epic falls within the time range
+                      (epicStart && epicStart >= rangeStart && epicStart <= rangeEnd) ||
+                      (epicEnd && epicEnd >= rangeStart && epicEnd <= rangeEnd) ||
+                      // Also include if epic spans across the time range
+                      (epicStart && epicEnd && epicStart <= rangeEnd && epicEnd >= rangeStart)
 
       if (!inRange) return
 
